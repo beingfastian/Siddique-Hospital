@@ -2,7 +2,6 @@ import { createContext, useState } from "react";
 import axios from "axios";
 export const AdminContext = createContext();
 import { toast } from "react-toastify";
-import { useEffect } from "react";
 
 const AdminContextProvider = (props) => {
   const [aToken, setAToken] = useState(
@@ -43,44 +42,6 @@ const getAllDoctors = async () => {
   }
 };
 
-const addDoctor = async (formData) => {
-  try {
-    const { data } = await axios.post(
-      backendUrl + "/api/admin/add-doctor",
-      formData,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const updateDoctor = async (doctorId, updateData) => {
-  try {
-    const { data } = await axios.put(
-      backendUrl + `/api/admin/update-doctor/${doctorId}`,
-      updateData,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const deleteDoctor = async (doctorId) => {
-  try {
-    const { data } = await axios.delete(
-      backendUrl + `/api/admin/delete-doctor/${doctorId}`,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
 const changeAvailability = async (docId) => {
   try {
     const { data } = await axios.post(
@@ -116,44 +77,6 @@ const getAllPatients = async () => {
   }
 };
 
-const addPatient = async (formData) => {
-  try {
-    const { data } = await axios.post(
-      backendUrl + "/api/admin/add-patient",
-      formData,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const updatePatient = async (patientId, updateData) => {
-  try {
-    const { data } = await axios.put(
-      backendUrl + `/api/admin/update-patient/${patientId}`,
-      updateData,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const deletePatient = async (patientId) => {
-  try {
-    const { data } = await axios.delete(
-      backendUrl + `/api/admin/delete-patient/${patientId}`,
-      { headers: { atoken: aToken } }   // ✅ fixed
-    );
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
 // Appointments
 const getAllAppointments = async () => {
   try {
@@ -171,16 +94,22 @@ const getAllAppointments = async () => {
   }
 };
 
-const bookAppointmentForPatient = async (bookingData) => {
+const cancelAppointment = async (appointmentId) => {
   try {
     const { data } = await axios.post(
-      backendUrl + "/api/admin/book-appointment-for-patient",
-      bookingData,
-      { headers: { atoken: aToken } }   // ✅ fixed
+      backendUrl + "/api/admin/cancel-appointment",
+      { appointmentId },
+      { headers: { atoken: aToken } }
     );
-    return data;
+    if (data.success) {
+      toast.success(data.message);
+      getDashData();
+      getAllAppointments();
+    } else {
+      toast.error(data.message);
+    }
   } catch (error) {
-    throw error;
+    toast.error(error.response?.data?.message || error.message);
   }
 };
 
@@ -293,26 +222,17 @@ const getLeaveStats = async () => {
     
     // Doctor CRUD
     doctors,
-    setDoctors,
     getAllDoctors,
-    addDoctor,
-    updateDoctor,
-    deleteDoctor,
     changeAvailability,
     
     // Patient CRUD
     patients,
-    setPatients,
     getAllPatients,
-    addPatient,
-    updatePatient,
-    deletePatient,
     
     // Appointments
     appointments,
-    setAppointments,
     getAllAppointments,
-    bookAppointmentForPatient,
+    cancelAppointment,
     
     // Dashboard
     getDashData,
@@ -320,7 +240,6 @@ const getLeaveStats = async () => {
 
     // Leave Management (NEW)
     leaveRequests,
-    setLeaveRequests,
     getAllLeaveRequests,
     approveLeaveRequest,
     rejectLeaveRequest,

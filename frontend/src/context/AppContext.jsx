@@ -9,78 +9,12 @@ const AppContextProvider = (props) => {
   const currencySymbol = "Rs."; // Changed to Pakistani Rupees
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
-  // Helper function to check if doctor is currently available
-const isDoctorAvailable = (doctor) => {
-  if (!doctor.available) return false; // Basic availability flag
-  
-  const now = new Date();
-  const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(); // Fixed line
-  const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
-  
-  // Check if doctor has sitting days defined
-  if (doctor.sittingDays && doctor.sittingDays.length > 0) {
-    if (!doctor.sittingDays.includes(currentDay)) {
-      return false; // Doctor doesn't work today
-    }
-  }
-  
-  // Check if doctor has working hours defined
-  if (doctor.timings) {
-    const [startHour, startMin] = doctor.timings.start.split(':').map(Number);
-    const [endHour, endMin] = doctor.timings.end.split(':').map(Number);
-    
-    const startTime = startHour * 60 + startMin;
-    const endTime = endHour * 60 + endMin;
-    
-    if (currentTime < startTime || currentTime > endTime) {
-      return false; // Outside working hours
-    }
-  }
-  
-  // Check if doctor is on approved leave
-  if (doctor.leaveRequests && doctor.leaveRequests.length > 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const isOnLeave = doctor.leaveRequests.some(leave => {
-      if (leave.status !== 'approved') return false;
-      
-      const fromDate = new Date(leave.fromDate);
-      const toDate = new Date(leave.toDate);
-      fromDate.setHours(0, 0, 0, 0);
-      toDate.setHours(23, 59, 59, 999);
-      
-      return today >= fromDate && today <= toDate;
-    });
-    
-    if (isOnLeave) {
-      return false; // Doctor is on leave
-    }
-  }
-  
-  return true; // Doctor is available
-};
 const getDoctorsData = async () => {
   try {
     const { data } = await axios.get(backendUrl + "/api/doctor/list");
     
     if (data.success) {
-      // Process doctors to add real-time availability status
-      const processedDoctors = data.doctors.map(doctor => {
-        try {
-          return {
-            ...doctor,
-            isCurrentlyAvailable: isDoctorAvailable(doctor)
-          };
-        } catch (error) {
-          console.error("Error processing doctor", doctor.name, ":", error);
-          return {
-            ...doctor,
-            isCurrentlyAvailable: false
-          };
-        }
-      });
-      setDoctors(processedDoctors);
+      setDoctors(data.doctors);
     } else {
       console.error("Backend error:", data.message);
       toast.error(data.message);
@@ -134,33 +68,6 @@ const getDoctorAvailabilityStatus = (doctor) => {
         available: false, 
         reason: `Clinic closed at ${doctor.timings.end}`,
         nextAvailable: "Tomorrow"
-      };
-    }
-  }
-  
-  // Check leave status
-  if (doctor.leaveRequests && doctor.leaveRequests.length > 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const currentLeave = doctor.leaveRequests.find(leave => {
-      if (leave.status !== 'approved') return false;
-      
-      const fromDate = new Date(leave.fromDate);
-      const toDate = new Date(leave.toDate);
-      fromDate.setHours(0, 0, 0, 0);
-      toDate.setHours(23, 59, 59, 999);
-      
-      return today >= fromDate && today <= toDate;
-    });
-    
-    if (currentLeave) {
-      const returnDate = new Date(currentLeave.toDate);
-      returnDate.setDate(returnDate.getDate() + 1);
-      return { 
-        available: false, 
-        reason: "On leave",
-        nextAvailable: returnDate.toLocaleDateString()
       };
     }
   }
@@ -219,26 +126,15 @@ const getDoctorAvailabilityStatus = (doctor) => {
 
   useEffect(() => {
     getDoctorsData();
-    
-    // Update availability status every minute
-    const interval = setInterval(() => {
-      setDoctors(prevDoctors => 
-        prevDoctors.map(doctor => ({
-          ...doctor,
-          isCurrentlyAvailable: isDoctorAvailable(doctor)
-        }))
-      );
-    }, 60000); // Update every minute
-    
+
+    // Re-render every minute so time-based availability badges stay current
+    const interval = setInterval(() => setDoctors((prev) => [...prev]), 60000);
     return () => clearInterval(interval);
   }, []);
 
   const value = {
     doctors,
-    getDoctorsData,
     currencySymbol,
-    backendUrl,
-    isDoctorAvailable,
     getDoctorAvailabilityStatus,
     formatWorkingHours,
     formatSittingDays

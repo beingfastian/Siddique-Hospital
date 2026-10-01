@@ -26,11 +26,7 @@ const TopDoctors = () => {
   const getAvailabilityDisplay = (doctor) => {
     const status = getDoctorAvailabilityStatus(doctor);
     
-    const kind = status.available
-      ? "available"
-      : status.reason === "On leave"
-        ? "on-leave"
-        : "unavailable";
+    const kind = status.available ? "available" : "unavailable";
 
     switch (kind) {
       case "available":
@@ -38,13 +34,6 @@ const TopDoctors = () => {
           <div className="flex items-center gap-2 text-sm text-green-500">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span>Available Now</span>
-          </div>
-        );
-      case "on-leave":
-        return (
-          <div className="flex items-center gap-2 text-sm text-orange-500">
-            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-            <span>On Leave</span>
           </div>
         );
       case "unavailable":
