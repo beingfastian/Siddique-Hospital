@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { FaWhatsapp, FaClock, FaCalendarDay } from "react-icons/fa";
+import { HOSPITAL_PHONE } from "../config";
 
 const TopDoctors = () => {
   const { 
@@ -15,7 +16,7 @@ const TopDoctors = () => {
 
   // WhatsApp contact function
   const handleDoctorWhatsApp = (doctorName, speciality) => {
-    const whatsappNumber = "+923348400517"; // Hospital's WhatsApp number
+    const whatsappNumber = HOSPITAL_PHONE;
     const message = `Hello! I would like to request an appointment with Dr. ${doctorName} (${speciality}). Please let me know the available time slots.`;
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${whatsappNumber.replace('+', '')}?text=${encodedMessage}`;
@@ -25,7 +26,13 @@ const TopDoctors = () => {
   const getAvailabilityDisplay = (doctor) => {
     const status = getDoctorAvailabilityStatus(doctor);
     
-    switch (status.status) {
+    const kind = status.available
+      ? "available"
+      : status.reason === "On leave"
+        ? "on-leave"
+        : "unavailable";
+
+    switch (kind) {
       case "available":
         return (
           <div className="flex items-center gap-2 text-sm text-green-500">
@@ -126,13 +133,13 @@ const TopDoctors = () => {
                   {item.timings && (
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <FaClock />
-                      <span>{formatWorkingHours(item.timings)}</span>
+                      <span>{formatWorkingHours(item)}</span>
                     </div>
                   )}
                   {item.sittingDays && item.sittingDays.length > 0 && (
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <FaCalendarDay />
-                      <span>{formatSittingDays(item.sittingDays)}</span>
+                      <span>{formatSittingDays(item)}</span>
                     </div>
                   )}
                 </div>

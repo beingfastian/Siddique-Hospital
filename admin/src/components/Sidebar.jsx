@@ -1,121 +1,230 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { AdminContext } from "../context/AdminContext";
-import { NavLink } from "react-router-dom";
-import { assets } from "../assets/assets.js";
 import { DoctorContext } from "../context/DoctorContext.jsx";
-import { 
-  FaCog, 
-  FaUserPlus, 
-  FaUsers, 
-  FaUserMd, 
-  FaCalendarCheck, 
+import {
+  FaCog,
+  FaUserPlus,
+  FaUsers,
+  FaUserMd,
+  FaCalendarCheck,
   FaChartBar,
   FaStethoscope,
   FaUserInjured,
   FaCalendarAlt,
-  FaBars
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaTimes,
 } from "react-icons/fa";
 
-const Sidebar = () => {
-  const { aToken } = useContext(AdminContext);
+const adminSections = [
+  {
+    title: "Overview",
+    items: [{ path: "/", icon: <FaChartBar />, label: "Dashboard", end: true }],
+  },
+  {
+    title: "Appointments",
+    items: [
+      { path: "/all-appointments", icon: <FaCalendarAlt />, label: "All Appointments" },
+      { path: "/book-appointment", icon: <FaUserPlus />, label: "Book Appointment" },
+    ],
+  },
+  {
+    title: "Doctors",
+    items: [
+      { path: "/doctors", icon: <FaUserMd />, label: "Manage Doctors" },
+      { path: "/add-doctor", icon: <FaStethoscope />, label: "Add Doctor" },
+      { path: "/leave-management", icon: <FaCalendarCheck />, label: "Leave Requests", badge: "pendingLeave" },
+    ],
+  },
+  {
+    title: "Patients",
+    items: [
+      { path: "/patients", icon: <FaUsers />, label: "Manage Patients" },
+      { path: "/add-patient", icon: <FaUserInjured />, label: "Add Patient" },
+    ],
+  },
+  {
+    title: "System",
+    items: [{ path: "/settings", icon: <FaCog />, label: "Settings" }],
+  },
+];
+
+const doctorSections = [
+  {
+    title: "Overview",
+    items: [{ path: "/doctor", icon: <FaChartBar />, label: "Dashboard", end: true }],
+  },
+  {
+    title: "My Work",
+    items: [
+      { path: "/doctor/appointments", icon: <FaCalendarAlt />, label: "Appointments" },
+      { path: "/doctor/leave-requests", icon: <FaCalendarCheck />, label: "Leave Requests" },
+      { path: "/doctor/profile", icon: <FaUserMd />, label: "Profile" },
+    ],
+  },
+];
+
+const COLLAPSE_KEY = "sidebarCollapsed";
+
+// mobileOpen/onClose control the slide-in drawer on screens below lg.
+const Sidebar = ({ mobileOpen, onClose }) => {
+  const { aToken, leaveStats, getLeaveStats } = useContext(AdminContext);
   const { dToken } = useContext(DoctorContext);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
-  // Simplified navigation items for Admin
-  const adminNavItems = [
-    { path: "/", icon: <FaChartBar />, label: "Dashboard" },
-    { path: "/all-appointments", icon: <FaCalendarAlt />, label: "Appointments" },
-    { path: "/book-appointment", icon: <FaUserPlus />, label: "Book Appointment" },
-    { path: "/doctors", icon: <FaUserMd />, label: "Doctors" },
-    { path: "/add-doctor", icon: <FaStethoscope />, label: "Add Doctor" },
-    { path: "/patients", icon: <FaUsers />, label: "Patients" },
-    { path: "/add-patient", icon: <FaUserInjured />, label: "Add Patient" },
-    { path: "/leave-management", icon: <FaCalendarCheck />, label: "Leave Management" },
-    { path: "/settings", icon: <FaCog />, label: "Settings" }
-  ];
-
-  // Simplified navigation items for Doctor
-  const doctorNavItems = [
-    { path: "/doctor/", icon: <FaChartBar />, label: "Dashboard", end: true },
-    { path: "/doctor/appointments", icon: <FaCalendarAlt />, label: "Appointments" },
-    { path: "/doctor/profile", icon: <FaUserMd />, label: "Profile" },
-    { path: "/doctor/leave-requests", icon: <FaCalendarCheck />, label: "Leave Requests" }
-  ];
-
-  const renderNavItem = (item, index) => (
-    <NavLink
-      key={index}
-      end={item.end}
-      className={({ isActive }) =>
-        `flex items-center gap-3 py-2.5 px-4 mx-2 rounded-lg transition-colors duration-200 ${
-          isActive
-            ? "bg-blue-500 text-white shadow-sm"
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-        }`
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, String(!prev));
+      } catch {
+        // storage unavailable; keep the in-memory state
       }
-      to={item.path}
-    >
-      <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-        {item.icon}
-      </div>
-      {!isCollapsed && (
-        <span className="text-sm font-medium truncate">{item.label}</span>
-      )}
-    </NavLink>
+      return !prev;
+    });
+  };
+
+  // Pending leave count for the badge
+  useEffect(() => {
+    if (aToken) getLeaveStats();
+  }, [aToken]);
+
+  // Close the mobile drawer after navigating
+  useEffect(() => {
+    onClose();
+  }, [location.pathname]);
+
+  // Close the mobile drawer with Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
+  const sections = aToken ? adminSections : dToken ? doctorSections : [];
+  const badges = { pendingLeave: leaveStats?.pending || 0 };
+
+  // The drawer on mobile is always shown expanded
+  const renderNav = (isCollapsed) => (
+    <nav className="flex-1 overflow-y-auto py-4">
+      {sections.map((section) => (
+        <div key={section.title} className="mb-4">
+          {isCollapsed ? (
+            <div className="mx-4 mb-2 border-t border-gray-100" />
+          ) : (
+            <p className="px-5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              {section.title}
+            </p>
+          )}
+          <ul className="space-y-0.5">
+            {section.items.map((item) => {
+              const count = item.badge ? badges[item.badge] : 0;
+              return (
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    end={item.end}
+                    title={isCollapsed ? item.label : undefined}
+                    className={({ isActive }) =>
+                      `relative flex items-center gap-3 mx-2 rounded-lg text-sm font-medium transition-colors ${
+                        isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2"
+                      } ${
+                        isActive
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-blue-600" />
+                        )}
+                        <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-base">
+                          {item.icon}
+                        </span>
+                        {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                        {count > 0 &&
+                          (isCollapsed ? (
+                            <span className="absolute top-1.5 right-3 w-2 h-2 rounded-full bg-red-500" />
+                          ) : (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                              {count > 99 ? "99+" : count}
+                            </span>
+                          ))}
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
   );
 
   return (
-    <div className={`flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-200 ${
-      isCollapsed ? "w-16" : "w-64"
-    }`}>
-      
-      {/* Header - Fixed height */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 h-16 flex-shrink-0">
-        {!isCollapsed && (
-          <div className="flex items-center space-x-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm ${
-              aToken ? "bg-blue-500" : "bg-indigo-500"
-            }`}>
-              {aToken ? 'A' : 'D'}
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">
-                {aToken ? "Admin" : "Doctor"}
-              </h2>
-            </div>
-          </div>
-        )}
-        
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-        >
-          <FaBars className="w-4 h-4" />
-        </button>
-      </div>
+    <>
+      {/* Desktop sidebar: sticky under the 64px navbar */}
+      <aside
+        className={`hidden lg:flex flex-col flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-[width] duration-200 ${
+          collapsed ? "w-[72px]" : "w-60"
+        }`}
+      >
+        {renderNav(collapsed)}
+        <div className="border-t border-gray-100 p-2">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 ${
+              collapsed ? "justify-center" : ""
+            }`}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : undefined}
+          >
+            {collapsed ? <FaAngleDoubleRight /> : <FaAngleDoubleLeft />}
+            {!collapsed && <span>Collapse</span>}
+          </button>
+        </div>
+      </aside>
 
-      {/* Navigation - Scrollable area */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1">
-          {aToken && adminNavItems.map((item, index) => renderNavItem(item, index))}
-          {dToken && doctorNavItems.map((item, index) => renderNavItem(item, index))}
-        </nav>
-      </div>
-
-      {/* Footer - Fixed height */}
-      <div className="border-t border-gray-100 p-4 h-16 flex-shrink-0">
-        {!isCollapsed ? (
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            <span className="text-xs text-gray-500">System Online</span>
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Mobile / tablet drawer */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[60] bg-black/30 transition-opacity ${
+          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        className={`lg:hidden fixed inset-y-0 left-0 z-[70] w-64 max-w-[80vw] flex flex-col bg-white shadow-xl transition-transform duration-200 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        aria-label="Main navigation"
+      >
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
+          <span className="font-semibold text-gray-900">{aToken ? "Admin Menu" : "Doctor Menu"}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+            aria-label="Close menu"
+          >
+            <FaTimes />
+          </button>
+        </div>
+        {renderNav(false)}
+      </aside>
+    </>
   );
 };
 

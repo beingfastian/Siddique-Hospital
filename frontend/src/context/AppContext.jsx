@@ -62,16 +62,12 @@ const isDoctorAvailable = (doctor) => {
 };
 const getDoctorsData = async () => {
   try {
-    console.log("Fetching doctors from:", backendUrl + "/api/doctor/list");
     const { data } = await axios.get(backendUrl + "/api/doctor/list");
-    console.log("API response:", data);
     
     if (data.success) {
-      console.log("Processing", data.doctors.length, "doctors");
       // Process doctors to add real-time availability status
       const processedDoctors = data.doctors.map(doctor => {
         try {
-          console.log("Processing doctor:", doctor.name);
           return {
             ...doctor,
             isCurrentlyAvailable: isDoctorAvailable(doctor)
@@ -84,7 +80,6 @@ const getDoctorsData = async () => {
           };
         }
       });
-      console.log("Setting doctors state with", processedDoctors.length, "doctors");
       setDoctors(processedDoctors);
     } else {
       console.error("Backend error:", data.message);
@@ -92,10 +87,6 @@ const getDoctorsData = async () => {
     }
   } catch (error) {
     console.error("Error fetching doctors:", error);
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response data:", error.response.data);
-    }
     toast.error("Failed to load doctors");
   }
 };

@@ -1,11 +1,12 @@
 import React from "react";
 import { assets } from "../assets/assets";
 import { FaFacebook, FaInstagram, FaWhatsapp, FaPhone, FaEnvelope } from "react-icons/fa";
+import { HOSPITAL_PHONE } from "../config";
 
 const Footer = () => {
   // Contact details
-  const whatsappNumber = "+923348400517";
-  const phoneNumber = "+923318400517";
+  const whatsappNumber = HOSPITAL_PHONE;
+  const phoneNumber = HOSPITAL_PHONE;
   const email = "Siddiquehospital@gmail.com";
   
   const handleWhatsAppClick = () => {

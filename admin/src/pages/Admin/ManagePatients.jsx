@@ -54,8 +54,8 @@ const ManagePatients = () => {
     if (searchTerm) {
       filtered = filtered.filter(patient => 
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.phone || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (patient.cnic && patient.cnic.includes(searchTerm))
       );
     }
@@ -145,7 +145,7 @@ const ManagePatients = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-16 bg-gray-200 rounded"></div>
@@ -160,7 +160,7 @@ const ManagePatients = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -216,7 +216,7 @@ const ManagePatients = () => {
 
       {/* Patients Table */}
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[65vh] overflow-auto">
           {/* Desktop View */}
           <div className="hidden lg:block">
             <table className="w-full">
@@ -393,7 +393,7 @@ const ManagePatients = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
-                  value={editingPatient.email}
+                  value={editingPatient.email || ""}
                   onChange={(e) => setEditingPatient({...editingPatient, email: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />

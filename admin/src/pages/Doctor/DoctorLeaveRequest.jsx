@@ -134,7 +134,7 @@ const DoctorLeaveRequest = () => {
   }, [dToken]);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Leave Requests</h1>
@@ -276,7 +276,7 @@ const DoctorLeaveRequest = () => {
             <p className="text-gray-500">Click "Request Leave" to submit your first leave request</p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[65vh] overflow-auto">
             {/* Desktop View */}
             <div className="hidden lg:block">
               <table className="w-full">

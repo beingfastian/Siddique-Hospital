@@ -14,7 +14,7 @@ export const createNotification = async (recipient, recipientType, sender, sende
       priority,
       relatedId
     });
-    
+
     await notification.save();
     return notification;
   } catch (error) {
@@ -23,16 +23,14 @@ export const createNotification = async (recipient, recipientType, sender, sende
   }
 };
 
-// Get notifications for a user
+// Get notifications for the logged-in admin or doctor
 export const getNotifications = async (req, res) => {
   try {
-    const { userId, userType } = req.params;
-    
     const notifications = await notificationModel.find({
-      recipient: userId,
-      recipientType: userType
+      recipient: req.recipient,
+      recipientType: req.recipientType
     }).sort({ createdAt: -1 });
-    
+
     res.json({ success: true, notifications });
   } catch (error) {
     console.error(error);
@@ -44,9 +42,12 @@ export const getNotifications = async (req, res) => {
 export const markAsRead = async (req, res) => {
   try {
     const { notificationId } = req.params;
-    
-    await notificationModel.findByIdAndUpdate(notificationId, { read: true });
-    
+
+    await notificationModel.findOneAndUpdate(
+      { _id: notificationId, recipient: req.recipient, recipientType: req.recipientType },
+      { read: true }
+    );
+
     res.json({ success: true, message: "Notification marked as read" });
   } catch (error) {
     console.error(error);
@@ -54,16 +55,14 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// Mark all notifications as read
+// Mark all of the caller's notifications as read
 export const markAllAsRead = async (req, res) => {
   try {
-    const { userType } = req.params;
-    
     await notificationModel.updateMany(
-      { recipientType: userType, read: false },
+      { recipient: req.recipient, recipientType: req.recipientType, read: false },
       { read: true }
     );
-    
+
     res.json({ success: true, message: "All notifications marked as read" });
   } catch (error) {
     console.error(error);
@@ -75,9 +74,13 @@ export const markAllAsRead = async (req, res) => {
 export const deleteNotification = async (req, res) => {
   try {
     const { notificationId } = req.params;
-    
-    await notificationModel.findByIdAndDelete(notificationId);
-    
+
+    await notificationModel.findOneAndDelete({
+      _id: notificationId,
+      recipient: req.recipient,
+      recipientType: req.recipientType
+    });
+
     res.json({ success: true, message: "Notification deleted" });
   } catch (error) {
     console.error(error);

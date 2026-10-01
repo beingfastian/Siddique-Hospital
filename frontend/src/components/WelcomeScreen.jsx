@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { assets } from "../assets/assets";
+import { HOSPITAL_PHONE } from "../config";
 
 const WelcomeScreen = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -57,7 +58,7 @@ const WelcomeScreen = ({ onComplete }) => {
             <div className={`relative transform transition-all duration-1000 ${currentStep >= 1 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
               <div className="relative">
                 <img
-                  src="/src/assets/CEO.jpg"
+                  src={assets.ceo_image}
                   alt="Dr. Muhammad Siddique - CEO"
                   className="w-80 h-80 lg:w-96 lg:h-96 object-cover rounded-3xl shadow-2xl border-4 border-white border-opacity-20"
                 />
@@ -112,7 +113,7 @@ const WelcomeScreen = ({ onComplete }) => {
                   
                   <button
                     onClick={() => {
-                      const whatsappNumber = "+923348400517";
+                      const whatsappNumber = HOSPITAL_PHONE;
                       const message = "Hello! I would like to schedule an appointment at Siddique Hospital. Please provide me with available times.";
                       const encodedMessage = encodeURIComponent(message);
                       const whatsappUrl = `https://wa.me/${whatsappNumber.replace('+', '')}?text=${encodedMessage}`;

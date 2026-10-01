@@ -1,10 +1,11 @@
 import React from "react";
 import { assets } from "../assets/assets";
 import { FaWhatsapp } from "react-icons/fa";
+import { HOSPITAL_PHONE } from "../config";
 
 const Header = () => {
   // WhatsApp contact details
-  const whatsappNumber = "+923348400517"; // Replace with your hospital's WhatsApp number
+  const whatsappNumber = HOSPITAL_PHONE;
   const whatsappMessage = "Hello! I would like to request an appointment. Please provide me with available times and doctor information.";
   
   const handleWhatsAppClick = () => {

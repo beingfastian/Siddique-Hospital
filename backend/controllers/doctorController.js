@@ -4,11 +4,15 @@ import jwt from "jsonwebtoken";
 import appointmentModel from "../model/appointmentModel.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
-//import { createNotification } from "../controllers/notificationController.js";
+import { releaseSlot } from "../utils/slots.js";
+
 const changeAvailabilities = async (req, res) => {
   try {
     const { docId } = req.body;
     const docData = await doctorModel.findById(docId);
+    if (!docData) {
+      return res.json({ success: false, message: "Doctor not found" });
+    }
     await doctorModel.findByIdAndUpdate(docId, {
       available: !docData.available,
     });
@@ -45,7 +49,11 @@ const loginDoctor = async (req, res) => {
     if (!isMatch) {
       return res.json({ success: false, message: "Invalid Credentials" });
     }
-    const token = jwt.sign({ id: doctor._id }, process.env.JWT_SECRET);
+    const token = jwt.sign(
+      { id: doctor._id, role: "doctor" },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
+    );
     res.json({ success: true, token });
   } catch (error) {
     console.error(error);
@@ -75,7 +83,7 @@ const appointmentComplete = async (req, res) => {
     const { docId, appointmentId } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
     
-    if (appointmentData && appointmentData.docId === docId) {
+    if (appointmentData && appointmentData.docId === docId && !appointmentData.cancelled) {
       // Mark appointment as completed
       await appointmentModel.findByIdAndUpdate(appointmentId, {
         isCompleted: true,
@@ -121,10 +129,11 @@ const appointmentCancel = async (req, res) => {
   try {
     const { docId, appointmentId } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
-    if (appointmentData && appointmentData.docId === docId) {
+    if (appointmentData && appointmentData.docId === docId && !appointmentData.cancelled) {
       await appointmentModel.findByIdAndUpdate(appointmentId, {
         cancelled: true,
       });
+      await releaseSlot(docId, appointmentData.slotDate, appointmentData.slotTime);
       return res.json({
         success: true,
         message: "Appointment Cancelled",
@@ -200,12 +209,10 @@ const updateDoctorProfile = async (req, res) => {
 // Doctor applies for leave
 const requestLeave = async (req, res) => {
   try {
-    const doctorId = req.doctorId || req.body.docId || req.headers.docid;
+    const doctorId = req.doctorId;
     const { fromDate, toDate, reason, type } = req.body;
-    console.log('Leave request received:', { doctorId, fromDate, toDate, reason, type });
-    
+
     if (!doctorId) {
-      console.log('No doctor ID found in request');
       return res.json({ success: false, message: "Doctor not authenticated" });
     }
     
@@ -255,8 +262,6 @@ const requestLeave = async (req, res) => {
       type: type || "vacation",
     });
     
-    console.log('Leave request created:', leaveRequest);
-    
     // Get doctor details for notification
     const doctor = await doctorModel.findById(doctorId);
     
@@ -291,7 +296,7 @@ const requestLeave = async (req, res) => {
 // List doctor's leave requests
 const listLeaveRequests = async (req, res) => {
   try {
-    const doctorId = req.doctorId || req.headers.docid || req.body.docId;
+    const doctorId = req.doctorId;
     const leaveRequests = await leaveRequestModel
       .find({ doctorId })
       .sort({ submittedAt: -1 });
@@ -307,7 +312,7 @@ const cancelLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const leave = await leaveRequestModel.findById(id);
-    if (!leave || leave.status !== "pending") {
+    if (!leave || leave.doctorId !== req.doctorId || leave.status !== "pending") {
       return res.json({ success: false, message: "Cannot cancel this leave request" });
     }
     await leaveRequestModel.findByIdAndDelete(id);
@@ -321,7 +326,7 @@ const cancelLeaveRequest = async (req, res) => {
 // Add this to your existing exports
 const getDoctorProfile = async (req, res) => {
   try {
-    const doctorId = req.doctorId || req.body.docId;
+    const doctorId = req.doctorId;
     const doctorData = await doctorModel.findById(doctorId).select("-password");
     
     if (!doctorData) {

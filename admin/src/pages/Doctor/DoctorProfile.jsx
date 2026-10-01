@@ -60,7 +60,7 @@ const DoctorProfile = () => {
 
   if (!profileData) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
         <div className="animate-pulse">
           <div className="bg-gray-200 h-64 rounded-2xl mb-6"></div>
           <div className="bg-gray-200 h-8 rounded mb-4"></div>
@@ -72,7 +72,7 @@ const DoctorProfile = () => {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         {/* Header Section */}
         <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-8">

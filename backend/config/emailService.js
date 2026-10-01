@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
+import { formatSlotDate as formatDate } from '../utils/slots.js';
+import { HOSPITAL_PHONE } from './hospital.js';
 // Check if email configuration is available
-const isEmailConfigured = () => {
+export const isEmailConfigured = () => {
   return !!(
     process.env.EMAIL_HOST &&
     process.env.EMAIL_PORT &&
@@ -27,16 +29,6 @@ const createTransporter = () => {
     logger: process.env.NODE_ENV === 'development'
   });
 };
-// Format date for email
-const formatDate = (dateString) => {
-  const date = new Date(dateString.replace(/_/g, '/'));
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
 // Email template for Siddique Hospital
 const getEmailTemplate = (title, content, type = 'info') => {
   const colors = {
@@ -56,8 +48,8 @@ const getEmailTemplate = (title, content, type = 'info') => {
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
         <h3 style="color: #333; margin-top: 0;">📍 Hospital Information</h3>
         <p style="color: #666; margin: 5px 0;"><strong>Address:</strong> Civil Lines, Lahore-Sargodha Road, Sheikhupura</p>
-        <p style="color: #666; margin: 5px 0;"><strong>Phone:</strong> +923348400517</p>
-        <p style="color: #666; margin: 5px 0;"><strong>WhatsApp:</strong> +923348400517</p>
+        <p style="color: #666; margin: 5px 0;"><strong>Phone:</strong> ${HOSPITAL_PHONE}</p>
+        <p style="color: #666; margin: 5px 0;"><strong>WhatsApp:</strong> ${HOSPITAL_PHONE}</p>
         <p style="color: #666; margin: 5px 0;"><strong>Email:</strong> Siddiquehospital@gmail.com</p>
       </div>
       
@@ -110,7 +102,7 @@ export const sendUserAppointmentConfirmation = async (userEmail, userName, docto
           </tr>
           <tr>
             <td style="padding: 10px 0;"><strong>Fee:</strong></td>
-            <td style="padding: 10px 0;">$${fee}</td>
+            <td style="padding: 10px 0;">Rs. ${fee}</td>
           </tr>
         </table>
       </div>
@@ -177,7 +169,7 @@ export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName,
           </tr>
           <tr>
             <td style="padding: 10px 0;"><strong>Consultation Fee:</strong></td>
-            <td style="padding: 10px 0;">$${fee}</td>
+            <td style="padding: 10px 0;">Rs. ${fee}</td>
           </tr>
         </table>
       </div>
@@ -202,108 +194,6 @@ export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName,
     console.error('❌ Error sending doctor email:', error.message);
   }
 };
-// Send appointment notification to admin
-export const sendAdminAppointmentNotification = async (doctorName, userName, userEmail, appointmentDate, appointmentTime, fee) => {
-  try {
-    if (!isEmailConfigured() || !process.env.ADMIN_EMAIL) {
-      console.log('Email not configured or admin email not set - Admin notification email skipped');
-      return;
-    }
-    const transporter = createTransporter();
-    if (!transporter) return;
-    const content = `
-      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: #333; margin-top: 0;">Dear Admin,</h3>
-        <p style="color: #666; line-height: 1.6;">
-          A new appointment has been booked on the Siddique Hospital platform. Here are the details:
-        </p>
-      </div>
-      
-      <div style="background-color: #fff; border: 2px solid #FF9800; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h3 style="color: #FF9800; margin-top: 0; margin-bottom: 15px;">📋 Appointment Summary</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Patient:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${userName} (${userEmail})</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Doctor:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">Dr. ${doctorName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${formatDate(appointmentDate)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${appointmentTime}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;"><strong>Fee:</strong></td>
-            <td style="padding: 10px 0;">$${fee}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="color: #e65100; margin: 0; font-weight: 500;">
-          📈 Check your admin dashboard for more details and analytics.
-        </p>
-      </div>
-    `;
-    
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to: process.env.ADMIN_EMAIL,
-      subject: '📊 New Appointment Booked - Siddique Hospital Admin',
-      html: getEmailTemplate('New Appointment Alert! 🚨', content, 'warning')
-    };
-    
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Admin appointment notification email sent successfully');
-  } catch (error) {
-    console.error('❌ Error sending admin email:', error.message);
-  }
-};
-// Send welcome email to new patients
-export const sendWelcomeEmail = async (userEmail, userName) => {
-  try {
-    if (!isEmailConfigured()) {
-      console.log('Email not configured - Welcome email skipped');
-      return;
-    }
-    const transporter = createTransporter();
-    if (!transporter) return;
-    const content = `
-      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: #333; margin-top: 0;">Welcome ${userName}!</h3>
-        <p style="color: #666; line-height: 1.6;">
-          Thank you for registering with Siddique Hospital. We're committed to providing you with the best healthcare services.
-        </p>
-      </div>
-      
-      <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h4 style="color: #2e7d32; margin-top: 0;">🌟 What's Next?</h4>
-        <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
-          <li>Complete your profile with personal information</li>
-          <li>Enable WhatsApp notifications for instant updates</li>
-          <li>Browse our qualified doctors and their specialties</li>
-          <li>Book your first appointment online</li>
-        </ul>
-      </div>
-    `;
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to: userEmail,
-      subject: '🏥 Welcome to Siddique Hospital',
-      html: getEmailTemplate('Welcome to Our Hospital Family! 🎉', content, 'success')
-    };
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Welcome email sent successfully');
-  } catch (error) {
-    console.error('❌ Error sending welcome email:', error.message);
-  }
-};
 // Test email connection on startup
 export const testEmailConnection = async () => {
   if (!isEmailConfigured()) {
@@ -320,14 +210,5 @@ export const testEmailConnection = async () => {
     return false;
   }
 };
-// Get email service status
-export const getEmailStatus = () => {
-  return {
-    configured: isEmailConfigured(),
-    host: process.env.EMAIL_HOST || 'Not configured',
-    from: process.env.EMAIL_FROM || 'Not configured'
-  };
-};
 
-// Export the necessary functions for the forgot password feature
 export { createTransporter, getEmailTemplate };

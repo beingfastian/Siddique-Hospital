@@ -48,7 +48,7 @@ const AllAppointments = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
