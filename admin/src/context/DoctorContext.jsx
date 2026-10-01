@@ -207,24 +207,20 @@ const DoctorContextProvider = (props) => {
     dToken,
     setDToken,
     appointments,
-    setAppointments,
     getAppointments,
     completeAppointment,
     cancelAppointment,
     dashData,
-    setDashData,
     getDashData,
     profileData,
     setProfileData,
     getProfileData,
     // Add leave management to context
     leaveRequests,
-    setLeaveRequests,
     requestLeave,
     getLeaveRequests,
     cancelLeaveRequest,
     doctorData,
-    getDoctorProfile,
   };
   
   return (

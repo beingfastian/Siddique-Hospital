@@ -185,7 +185,7 @@ const Dashboard = () => {
                         Pending
                       </span>
                       <button
-                        onClick={() => cancelAppointment(item._id)}
+                        onClick={() => window.confirm("Cancel this appointment? The patient's slot will be freed.") && cancelAppointment(item._id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Cancel Appointment"
                       >
