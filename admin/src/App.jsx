@@ -1,5 +1,5 @@
-import React, { useContext } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useCallback, useContext, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -28,45 +28,41 @@ import ResetPassword from "./pages/Doctor/ResetPassword";
 const App = () => {
   const { aToken } = useContext(AdminContext);
   const { dToken } = useContext(DoctorContext);
-    // Debug logging
-  console.log("App render - aToken:", aToken, "dToken:", dToken);
-  console.log("Should show authenticated?", Boolean(aToken || dToken));
-  
+  const [navOpen, setNavOpen] = useState(false);
+  const closeNav = useCallback(() => setNavOpen(false), []);
   return (
     <BrowserRouter>
       <ToastContainer />
       {aToken || dToken ? (
         <NotificationProvider>
-          <div className="bg-[#F8F9FD]">
-            <Navbar />
-            <div className="flex items-start">
-              <Sidebar />
-              <Routes>
-                {/* Admin Routes */}
-                <Route path="/" element={<Dashboard />} />
-                
-                {/* Appointment Management */}
-                <Route path="/all-appointments" element={<AllAppointments />} />
-                <Route path="/book-appointment" element={<BookAppointmentForPatient />} />
-                
-                {/* Doctor Management */}
-                <Route path="/doctors" element={<ManageDoctors />} />
-                <Route path="/add-doctor" element={<AddDoctor />} />
-                
-                {/* Patient Management */}
-                <Route path="/patients" element={<ManagePatients />} />
-                <Route path="/add-patient" element={<AddPatient />} />
-                
-                {/* Settings */}
-                <Route path="/settings" element={<Settings />} />
-                
-                {/* Doctor Routes */}
-                <Route path="/doctor" element={<DoctorDashboard />} />
-                <Route path="/doctor/appointments" element={<DoctorAppointments />} />
-                <Route path="/doctor/profile" element={<DoctorProfile />} />
-                <Route path="/doctor/leave-requests" element={<DoctorLeaveRequest />} />
-                <Route path="/leave-management" element={<AdminLeaveManagement />} />
-              </Routes>
+          <div className="min-h-screen bg-[#F8F9FD]">
+            <Navbar onMenuClick={() => setNavOpen(true)} />
+            <div className="flex">
+              <Sidebar mobileOpen={navOpen} onClose={closeNav} />
+              <main className="flex-1 min-w-0">
+              {aToken ? (
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/all-appointments" element={<AllAppointments />} />
+                  <Route path="/book-appointment" element={<BookAppointmentForPatient />} />
+                  <Route path="/doctors" element={<ManageDoctors />} />
+                  <Route path="/add-doctor" element={<AddDoctor />} />
+                  <Route path="/patients" element={<ManagePatients />} />
+                  <Route path="/add-patient" element={<AddPatient />} />
+                  <Route path="/leave-management" element={<AdminLeaveManagement />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              ) : (
+                <Routes>
+                  <Route path="/doctor" element={<DoctorDashboard />} />
+                  <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+                  <Route path="/doctor/profile" element={<DoctorProfile />} />
+                  <Route path="/doctor/leave-requests" element={<DoctorLeaveRequest />} />
+                  <Route path="*" element={<Navigate to="/doctor" replace />} />
+                </Routes>
+              )}
+              </main>
             </div>
           </div>
         </NotificationProvider>
@@ -76,6 +72,7 @@ const App = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
     </BrowserRouter>

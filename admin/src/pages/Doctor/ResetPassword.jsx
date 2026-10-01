@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {assets}from "../../assets/assets";
 
 const ResetPassword = () => {
-  const [searchParams] = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const resetToken = sessionStorage.getItem("resetToken") || "";
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,11 +14,11 @@ const ResetPassword = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   useEffect(() => {
-    if (!email) {
+    if (!resetToken) {
       toast.error("Invalid access. Please start over.");
       window.location.href = "/forgot-password";
     }
-  }, [email]);
+  }, [resetToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,14 +43,15 @@ const ResetPassword = () => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/auth/reset-password`,
-        { email, newPassword, confirmPassword }
+        { resetToken, newPassword, confirmPassword }
       );
       
       if (data.success) {
         toast.success(data.message);
+        sessionStorage.removeItem("resetToken");
         // Redirect to login page
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = "/";
         }, 2000);
       } else {
         toast.error(data.message);

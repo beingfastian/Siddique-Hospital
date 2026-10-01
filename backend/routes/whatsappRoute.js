@@ -1,20 +1,23 @@
 import express from "express";
-import { 
-  handleWhatsAppWebhook, 
-  sendWhatsAppNotification, 
+import twilio from "twilio";
+import {
+  handleWhatsAppWebhook,
   sendWhatsAppAppointmentReminder,
-  testWhatsApp 
+  testWhatsApp
 } from "../controllers/whatsappController.js";
-import authUser from "../middleware/authUser.js";
 import authAdmin from "../middleware/authAdmin.js";
 
 const whatsappRouter = express.Router();
 
-// Webhook for receiving WhatsApp messages (no auth needed for Twilio webhook)
-whatsappRouter.post("/webhook", handleWhatsAppWebhook);
-
-// Send WhatsApp notification (requires user auth)
-whatsappRouter.post("/send-notification", authUser, sendWhatsAppNotification);
+// Webhook for incoming WhatsApp messages. Only requests signed by Twilio
+// (X-Twilio-Signature, checked with TWILIO_AUTH_TOKEN) are accepted.
+// Set TWILIO_WEBHOOK_URL to the exact URL configured in the Twilio console
+// so the signature matches behind a proxy.
+whatsappRouter.post(
+  "/webhook",
+  twilio.webhook({ url: process.env.TWILIO_WEBHOOK_URL || undefined }),
+  handleWhatsAppWebhook
+);
 
 // Send WhatsApp reminder (requires admin auth)
 whatsappRouter.post("/send-reminder", authAdmin, sendWhatsAppAppointmentReminder);

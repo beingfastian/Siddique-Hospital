@@ -7,12 +7,17 @@ import appointmentModel from "../model/appointmentModel.js";
 import userModel from "../model/userModel.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
-import { 
-  sendUserAppointmentConfirmation, 
-  sendDoctorAppointmentNotification, 
-  sendAdminAppointmentNotification 
+import {
+  sendUserAppointmentConfirmation,
+  sendDoctorAppointmentNotification,
+  isEmailConfigured,
 } from "../config/emailService.js";
-import { sendWhatsAppConfirmation, sendDoctorWhatsAppConfirmation } from "../config/whatsappService.js";
+import {
+  sendWhatsAppConfirmation,
+  sendDoctorWhatsAppConfirmation,
+  isWhatsAppConfigured,
+} from "../config/whatsappService.js";
+import { isValidSlotDate, reserveSlot, releaseSlot } from "../utils/slots.js";
 
 // API for adding doctors
 const addDoctor = async (req, res) => {
@@ -61,6 +66,9 @@ const addDoctor = async (req, res) => {
         success: false,
         message: "Password should be at least 8 characters long",
       });
+    }
+    if (!imageFile) {
+      return res.json({ success: false, message: "Doctor image is required" });
     }
 
     // Check if doctor with email already exists
@@ -142,9 +150,9 @@ const updateDoctor = async (req, res) => {
     }
 
     // Check if email is taken by another doctor
-    const emailExists = await doctorModel.findOne({ 
-      email, 
-      _id: { $ne: doctorId } 
+    const emailExists = await doctorModel.findOne({
+      email,
+      _id: { $ne: doctorId }
     });
     if (emailExists) {
       return res.json({ success: false, message: "Email already taken by another doctor" });
@@ -172,24 +180,23 @@ const updateDoctor = async (req, res) => {
 
 const getAllLeaveRequests = async (req, res) => {
   try {
-    const leaveRequests = await leaveRequestModel.find({})
-      .populate('doctorId', 'name email speciality image') // Populate doctor info
-      .sort({ submittedAt: -1 });
+    const leaveRequests = await leaveRequestModel.find({}).sort({ submittedAt: -1 });
 
-    // If populate doesn't work (because doctorId is String), fetch doctor data manually
-    const requestsWithDoctorData = await Promise.all(
-      leaveRequests.map(async (request) => {
-        const doctor = await doctorModel.findById(request.doctorId).select('name email speciality image');
-        return {
-          ...request.toObject(),
-          doctorData: doctor
-        };
-      })
-    );
+    // doctorId is stored as a String, so load all referenced doctors in one query
+    const doctorIds = [...new Set(leaveRequests.map((r) => r.doctorId))];
+    const doctors = await doctorModel
+      .find({ _id: { $in: doctorIds } })
+      .select('name email speciality image');
+    const doctorsById = new Map(doctors.map((d) => [d._id.toString(), d]));
 
-    res.json({ 
-      success: true, 
-      leaveRequests: requestsWithDoctorData 
+    const requestsWithDoctorData = leaveRequests.map((request) => ({
+      ...request.toObject(),
+      doctorData: doctorsById.get(request.doctorId) || null
+    }));
+
+    res.json({
+      success: true,
+      leaveRequests: requestsWithDoctorData
     });
   } catch (error) {
     console.error(error);
@@ -201,31 +208,31 @@ const getAllLeaveRequests = async (req, res) => {
 const approveLeaveRequest = async (req, res) => {
   try {
     const { requestId, adminResponse } = req.body;
-    
+
     if (!requestId) {
       return res.json({ success: false, message: "Request ID is required" });
     }
-    
+
     const leaveRequest = await leaveRequestModel.findById(requestId);
-    
+
     if (!leaveRequest) {
       return res.json({ success: false, message: "Leave request not found" });
     }
-    
+
     if (leaveRequest.status !== 'pending') {
       return res.json({ success: false, message: "Leave request is not pending" });
     }
-    
+
     await leaveRequestModel.findByIdAndUpdate(requestId, {
       status: 'approved',
       adminResponse: adminResponse || 'Leave request approved',
       approvedBy: 'admin',
       approvedAt: new Date()
     });
-    
+
     // Get doctor info for notification
     const doctor = await doctorModel.findById(leaveRequest.doctorId);
-    
+
     // Create notification for doctor
     const notification = await createNotification(
       leaveRequest.doctorId,     // recipient
@@ -238,13 +245,13 @@ const approveLeaveRequest = async (req, res) => {
       'high',                    // priority
       requestId                  // relatedId
     );
-    
+
     // Emit notification via Socket.IO to doctor
     const io = req.app.get('io');
     if (io) {
       io.to(`doctor_${leaveRequest.doctorId}`).emit('newNotification', notification);
     }
-    
+
     res.json({ success: true, message: "Leave request approved successfully" });
   } catch (error) {
     console.error(error);
@@ -257,35 +264,35 @@ const approveLeaveRequest = async (req, res) => {
 const rejectLeaveRequest = async (req, res) => {
   try {
     const { requestId, adminResponse } = req.body;
-    
+
     if (!requestId) {
       return res.json({ success: false, message: "Request ID is required" });
     }
-    
+
     if (!adminResponse || adminResponse.trim() === '') {
       return res.json({ success: false, message: "Rejection reason is required" });
     }
-    
+
     const leaveRequest = await leaveRequestModel.findById(requestId);
-    
+
     if (!leaveRequest) {
       return res.json({ success: false, message: "Leave request not found" });
     }
-    
+
     if (leaveRequest.status !== 'pending') {
       return res.json({ success: false, message: "Leave request is not pending" });
     }
-    
+
     await leaveRequestModel.findByIdAndUpdate(requestId, {
       status: 'rejected',
       adminResponse,
       approvedBy: 'admin',
       approvedAt: new Date()
     });
-    
+
     // Get doctor info for notification
     const doctor = await doctorModel.findById(leaveRequest.doctorId);
-    
+
     // Create notification for doctor
     const notification = await createNotification(
       leaveRequest.doctorId,     // recipient
@@ -298,13 +305,13 @@ const rejectLeaveRequest = async (req, res) => {
       'high',                    // priority
       requestId                  // relatedId
     );
-    
+
     // Emit notification via Socket.IO to doctor
     const io = req.app.get('io');
     if (io) {
       io.to(`doctor_${leaveRequest.doctorId}`).emit('newNotification', notification);
     }
-    
+
     res.json({ success: true, message: "Leave request rejected successfully" });
   } catch (error) {
     console.error(error);
@@ -364,9 +371,9 @@ const deleteDoctor = async (req, res) => {
     });
 
     if (activeAppointments.length > 0) {
-      return res.json({ 
-        success: false, 
-        message: `Cannot delete doctor. There are ${activeAppointments.length} active appointments.` 
+      return res.json({
+        success: false,
+        message: `Cannot delete doctor. There are ${activeAppointments.length} active appointments.`
       });
     }
 
@@ -387,6 +394,7 @@ const addPatient = async (req, res) => {
       name,
       cnic,
       phone,
+      email,
       dob,
       gender,
       address,
@@ -394,23 +402,30 @@ const addPatient = async (req, res) => {
       whatsappNumber
     } = req.body;
     const imageFile = req.file;
-    
+    const patientEmail = (email || "").trim();
+
     // Validate required fields
     if (!name || !cnic || !phone || !dob || !address) {
       return res.json({ success: false, message: "Please fill all required fields" });
     }
-    
+
     // Validate CNIC
     if (!/^\d{13}$/.test(cnic)) {
       return res.json({ success: false, message: "CNIC must be exactly 13 digits" });
     }
-    
-    // Check if user already exists
-    const existingUser = await userModel.findOne({ $or: [{ cnic }, { phone }] });
-    if (existingUser) {
-      return res.json({ success: false, message: "Patient with this CNIC or phone already exists" });
+
+    if (patientEmail && !validator.isEmail(patientEmail)) {
+      return res.json({ success: false, message: "Please enter a valid email" });
     }
-    
+
+    // Check if user already exists
+    const existingUser = await userModel.findOne({
+      $or: [{ cnic }, { phone }, ...(patientEmail ? [{ email: patientEmail }] : [])]
+    });
+    if (existingUser) {
+      return res.json({ success: false, message: "Patient with this CNIC, phone or email already exists" });
+    }
+
     // Upload image if provided
     let imageUrl = null;
     if (imageFile) {
@@ -419,7 +434,7 @@ const addPatient = async (req, res) => {
       });
       imageUrl = imageUpload.secure_url;
     }
-    
+
     const patientData = {
       name,
       cnic,
@@ -429,12 +444,13 @@ const addPatient = async (req, res) => {
       address: JSON.parse(address),
       whatsappEnabled: whatsappEnabled === 'true' || whatsappEnabled === true,
       whatsappNumber: whatsappNumber || phone,
+      ...(patientEmail && { email: patientEmail }),
       ...(imageUrl && { image: imageUrl })
     };
-    
+
     const newPatient = new userModel(patientData);
     await newPatient.save();
-    
+
     // Create notification for admin
     const notification = await createNotification(
       'admin',                    // recipient
@@ -447,13 +463,13 @@ const addPatient = async (req, res) => {
       'medium',                  // priority
       newPatient._id.toString()  // relatedId
     );
-    
+
     // Emit notification via Socket.IO to admin
     const io = req.app.get('io');
     if (io) {
       io.to('admin').emit('newNotification', notification);
     }
-    
+
     res.json({ success: true, message: "Patient added successfully" });
   } catch (error) {
     console.error(error);
@@ -489,11 +505,13 @@ const updatePatient = async (req, res) => {
     } = req.body;
 
     // Validate input
-    if (!name || !email || !phone || !dob || !gender) {
+    if (!name || !phone || !dob || !gender) {
       return res.json({ success: false, message: "Please fill all required fields" });
     }
 
-    if (!validator.isEmail(email)) {
+    // Email is optional (patients added by admin usually have none)
+    const trimmedEmail = (email || "").trim();
+    if (trimmedEmail && !validator.isEmail(trimmedEmail)) {
       return res.json({ success: false, message: "Please enter a valid email" });
     }
 
@@ -504,18 +522,21 @@ const updatePatient = async (req, res) => {
     }
 
     // Check if email is taken by another patient
-    const emailExists = await userModel.findOne({ 
-      email, 
-      _id: { $ne: patientId } 
-    });
-    if (emailExists) {
-      return res.json({ success: false, message: "Email already taken by another patient" });
+    if (trimmedEmail) {
+      const emailExists = await userModel.findOne({
+        email: trimmedEmail,
+        _id: { $ne: patientId }
+      });
+      if (emailExists) {
+        return res.json({ success: false, message: "Email already taken by another patient" });
+      }
     }
 
-    // Update patient
+    // Update patient. An empty email is removed rather than stored as "",
+    // because the unique index would treat "" as a duplicate value.
     await userModel.findByIdAndUpdate(patientId, {
+      ...(trimmedEmail ? { email: trimmedEmail } : { $unset: { email: 1 } }),
       name,
-      email,
       phone,
       dob,
       gender,
@@ -542,7 +563,15 @@ const deletePatient = async (req, res) => {
       return res.json({ success: false, message: "Patient not found" });
     }
 
-    // Delete all appointments for this patient
+    // Free the slots of upcoming appointments, then delete all appointments for this patient
+    const activeAppointments = await appointmentModel.find({
+      userId: patientId,
+      cancelled: false,
+      isCompleted: false
+    });
+    for (const apt of activeAppointments) {
+      await releaseSlot(apt.docId, apt.slotDate, apt.slotTime);
+    }
     await appointmentModel.deleteMany({ userId: patientId });
 
     // Delete patient
@@ -571,7 +600,9 @@ const bookAppointmentForPatient = async (req, res) => {
       finalFee
     } = req.body;
 
-    console.log('🔄 Admin booking appointment:', { patientSelectionMode, docId, slotDate, slotTime });
+    if (!docId || !isValidSlotDate(slotDate) || !slotTime) {
+      return res.json({ success: false, message: "Please select a doctor, date and time slot" });
+    }
 
     let patientId = selectedPatientId;
     let userData;
@@ -579,6 +610,10 @@ const bookAppointmentForPatient = async (req, res) => {
     // Handle new patient creation
     if (patientSelectionMode === "new") {
       const { name, phone, cnic, dob, gender, address, whatsappEnabled, whatsappNumber } = newPatientData;
+      const patientEmail = (newPatientData.email || "").trim();
+      if (patientEmail && !validator.isEmail(patientEmail)) {
+        return res.json({ success: false, message: "Please enter a valid email" });
+      }
 
       if (!name || !phone || !cnic || !dob || !address?.line1) {
         return res.json({ success: false, message: "Please fill all required patient fields" });
@@ -589,12 +624,15 @@ const bookAppointmentForPatient = async (req, res) => {
       }
 
       // Check for existing patient
-      const existingUser = await userModel.findOne({ $or: [{ cnic }, { phone }] });
+      const existingUser = await userModel.findOne({
+        $or: [{ cnic }, { phone }, ...(patientEmail ? [{ email: patientEmail }] : [])]
+      });
       if (existingUser) {
-        return res.json({ success: false, message: "Patient with this CNIC or phone already exists" });
+        return res.json({ success: false, message: "Patient with this CNIC, phone or email already exists" });
       }
 
       const patientData = {
+        ...(patientEmail && { email: patientEmail }),
         name,
         cnic,
         phone,
@@ -624,7 +662,7 @@ const bookAppointmentForPatient = async (req, res) => {
     if (!docData) {
       return res.json({ success: false, message: "Doctor not found" });
     }
-    
+
     if (!docData.available) {
       return res.json({
         success: false,
@@ -634,20 +672,18 @@ const bookAppointmentForPatient = async (req, res) => {
 
     console.log('✅ Doctor found:', docData.name);
 
-    // Check slot availability
-    let slots_booked = docData.slots_booked;
-    if (slots_booked[slotDate]) {
-      if (slots_booked[slotDate].includes(slotTime)) {
-        return res.json({
-          success: false,
-          message: "Selected time slot is not available",
-        });
-      } else {
-        slots_booked[slotDate].push(slotTime);
-      }
-    } else {
-      slots_booked[slotDate] = [slotTime];
+    // Reserve the slot atomically so two bookings can't take the same slot
+    const reserved = await reserveSlot(docId, slotDate, slotTime);
+    if (!reserved) {
+      return res.json({
+        success: false,
+        message: "Selected time slot is not available",
+      });
     }
+
+    // Snapshot of the doctor without the booking map
+    const docSnapshot = docData.toObject();
+    delete docSnapshot.slots_booked;
 
     // Create appointment
     const appointmentData = {
@@ -656,7 +692,7 @@ const bookAppointmentForPatient = async (req, res) => {
       slotDate,
       slotTime,
       userData: userData.toObject ? userData.toObject() : userData,
-      docData: docData.toObject(),
+      docData: docSnapshot,
       amount: finalFee || docData.fee,
       date: new Date().getTime(),
       ...(discountPercent && { discountPercent }),
@@ -664,11 +700,12 @@ const bookAppointmentForPatient = async (req, res) => {
     };
 
     const newAppointment = new appointmentModel(appointmentData);
-    await newAppointment.save();
-    console.log('✅ Appointment created:', newAppointment._id);
-
-    // Update doctor's booked slots
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    try {
+      await newAppointment.save();
+    } catch (saveError) {
+      await releaseSlot(docId, slotDate, slotTime);
+      throw saveError;
+    }
 
     // Initialize notification results
     let whatsappResults = {
@@ -681,12 +718,12 @@ const bookAppointmentForPatient = async (req, res) => {
     // Send notifications
     try {
       console.log('🔄 Starting notification process...');
-      
+
       // Patient WhatsApp notification
       const patientPhone = userData.whatsappNumber || userData.phone;
       if (userData.whatsappEnabled && patientPhone) {
         console.log('📱 Sending WhatsApp to patient:', patientPhone);
-        
+
         try {
           const patientWhatsAppResult = await sendWhatsAppConfirmation(
             patientPhone,
@@ -698,7 +735,7 @@ const bookAppointmentForPatient = async (req, res) => {
             finalFee || docData.fee,
             newAppointment._id.toString()
           );
-          
+
           if (patientWhatsAppResult.success) {
             console.log('✅ Patient WhatsApp sent:', patientWhatsAppResult.messageId);
             whatsappResults.patientSent = true;
@@ -718,7 +755,7 @@ const bookAppointmentForPatient = async (req, res) => {
       const doctorPhone = docData.whatsappNumber || docData.phone;
       if (docData.whatsappEnabled && doctorPhone) {
         console.log('📱 Sending WhatsApp to doctor:', doctorPhone);
-        
+
         try {
           const doctorWhatsAppResult = await sendDoctorWhatsAppConfirmation(
             doctorPhone,
@@ -730,7 +767,7 @@ const bookAppointmentForPatient = async (req, res) => {
             finalFee || docData.fee,
             newAppointment._id.toString()
           );
-          
+
           if (doctorWhatsAppResult.success) {
             console.log('✅ Doctor WhatsApp sent:', doctorWhatsAppResult.messageId);
             whatsappResults.doctorSent = true;
@@ -788,8 +825,8 @@ const bookAppointmentForPatient = async (req, res) => {
     }
 
     // Prepare response with detailed notification status
-    const successMessage = patientSelectionMode === "new" 
-      ? "New patient created and appointment booked successfully" 
+    const successMessage = patientSelectionMode === "new"
+      ? "New patient created and appointment booked successfully"
       : "Appointment booked successfully";
 
     const response = {
@@ -824,8 +861,8 @@ const bookAppointmentForPatient = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Booking error:', error);
-    res.json({ 
-      success: false, 
+    res.json({
+      success: false,
       message: error.message,
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
@@ -840,7 +877,11 @@ const loginAdmin = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-      const token = jwt.sign(email + password, process.env.JWT_SECRET);
+      const token = jwt.sign(
+        { role: "admin" },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
+      );
       res.json({
         success: true,
         message: "Admin Logged in Successfully",
@@ -890,6 +931,9 @@ const appointmentCancel = async (req, res) => {
     if (!appointmentData) {
       return res.json({ success: false, message: "Appointment not found" });
     }
+    if (appointmentData.cancelled) {
+      return res.json({ success: false, message: "Appointment is already cancelled" });
+    }
 
     await appointmentModel.findByIdAndUpdate(appointmentId, {
       cancelled: true,
@@ -897,13 +941,7 @@ const appointmentCancel = async (req, res) => {
 
     // Release doctor's slot
     const { docId, slotDate, slotTime } = appointmentData;
-    const doctorData = await doctorModel.findById(docId);
-
-    let slots_booked = doctorData.slots_booked;
-    slots_booked[slotDate] = slots_booked[slotDate].filter(
-      (e) => e !== slotTime
-    );
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    await releaseSlot(docId, slotDate, slotTime);
 
     res.json({ success: true, message: "Appointment Cancelled" });
   } catch (error) {
@@ -916,16 +954,16 @@ const appointmentCancel = async (req, res) => {
 const getWhatsAppStats = async (req, res) => {
   try {
     const enabledUsers = await userModel.countDocuments({ whatsappEnabled: true });
-    
+
     // Get today's appointments with WhatsApp enabled users
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
     const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-    
+
     const todayAppointments = await appointmentModel.find({
       date: { $gte: startOfDay.getTime(), $lte: endOfDay.getTime() }
     });
-    
+
     const todayNotifications = todayAppointments.filter(
       apt => apt.userData?.whatsappEnabled
     ).length;
@@ -943,19 +981,28 @@ const getWhatsAppStats = async (req, res) => {
   }
 };
 
+// API to report which notification services are configured
+const getSystemStatus = async (req, res) => {
+  res.json({
+    success: true,
+    status: {
+      whatsappConfigured: isWhatsAppConfigured(),
+      emailConfigured: isEmailConfigured(),
+    },
+  });
+};
+
 // API to get dashboard data for admin panel
 const adminDashboard = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({});
-    const users = await userModel.find({});
-    const appointments = await appointmentModel.find({});
+    const [doctors, patients, appointments, latestAppointments] = await Promise.all([
+      doctorModel.countDocuments({}),
+      userModel.countDocuments({}),
+      appointmentModel.countDocuments({}),
+      appointmentModel.find({}).sort({ date: -1 }).limit(5),
+    ]);
 
-    const dashData = {
-      doctors: doctors.length,
-      patients: users.length,
-      appointments: appointments.length,
-      latestAppointments: appointments.reverse().slice(0, 5),
-    };
+    const dashData = { doctors, patients, appointments, latestAppointments };
     res.json({ success: true, dashData });
   } catch (error) {
     console.error(error);
@@ -983,4 +1030,5 @@ export {
   approveLeaveRequest,
   rejectLeaveRequest,
   getLeaveStats,
+  getSystemStatus,
 };

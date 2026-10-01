@@ -65,8 +65,9 @@ const VerifyOTP = () => {
       
       if (data.success) {
         toast.success(data.message);
-        // Redirect to reset password page
-        window.location.href = `/reset-password?email=${encodeURIComponent(email)}`;
+        // The reset token proves the OTP was verified; it expires in 10 minutes
+        sessionStorage.setItem("resetToken", data.resetToken);
+        window.location.href = "/reset-password";
       } else {
         toast.error(data.message);
       }

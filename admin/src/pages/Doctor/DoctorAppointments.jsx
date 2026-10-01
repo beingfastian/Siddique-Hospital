@@ -43,7 +43,7 @@ const DoctorAppointments = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 mb-4">All Appointments</h1>
         

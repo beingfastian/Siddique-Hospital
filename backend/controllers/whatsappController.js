@@ -1,19 +1,9 @@
 import twilio from 'twilio';
 import appointmentModel from "../model/appointmentModel.js";
 import userModel from "../model/userModel.js";
-import doctorModel from "../model/doctorModel.js";
 import { sendWhatsAppConfirmation, sendWhatsAppReminder } from "../config/whatsappService.js";
-
-// Format date for display
-const formatDisplayDate = (dateString) => {
-  const date = new Date(dateString.replace(/_/g, '/'));
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
+import { formatSlotDate as formatDisplayDate, releaseSlot } from "../utils/slots.js";
+import { HOSPITAL_PHONE } from "../config/hospital.js";
 
 // Handle incoming WhatsApp messages
 export const handleWhatsAppWebhook = async (req, res) => {
@@ -43,10 +33,8 @@ export const handleWhatsAppWebhook = async (req, res) => {
       responseMessage = `
 *Welcome to Siddique Hospital! 🏥*
 
-We couldn't find your account with this number. Please:
-1. Register on our website: siddiquehospital.com
-2. Enable WhatsApp notifications in your profile
-3. Or contact us at +923348400517
+We couldn't find your account with this number.
+Please contact us at ${HOSPITAL_PHONE} to register or book an appointment.
 
 Thank you for choosing Siddique Hospital!
       `;
@@ -82,8 +70,8 @@ You currently have no appointments.
 
 To book an appointment:
 🌐 Visit: siddiquehospital.com
-📞 Call: +923348400517
-💬 WhatsApp: +923348400517
+📞 Call: ${HOSPITAL_PHONE}
+💬 WhatsApp: ${HOSPITAL_PHONE}
 
 Reply *HELP* for more options.
               `;
@@ -108,15 +96,7 @@ Reply *HELP* for more options.
                 cancelled: true
               });
               
-              // Release doctor slot
-              const doctor = await doctorModel.findById(appointment.docId);
-              if (doctor && doctor.slots_booked[appointment.slotDate]) {
-                doctor.slots_booked[appointment.slotDate] = 
-                  doctor.slots_booked[appointment.slotDate].filter(
-                    time => time !== appointment.slotTime
-                  );
-                await doctor.save();
-              }
+              await releaseSlot(appointment.docId, appointment.slotDate, appointment.slotTime);
               
               responseMessage = `
 *Appointment Cancelled Successfully ❌*
@@ -128,7 +108,7 @@ Details:
 
 To book a new appointment:
 🌐 Visit: siddiquehospital.com
-📞 Call: +923348400517
+📞 Call: ${HOSPITAL_PHONE}
 
 Thank you!
               `;
@@ -140,7 +120,7 @@ You don't have any upcoming appointments to cancel.
 
 To book a new appointment:
 🌐 Visit: siddiquehospital.com
-📞 Call: +923348400517
+📞 Call: ${HOSPITAL_PHONE}
 
 Reply *HELP* for more options.
               `;
@@ -159,8 +139,8 @@ Reply *HELP* for more options.
 To book an appointment with our doctors:
 
 🌐 *Website:* siddiquehospital.com
-📞 *Call:* +923348400517  
-💬 *WhatsApp:* +923348400517
+📞 *Call:* ${HOSPITAL_PHONE}  
+💬 *WhatsApp:* ${HOSPITAL_PHONE}
 
 *Our Specialties:*
 • General Medicine
@@ -183,8 +163,8 @@ We're here to help! 🏥
 Civil Lines, Lahore-Sargodha Road
 Sheikhupura, Pakistan
 
-📞 *Phone:* +923348400517
-💬 *WhatsApp:* +923348400517
+📞 *Phone:* ${HOSPITAL_PHONE}
+💬 *WhatsApp:* ${HOSPITAL_PHONE}
 📧 *Email:* Siddiquehospital@gmail.com
 
 🌐 *Website:* siddiquehospital.com
@@ -212,7 +192,7 @@ We're here 24/7 for emergencies! 🚑
 
 *Quick Actions:*
 🌐 Book Online: siddiquehospital.com
-📞 Call Direct: +923348400517
+📞 Call Direct: ${HOSPITAL_PHONE}
 
 How can we help you today?
           `;
@@ -234,40 +214,10 @@ How can we help you today?
     // Send error response
     const MessagingResponse = twilio.twiml.MessagingResponse;
     const twiml = new MessagingResponse();
-    twiml.message('Sorry, there was an error processing your request. Please try again later or contact us directly at +923348400517.');
+    twiml.message(`Sorry, there was an error processing your request. Please try again later or contact us directly at ${HOSPITAL_PHONE}.`);
     
     res.writeHead(200, { 'Content-Type': 'text/xml' });
     res.end(twiml.toString());
-  }
-};
-
-// Send WhatsApp notification for new appointment
-export const sendWhatsAppNotification = async (req, res) => {
-  try {
-    const { phoneNumber, appointmentDetails } = req.body;
-    
-    if (!phoneNumber || !appointmentDetails) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Phone number and appointment details are required' 
-      });
-    }
-    
-    const result = await sendWhatsAppConfirmation(
-      phoneNumber,
-      appointmentDetails.userName,
-      appointmentDetails.doctorName,
-      appointmentDetails.doctorSpeciality,
-      appointmentDetails.date,
-      appointmentDetails.time,
-      appointmentDetails.fee,
-      appointmentDetails.appointmentId
-    );
-    
-    res.json(result);
-  } catch (error) {
-    console.error('Send notification error:', error);
-    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -301,7 +251,10 @@ export const sendWhatsAppAppointmentReminder = async (req, res) => {
 // Test WhatsApp connection
 export const testWhatsApp = async (req, res) => {
   try {
-    const testNumber = process.env.TEST_WHATSAPP_NUMBER || "+923348400517";
+    const testNumber = process.env.TEST_WHATSAPP_NUMBER;
+    if (!testNumber) {
+      return res.json({ success: false, message: "Set TEST_WHATSAPP_NUMBER in the backend .env" });
+    }
     
     const result = await sendWhatsAppConfirmation(
       testNumber,

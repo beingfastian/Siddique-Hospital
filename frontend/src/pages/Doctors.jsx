@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext.jsx";
 import { FaWhatsapp } from "react-icons/fa";
+import { HOSPITAL_PHONE } from "../config";
 
 const Doctors = () => {
   const { speciality } = useParams();
@@ -10,7 +11,7 @@ const Doctors = () => {
   const { doctors } = useContext(AppContext);
 
   // WhatsApp contact details
-  const whatsappNumber = "+923348400517"; // Replace with your hospital's WhatsApp number
+  const whatsappNumber = HOSPITAL_PHONE;
 
   const applyFilter = () => {
     if (speciality) {

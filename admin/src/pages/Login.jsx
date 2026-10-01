@@ -7,8 +7,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { DoctorContext } from "../context/DoctorContext";
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const Login = () => {
   const [state, setState] = useState("Admin");
   const [loading, setLoading] = useState(false);
@@ -33,7 +31,6 @@ const Login = () => {
         });
         if (data.success) {
           localStorage.setItem("aToken", data.token);
-          await sleep(2000);
           toast.success(data.message);
           setAToken(data.token);
         } else {
@@ -47,7 +44,6 @@ const Login = () => {
         if (data.success) {
           localStorage.setItem("dToken", data.token);
           navigate("/doctor");
-          await sleep(2000);
           setDToken(data.token);
         } else {
           toast.error(data.message);

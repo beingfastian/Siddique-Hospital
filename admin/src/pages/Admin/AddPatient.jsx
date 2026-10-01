@@ -2,13 +2,14 @@ import React, { useContext, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { FaWhatsapp, FaUser, FaIdCard, FaPhone, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
+import { FaWhatsapp, FaUser, FaIdCard, FaPhone, FaCalendarAlt, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
 
 const AddPatient = () => {
   const [patientImage, setPatientImage] = useState(false);
   const [name, setName] = useState("");
   const [cnic, setCnic] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("Male");
   const [address1, setAddress1] = useState("");
@@ -57,6 +58,7 @@ const AddPatient = () => {
       formData.append("name", name);
       formData.append("cnic", cnic);
       formData.append("phone", phone);
+      formData.append("email", email.trim());
       formData.append("dob", dob);
       formData.append("gender", gender);
       formData.append("address", JSON.stringify({ line1: address1, line2: address2 }));
@@ -72,7 +74,7 @@ const AddPatient = () => {
       if (data.success) {
         toast.success(data.message);
         // Reset form
-        setName(""); setCnic(""); setPhone(""); setDob(""); setGender("Male");
+        setName(""); setCnic(""); setPhone(""); setEmail(""); setDob(""); setGender("Male");
         setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");
         setPatientImage(false);
       } else {
@@ -87,7 +89,7 @@ const AddPatient = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Add New Patient</h1>
         <p className="text-gray-600">Register a new patient with complete information</p>
@@ -190,6 +192,20 @@ const AddPatient = () => {
                         placeholder="03001234567"
                         className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                         required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email (optional)</label>
+                    <div className="relative">
+                      <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="patient@example.com"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -315,7 +331,7 @@ const AddPatient = () => {
                 type="button"
                 onClick={() => {
                   if (window.confirm("Reset all fields? This cannot be undone.")) {
-                    setName(""); setCnic(""); setPhone(""); setDob(""); setGender("Male");
+                    setName(""); setCnic(""); setPhone(""); setEmail(""); setDob(""); setGender("Male");
                     setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");
                     setPatientImage(false);
                   }

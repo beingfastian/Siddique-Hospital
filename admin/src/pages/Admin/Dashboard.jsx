@@ -36,7 +36,7 @@ const Dashboard = () => {
 
   if (!dashData) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
         <div className="animate-pulse">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map((i) => (
@@ -54,21 +54,21 @@ const Dashboard = () => {
       title: "Total Doctors",
       value: dashData.doctors,
       icon: <FaUserMd className="text-2xl" />,
-      color: "from-blue-500 to-blue-600",
+      color: "text-blue-600",
       bgColor: "bg-blue-100"
     },
     {
       title: "Total Appointments",
       value: dashData.appointments,
       icon: <FaCalendarCheck className="text-2xl" />,
-      color: "from-indigo-500 to-indigo-600", 
+      color: "text-indigo-600",
       bgColor: "bg-indigo-100"
     },
     {
       title: "Total Patients",
       value: dashData.patients,
       icon: <FaUsers className="text-2xl" />,
-      color: "from-purple-500 to-purple-600",
+      color: "text-purple-600",
       bgColor: "bg-purple-100"
     },
     {
@@ -76,13 +76,13 @@ const Dashboard = () => {
       value: whatsappStats.enabledUsers,
       subtitle: `${whatsappStats.todayNotifications} sent today`,
       icon: <FaWhatsapp className="text-2xl" />,
-      color: "from-green-500 to-green-600",
+      color: "text-green-600",
       bgColor: "bg-green-100"
     }
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Admin Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's what's happening with your healthcare system today.</p>
@@ -104,7 +104,7 @@ const Dashboard = () => {
                 )}
               </div>
               <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center`}>
-                <div className={`bg-gradient-to-r ${card.color} bg-clip-text text-transparent`}>
+                <div className={card.color}>
                   {card.icon}
                 </div>
               </div>

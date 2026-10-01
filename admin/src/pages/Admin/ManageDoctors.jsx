@@ -125,7 +125,7 @@ const ManageDoctors = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -181,7 +181,7 @@ const ManageDoctors = () => {
 
       {/* Doctors Table */}
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[65vh] overflow-auto">
           {/* Desktop View */}
           <div className="hidden lg:block">
             <table className="w-full">

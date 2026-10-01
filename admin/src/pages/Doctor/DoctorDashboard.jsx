@@ -22,7 +22,7 @@ const DoctorDashboard = () => {
   
   return (
     dashData && (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">

@@ -55,8 +55,8 @@ const BookAppointmentForPatient = () => {
     if (patientSearchTerm) {
       const filtered = patients.filter(patient => 
         patient.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        patient.email.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        patient.phone.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
+        (patient.email || "").toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
+        (patient.phone || "").toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
         (patient.cnic && patient.cnic.includes(patientSearchTerm))
       );
       setFilteredPatients(filtered);
@@ -72,10 +72,9 @@ const BookAppointmentForPatient = () => {
     const endDate = new Date(year, month + 1, 0);
     const today = new Date();
     
-    let currentDate = startDate.getDate() === today.getDate() && 
-                     startDate.getMonth() === today.getMonth() && 
-                     startDate.getFullYear() === today.getFullYear() 
-                     ? today : startDate;
+    // Never offer days before today
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let currentDate = startDate < startOfToday ? startOfToday : startDate;
     const slots = [];
     
     for (let date = new Date(currentDate); date <= endDate; date.setDate(date.getDate() + 1)) {
@@ -107,7 +106,7 @@ const BookAppointmentForPatient = () => {
       let tempTime = new Date(startTime);
       
       while (tempTime < endTime) {
-        let formattedTime = tempTime.toLocaleTimeString([], {
+        let formattedTime = tempTime.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
           hour12: true,
@@ -297,7 +296,7 @@ const BookAppointmentForPatient = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
