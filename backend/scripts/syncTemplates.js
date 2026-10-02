@@ -39,5 +39,12 @@ try {
   console.log("Run this command again to check. Messages using a template only send once it is APPROVED.");
 } catch (error) {
   console.error("Template sync failed:", error.message);
-  process.exit(1);
+  if (/sandbox/i.test(error.message)) {
+    console.error("\nThis is a Kapso sandbox number, which can't use templates.");
+    console.error("Connect a real number in Kapso (Phone numbers -> Instant setup, or your own SIM),");
+    console.error("then put its WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_BUSINESS_ACCOUNT_ID in backend/.env.");
+  }
+  // exitCode instead of process.exit(): exiting while network handles are
+  // closing crashes Node on Windows ("Assertion failed ... async.c")
+  process.exitCode = 1;
 }
