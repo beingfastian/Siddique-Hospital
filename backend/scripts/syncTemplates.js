@@ -40,8 +40,7 @@ try {
 } catch (error) {
   console.error("Template sync failed:", error.message);
   if (/sandbox/i.test(error.message)) {
-    console.error("
-This is a Kapso sandbox number, which can't use templates.");
+    console.error("\nThis is a Kapso sandbox number, which can't use templates.");
     console.error("Connect a real number in Kapso (Phone numbers -> Instant setup, or your own SIM),");
     console.error("then put its WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_BUSINESS_ACCOUNT_ID in backend/.env.");
   }
