@@ -5,6 +5,8 @@ import appointmentModel from "../model/appointmentModel.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
 import { releaseSlot } from "../utils/slots.js";
+import userModel from "../model/userModel.js";
+import { sendWhatsAppCancellation } from "../config/whatsappService.js";
 
 const changeAvailabilities = async (req, res) => {
   try {
@@ -134,6 +136,20 @@ const appointmentCancel = async (req, res) => {
         cancelled: true,
       });
       await releaseSlot(docId, appointmentData.slotDate, appointmentData.slotTime);
+
+      // Tell the patient (if they agreed to WhatsApp messages)
+      const patient = await userModel.findById(appointmentData.userId).select("name whatsappEnabled whatsappNumber phone");
+      if (patient?.whatsappEnabled) {
+        await sendWhatsAppCancellation(
+          patient.whatsappNumber || patient.phone,
+          patient.name,
+          req.doctor?.name || appointmentData.docData?.name,
+          appointmentData.slotDate,
+          appointmentData.slotTime,
+          "your doctor"
+        );
+      }
+
       return res.json({
         success: true,
         message: "Appointment Cancelled",

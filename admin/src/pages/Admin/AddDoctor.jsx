@@ -467,7 +467,7 @@ const AddDoctor = () => {
                         <FaWhatsapp className="text-green-500" />
                         <div>
                           <p className="font-medium text-gray-700 text-sm">WhatsApp Notifications</p>
-                          <p className="text-xs text-gray-500">Enable for appointment updates</p>
+                          <p className="text-xs text-gray-500">Only turn on if the doctor agreed to receive appointment messages on WhatsApp</p>
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">

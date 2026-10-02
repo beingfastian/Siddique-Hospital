@@ -15,6 +15,11 @@ const appointmentSchema = new mongoose.Schema({
   discountPercent: { type: Number, default: 0 }, // Discount applied (if any)
   finalFee: { type: Number }, // Final fee after discount (if any)
   cnic: { type: String }, // Patient CNIC (for admin bookings)
+  // When WhatsApp reminders were sent (or skipped), so each is sent only once
+  reminders: {
+    dayBefore: { type: Date },
+    beforeStart: { type: Date },
+  },
   // ...add more admin-specific fields as needed...
 });
 

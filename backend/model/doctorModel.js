@@ -18,6 +18,7 @@ const doctorSchema = new mongoose.Schema(
     // --- New fields for admin/doctor ---
     whatsappEnabled: { type: Boolean, default: false },
     whatsappNumber: { type: String, default: "" },
+    whatsappConsentAt: { type: Date }, // When the doctor agreed to WhatsApp messages
     timings: {
       start: { type: String, default: "09:00" },
       end: { type: String, default: "17:00" },
