@@ -527,7 +527,7 @@ const BookAppointmentForPatient = () => {
                     <FaWhatsapp className="text-green-500 text-xl" />
                     <div>
                       <p className="font-medium text-gray-700">WhatsApp Notifications</p>
-                      <p className="text-sm text-gray-500">Send appointment confirmations via WhatsApp</p>
+                      <p className="text-sm text-gray-500">Only turn on if the patient agreed to receive confirmations and reminders on WhatsApp</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">

@@ -26,6 +26,31 @@ export const formatSlotDate = (slotDate) => {
   });
 };
 
+// Minutes the hospital's local time is ahead of UTC (Pakistan: +5h, no daylight saving).
+// Slot dates and times are entered in hospital time, but servers often run in UTC.
+export const HOSPITAL_UTC_OFFSET_MINUTES = Number(process.env.HOSPITAL_UTC_OFFSET_MINUTES ?? 300);
+
+// The exact moment of an appointment, from "d_m_yyyy" + "hh:mm AM/PM" in hospital time.
+export const slotToDate = (slotDate, slotTime) => {
+  const date = SLOT_DATE_PATTERN.exec(slotDate || "");
+  const time = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])?$/.exec((slotTime || "").trim());
+  if (!date || !time) return null;
+  const [, day, month, year] = date.map(Number);
+  let hours = Number(time[1]);
+  const minutes = Number(time[2]);
+  const meridiem = time[3]?.toUpperCase();
+  if (meridiem === "PM" && hours < 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
+  const utcMs = Date.UTC(year, month - 1, day, hours, minutes) - HOSPITAL_UTC_OFFSET_MINUTES * 60000;
+  return new Date(utcMs);
+};
+
+// "d_m_yyyy" for a moment, as a date in hospital time (daysAhead: 0 = today, 1 = tomorrow)
+export const hospitalSlotDate = (moment = new Date(), daysAhead = 0) => {
+  const local = new Date(moment.getTime() + HOSPITAL_UTC_OFFSET_MINUTES * 60000 + daysAhead * 86400000);
+  return `${local.getUTCDate()}_${local.getUTCMonth() + 1}_${local.getUTCFullYear()}`;
+};
+
 // Atomically reserve a slot. Returns false if it is already booked,
 // so two simultaneous bookings can't both succeed.
 export const reserveSlot = async (docId, slotDate, slotTime) => {

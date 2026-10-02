@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AdminContext } from '../../context/AdminContext';
-import { FaWhatsapp, FaEnvelope, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaWhatsapp, FaEnvelope, FaCheck, FaTimes, FaClock, FaFileAlt } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+
+const providerLabels = { kapso: "Kapso", meta: "Meta Cloud API", twilio: "Twilio" };
+const templateBadge = {
+  APPROVED: "bg-green-100 text-green-700",
+  PENDING: "bg-yellow-100 text-yellow-700",
+  REJECTED: "bg-red-100 text-red-700",
+  MISSING: "bg-gray-100 text-gray-600",
+};
 
 // Shows which notification services the backend has credentials for.
 // Services are configured through backend environment variables (see backend/.env.example).
@@ -95,7 +103,7 @@ const Settings = () => {
         <SettingCard
           icon={<FaWhatsapp className="text-2xl text-green-500" />}
           title="WhatsApp Notifications"
-          description="Appointment confirmations via Twilio WhatsApp"
+          description={`Confirmations, reminders and cancellations${status?.whatsappProvider ? ` via ${providerLabels[status.whatsappProvider] || status.whatsappProvider}` : ""}`}
           configured={status?.whatsappConfigured}
         >
           {status?.whatsappConfigured ? (
@@ -115,11 +123,64 @@ const Settings = () => {
             </button>
           ) : (
             <p className="text-sm text-yellow-800 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              Set the TWILIO_* variables in the backend environment to enable WhatsApp messages.
+              Set WHATSAPP_PROVIDER and its keys in the backend .env (see .env.example) to enable WhatsApp messages.
               Bookings still work without them.
             </p>
           )}
         </SettingCard>
+
+        {status?.whatsappConfigured && (
+          <SettingCard
+            icon={<FaClock className="text-2xl text-amber-500" />}
+            title="Automatic Reminders"
+            description="Sent on WhatsApp before each appointment"
+            configured={status.remindersEnabled}
+          >
+            {status.remindersEnabled ? (
+              <ul className="text-sm text-gray-600 space-y-1">
+                {status.reminderDayBeforeAt && (
+                  <li>Patient: the evening before at <strong>{status.reminderDayBeforeAt}</strong></li>
+                )}
+                {status.reminderMinutesBefore > 0 && (
+                  <li>Patient and doctor: <strong>{status.reminderMinutesBefore} minutes</strong> before</li>
+                )}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-600">Turned off (REMINDERS_ENABLED=false).</p>
+            )}
+            <p className="text-xs text-gray-400 mt-3">Change the timings in the backend .env.</p>
+          </SettingCard>
+        )}
+
+        {(status?.templates || status?.templatesError) && (
+          <SettingCard
+            icon={<FaFileAlt className="text-2xl text-indigo-500" />}
+            title="WhatsApp Templates"
+            description="Message formats reviewed by Meta"
+            configured={status.templates?.every((t) => t.status === "APPROVED")}
+          >
+            {status.templatesError ? (
+              <p className="text-sm text-red-700">Could not load templates: {status.templatesError}</p>
+            ) : (
+              <>
+                <ul className="divide-y divide-gray-100">
+                  {status.templates.map((t) => (
+                    <li key={t.name} className="flex items-center justify-between py-2 text-sm">
+                      <span className="font-mono text-gray-700">{t.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${templateBadge[t.status] || templateBadge.MISSING}`}>
+                        {t.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-400 mt-3">
+                  Run <code>npm run templates:sync</code> in the backend to submit missing templates.
+                  Messages using a template send only once it is APPROVED.
+                </p>
+              </>
+            )}
+          </SettingCard>
+        )}
 
         <SettingCard
           icon={<FaEnvelope className="text-2xl text-blue-500" />}

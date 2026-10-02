@@ -12,6 +12,8 @@ import whatsappRouter from "./routes/whatsappRoute.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { testEmailConnection } from "./config/emailService.js";
+import { getWhatsAppProvider } from "./config/whatsappService.js";
+import { startReminderScheduler } from "./jobs/reminders.js";
 
 // Fail fast with a clear message if required configuration is missing
 const requiredEnv = ["MONGODB_URI", "JWT_SECRET", "ADMIN_EMAIL", "ADMIN_PASSWORD"];
@@ -45,7 +47,8 @@ testEmailConnection();
 
 // Middlewares
 app.use(cors(corsOptions));
-app.use(express.json());
+// Keep the raw body: webhook signatures (Kapso) are computed over the exact bytes
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true }));
 
 // Make io accessible to routes
@@ -90,4 +93,8 @@ app.use((err, req, res, next) => {
   res.status(err.status || 400).json({ success: false, message: err.message || "Request failed" });
 });
 
-server.listen(port, () => console.log("Server Started on port", port));
+server.listen(port, () => {
+  console.log("Server Started on port", port);
+  console.log("WhatsApp provider:", getWhatsAppProvider() || "not configured");
+  startReminderScheduler();
+});

@@ -15,8 +15,11 @@ import {
 import {
   sendWhatsAppConfirmation,
   sendDoctorWhatsAppConfirmation,
+  sendWhatsAppCancellation,
   isWhatsAppConfigured,
+  getWhatsAppProvider,
 } from "../config/whatsappService.js";
+import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
 import { isValidSlotDate, reserveSlot, releaseSlot } from "../utils/slots.js";
 
 // API for adding doctors
@@ -103,6 +106,7 @@ const addDoctor = async (req, res) => {
       // --- New fields ---
       whatsappEnabled: whatsappEnabled === 'true' || whatsappEnabled === true,
       whatsappNumber: whatsappNumber || "",
+      ...((whatsappEnabled === 'true' || whatsappEnabled === true) && { whatsappConsentAt: new Date() }),
       timings: timings ? JSON.parse(timings) : { start: "09:00", end: "17:00" },
       sittingDays: sittingDays ? JSON.parse(sittingDays) : [],
       holidays: holidays || ""
@@ -444,6 +448,7 @@ const addPatient = async (req, res) => {
       address: JSON.parse(address),
       whatsappEnabled: whatsappEnabled === 'true' || whatsappEnabled === true,
       whatsappNumber: whatsappNumber || phone,
+      ...((whatsappEnabled === 'true' || whatsappEnabled === true) && { whatsappConsentAt: new Date() }),
       ...(patientEmail && { email: patientEmail }),
       ...(imageUrl && { image: imageUrl })
     };
@@ -534,14 +539,22 @@ const updatePatient = async (req, res) => {
 
     // Update patient. An empty email is removed rather than stored as "",
     // because the unique index would treat "" as a duplicate value.
+    // WhatsApp consent: keep the original date while enabled, clear it when disabled.
+    const whatsappOn = whatsappEnabled === 'true' || whatsappEnabled === true;
+    const unset = {
+      ...(!trimmedEmail && { email: 1 }),
+      ...(!whatsappOn && { whatsappConsentAt: 1 }),
+    };
     await userModel.findByIdAndUpdate(patientId, {
-      ...(trimmedEmail ? { email: trimmedEmail } : { $unset: { email: 1 } }),
+      ...(trimmedEmail && { email: trimmedEmail }),
+      ...(whatsappOn && !patient.whatsappConsentAt && { whatsappConsentAt: new Date() }),
+      ...(Object.keys(unset).length && { $unset: unset }),
       name,
       phone,
       dob,
       gender,
       address,
-      whatsappEnabled: whatsappEnabled === 'true' || whatsappEnabled === true,
+      whatsappEnabled: whatsappOn,
       whatsappNumber: whatsappNumber || phone
     });
 
@@ -640,7 +653,8 @@ const bookAppointmentForPatient = async (req, res) => {
         gender,
         address,
         whatsappEnabled: whatsappEnabled || false,
-        whatsappNumber: whatsappNumber || phone
+        whatsappNumber: whatsappNumber || phone,
+        ...(whatsappEnabled && { whatsappConsentAt: new Date() })
       };
 
       const newPatient = new userModel(patientData);
@@ -943,6 +957,19 @@ const appointmentCancel = async (req, res) => {
     const { docId, slotDate, slotTime } = appointmentData;
     await releaseSlot(docId, slotDate, slotTime);
 
+    // Tell the patient (if they agreed to WhatsApp messages)
+    const patient = await userModel.findById(appointmentData.userId).select("name whatsappEnabled whatsappNumber phone");
+    if (patient?.whatsappEnabled) {
+      await sendWhatsAppCancellation(
+        patient.whatsappNumber || patient.phone,
+        patient.name,
+        appointmentData.docData?.name,
+        slotDate,
+        slotTime,
+        "the hospital"
+      );
+    }
+
     res.json({ success: true, message: "Appointment Cancelled" });
   } catch (error) {
     console.error(error);
@@ -983,11 +1010,27 @@ const getWhatsAppStats = async (req, res) => {
 
 // API to report which notification services are configured
 const getSystemStatus = async (req, res) => {
+  // Template review status, only for Kapso / Meta (Twilio sends plain text)
+  let templates = null;
+  let templatesError = null;
+  if (isCloudApiConfigured() && process.env.WHATSAPP_BUSINESS_ACCOUNT_ID) {
+    try {
+      templates = await getTemplateStatuses();
+    } catch (error) {
+      templatesError = error.message;
+    }
+  }
   res.json({
     success: true,
     status: {
       whatsappConfigured: isWhatsAppConfigured(),
+      whatsappProvider: getWhatsAppProvider(),
       emailConfigured: isEmailConfigured(),
+      remindersEnabled: process.env.REMINDERS_ENABLED !== "false" && isWhatsAppConfigured(),
+      reminderDayBeforeAt: process.env.REMINDER_DAY_BEFORE_AT ?? "19:00",
+      reminderMinutesBefore: Number(process.env.REMINDER_MINUTES_BEFORE ?? 60),
+      templates,
+      templatesError,
     },
   });
 };

@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   image: { type: String },
   whatsappEnabled: { type: Boolean, default: false },
   whatsappNumber: { type: String, default: "" },
+  // When the patient agreed to receive WhatsApp messages (set when WhatsApp is enabled)
+  whatsappConsentAt: { type: Date },
   email: { type: String, unique: true, sparse: true },
   password: { type: String },
 });

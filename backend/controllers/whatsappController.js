@@ -1,31 +1,23 @@
 import twilio from 'twilio';
 import appointmentModel from "../model/appointmentModel.js";
 import userModel from "../model/userModel.js";
-import { sendWhatsAppConfirmation, sendWhatsAppReminder } from "../config/whatsappService.js";
+import crypto from 'crypto';
+import { sendWhatsAppConfirmation, sendWhatsAppReminder, sendWhatsAppText } from "../config/whatsappService.js";
+import { phoneVariants } from "../whatsapp/phone.js";
 import { formatSlotDate as formatDisplayDate, releaseSlot } from "../utils/slots.js";
 import { HOSPITAL_PHONE } from "../config/hospital.js";
 
-// Handle incoming WhatsApp messages
-export const handleWhatsAppWebhook = async (req, res) => {
-  try {
-    const { Body, From } = req.body;
-    
-    if (!Body || !From) {
-      return res.status(400).send('Invalid request');
-    }
-    
-    const userMessage = Body.toLowerCase().trim();
-    const phoneNumber = From.replace('whatsapp:', '');
-    
-    let responseMessage = '';
-
-    console.log(`WhatsApp message received from ${phoneNumber}: ${userMessage}`);
+// Reply text for an incoming WhatsApp message (STATUS / CANCEL / BOOK / CONTACT / HELP).
+// Shared by the Twilio and Kapso webhooks.
+const buildBotReply = async (phoneNumber, userMessage) => {
+  let responseMessage = '';
 
     // Find user by WhatsApp number
-    const user = await userModel.findOne({ 
+    const variants = phoneVariants(phoneNumber);
+    const user = await userModel.findOne({
       $or: [
-        { whatsappNumber: phoneNumber },
-        { phone: phoneNumber }
+        { whatsappNumber: { $in: variants } },
+        { phone: { $in: variants } }
       ]
     });
     
@@ -199,25 +191,60 @@ How can we help you today?
       }
     }
 
-    // Send Twilio response
-    const MessagingResponse = twilio.twiml.MessagingResponse;
-    const twiml = new MessagingResponse();
-    twiml.message(responseMessage);
-    
-    res.writeHead(200, { 'Content-Type': 'text/xml' });
-    res.end(twiml.toString());
-    
-    console.log(`WhatsApp response sent to ${phoneNumber}`);
+  return responseMessage.trim();
+};
+
+const twimlReply = (res, text) => {
+  const twiml = new twilio.twiml.MessagingResponse();
+  twiml.message(text);
+  res.writeHead(200, { 'Content-Type': 'text/xml' });
+  res.end(twiml.toString());
+};
+
+// Twilio webhook: replies in the HTTP response (TwiML)
+export const handleWhatsAppWebhook = async (req, res) => {
+  try {
+    const { Body, From } = req.body;
+    if (!Body || !From) {
+      return res.status(400).send('Invalid request');
+    }
+    const reply = await buildBotReply(From.replace('whatsapp:', ''), Body.toLowerCase().trim());
+    twimlReply(res, reply);
   } catch (error) {
     console.error('WhatsApp webhook error:', error);
-    
-    // Send error response
-    const MessagingResponse = twilio.twiml.MessagingResponse;
-    const twiml = new MessagingResponse();
-    twiml.message(`Sorry, there was an error processing your request. Please try again later or contact us directly at ${HOSPITAL_PHONE}.`);
-    
-    res.writeHead(200, { 'Content-Type': 'text/xml' });
-    res.end(twiml.toString());
+    twimlReply(res, `Sorry, there was an error processing your request. Please try again later or contact us directly at ${HOSPITAL_PHONE}.`);
+  }
+};
+
+// Kapso webhook: verifies the signature, acknowledges at once, then replies via the API.
+// The reply is free because it is sent within 24 hours of the patient's message.
+export const handleKapsoWebhook = async (req, res) => {
+  const secret = process.env.KAPSO_WEBHOOK_SECRET;
+  const signature = req.get('X-Webhook-Signature') || '';
+  if (!secret || !req.rawBody) {
+    return res.status(500).json({ success: false, message: 'Webhook secret not configured' });
+  }
+  const expected = crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+  const valid =
+    signature.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  if (!valid) {
+    return res.status(401).json({ success: false, message: 'Invalid signature' });
+  }
+
+  res.status(200).json({ received: true });
+
+  if (req.get('X-Webhook-Event') !== 'whatsapp.message.received') return;
+  const events = req.body?.batch ? req.body.data || [] : [req.body];
+  for (const event of events) {
+    const message = event?.message;
+    if (message?.type !== 'text' || !message.from || !message.text?.body) continue;
+    try {
+      const reply = await buildBotReply(message.from, message.text.body.toLowerCase().trim());
+      await sendWhatsAppText(message.from, reply);
+    } catch (error) {
+      console.error('Kapso webhook reply failed:', error.message);
+    }
   }
 };
 
