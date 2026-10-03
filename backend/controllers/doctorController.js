@@ -4,9 +4,14 @@ import jwt from "jsonwebtoken";
 import appointmentModel from "../model/appointmentModel.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
-import { releaseSlot } from "../utils/slots.js";
-import userModel from "../model/userModel.js";
-import { sendWhatsAppCancellation } from "../config/whatsappService.js";
+import { formatSlotDate } from "../utils/slots.js";
+import {
+  AppointmentError,
+  completeAppointment,
+  cancelAppointment,
+  bookFollowUp,
+  sendBookingNotifications,
+} from "../services/appointmentService.js";
 
 const changeAvailabilities = async (req, res) => {
   try {
@@ -84,83 +89,85 @@ const appointmentComplete = async (req, res) => {
   try {
     const { docId, appointmentId } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
-    
-    if (appointmentData && appointmentData.docId === docId && !appointmentData.cancelled) {
-      // Mark appointment as completed
-      await appointmentModel.findByIdAndUpdate(appointmentId, {
-        isCompleted: true,
-      });
-      
-      // Get doctor details for notification
-      const doctor = await doctorModel.findById(docId);
-      
-      // Create notification for admin
-      const notification = await createNotification(
-        'admin',                    // recipient
-        'admin',                    // recipientType
-        docId,                      // sender (doctor ID)
-        'doctor',                   // senderType
-        'appointment_completed',     // type
-        'Appointment Completed',     // title
-        `Dr. ${doctor.name} has completed an appointment with ${appointmentData.userData.name}.`, // message
-        'medium',                   // priority
-        appointmentId               // relatedId
-      );
-      
-      // Emit notification via Socket.IO to admin
-      const io = req.app.get('io');
-      if (io) {
-        io.to('admin').emit('newNotification', notification);
-      }
-      
-      return res.json({
-        success: true,
-        message: "Appointment Completed",
-      });
-    } else {
-      res.json({ success: false, message: "Mark Failed" });
+    if (!appointmentData || appointmentData.docId !== docId) {
+      return res.json({ success: false, message: "Appointment not found" });
     }
+
+    await completeAppointment(appointmentId, { role: "doctor", id: docId });
+
+    // Notify admin
+    const notification = await createNotification(
+      'admin', 'admin', docId, 'doctor',
+      'appointment_completed',
+      'Appointment Completed',
+      `Dr. ${req.doctor.name} has completed an appointment with ${appointmentData.userData.name}.`,
+      'medium',
+      appointmentId
+    );
+    req.app.get('io')?.to('admin').emit('newNotification', notification);
+
+    res.json({ success: true, message: "Appointment Completed" });
   } catch (error) {
-    console.error(error);
+    if (!(error instanceof AppointmentError)) console.error(error);
     res.json({ success: false, message: error.message });
   }
 };
+
 
 // API to cancel appointment for doctor panel
 const appointmentCancel = async (req, res) => {
   try {
-    const { docId, appointmentId } = req.body;
+    const { docId, appointmentId, reason } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
-    if (appointmentData && appointmentData.docId === docId && !appointmentData.cancelled) {
-      await appointmentModel.findByIdAndUpdate(appointmentId, {
-        cancelled: true,
-      });
-      await releaseSlot(docId, appointmentData.slotDate, appointmentData.slotTime);
-
-      // Tell the patient (if they agreed to WhatsApp messages)
-      const patient = await userModel.findById(appointmentData.userId).select("name whatsappEnabled whatsappNumber phone");
-      if (patient?.whatsappEnabled) {
-        await sendWhatsAppCancellation(
-          patient.whatsappNumber || patient.phone,
-          patient.name,
-          req.doctor?.name || appointmentData.docData?.name,
-          appointmentData.slotDate,
-          appointmentData.slotTime,
-          "your doctor"
-        );
-      }
-
-      return res.json({
-        success: true,
-        message: "Appointment Cancelled",
-      });
+    if (!appointmentData || appointmentData.docId !== docId) {
+      return res.json({ success: false, message: "Appointment not found" });
     }
-    res.json({ success: false, message: "Cancellation Failed" });
+
+    await cancelAppointment(appointmentId, { role: "doctor", id: docId }, { reason, cancelledBy: "your doctor" });
+    res.json({ success: true, message: "Appointment Cancelled" });
   } catch (error) {
-    console.error(error);
+    if (!(error instanceof AppointmentError)) console.error(error);
     res.json({ success: false, message: error.message });
   }
 };
+
+// Doctor schedules a follow-up visit for the patient of one of their appointments
+const scheduleFollowUp = async (req, res) => {
+  try {
+    const { appointmentId, slotDate, slotTime } = req.body;
+    const { appointment, patient, doctor } = await bookFollowUp({
+      parentAppointmentId: appointmentId,
+      doctorId: req.doctorId,
+      slotDate,
+      slotTime,
+    });
+
+    // The doctor booked it, so only the patient gets a confirmation
+    const whatsappResults = await sendBookingNotifications(appointment, patient, doctor, { notifyDoctor: false });
+
+    // Let the admin/reception know
+    const notification = await createNotification(
+      'admin', 'admin', req.doctorId, 'doctor',
+      'new_appointment',
+      'Follow-up Scheduled',
+      `Dr. ${doctor.name} scheduled a follow-up for ${patient.name} on ${formatSlotDate(appointment.slotDate)} at ${appointment.slotTime}.`,
+      'medium',
+      appointment._id.toString()
+    );
+    req.app.get('io')?.to('admin').emit('newNotification', notification);
+
+    res.json({
+      success: true,
+      message: "Follow-up scheduled",
+      appointment,
+      patientNotified: whatsappResults.patient.sent || Boolean(patient.email),
+    });
+  } catch (error) {
+    if (!(error instanceof AppointmentError)) console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 
 // API to get dashboard data for doctor panel
 const doctorDashboard = async (req, res) => {
@@ -381,4 +388,5 @@ export {
   listLeaveRequests,
   cancelLeaveRequest,
   getDoctorProfile,
+  scheduleFollowUp,
 };

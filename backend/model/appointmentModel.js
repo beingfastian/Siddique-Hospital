@@ -1,16 +1,60 @@
 import mongoose from "mongoose";
 
+// Who did something: role + id (staff/doctor id, or "admin" / "whatsapp")
+const actorSchema = new mongoose.Schema(
+  {
+    role: { type: String, enum: ["admin", "doctor", "patient", "system"], required: true },
+    id: { type: String },
+  },
+  { _id: false }
+);
+
+// One entry per change, newest last
+const historySchema = new mongoose.Schema(
+  {
+    at: { type: Date, default: Date.now },
+    by: { type: actorSchema },
+    action: {
+      type: String,
+      enum: ["booked", "follow_up_booked", "completed", "cancelled", "no_show", "rescheduled"],
+      required: true,
+    },
+    from: { slotDate: String, slotTime: String },
+    to: { slotDate: String, slotTime: String },
+    reason: { type: String },
+  },
+  { _id: false }
+);
+
 const appointmentSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   docId: { type: String, required: true },
+  // Hospital-time date "d_m_yyyy" and time "hh:mm AM" (also used for slot reservation)
   slotDate: { type: String, required: true },
   slotTime: { type: String, required: true },
+  // The same moment as a real date (UTC), for sorting, reminders and reports
+  startAt: { type: Date },
+  durationMinutes: { type: Number, default: 30 },
   userData: { type: Object, required: true },
   docData: { type: Object, required: true },
   amount: { type: Number, required: true },
-  date: { type: Number, required: true },
+  date: { type: Number, required: true }, // when it was booked (ms)
+
+  // Lifecycle. `cancelled` / `isCompleted` are kept in sync for existing screens.
+  status: {
+    type: String,
+    enum: ["booked", "completed", "cancelled", "no_show"],
+    default: "booked",
+  },
   cancelled: { type: Boolean, default: false },
   isCompleted: { type: Boolean, default: false },
+
+  // "new" visit or a "follow_up" scheduled from an earlier visit
+  type: { type: String, enum: ["new", "follow_up"], default: "new" },
+  parentAppointmentId: { type: String },
+  createdBy: { type: actorSchema },
+  history: { type: [historySchema], default: [] },
+
   // --- Admin/discount/cnic fields ---
   discountPercent: { type: Number, default: 0 }, // Discount applied (if any)
   finalFee: { type: Number }, // Final fee after discount (if any)
@@ -20,8 +64,11 @@ const appointmentSchema = new mongoose.Schema({
     dayBefore: { type: Date },
     beforeStart: { type: Date },
   },
-  // ...add more admin-specific fields as needed...
 });
+
+appointmentSchema.index({ docId: 1, startAt: 1 });
+appointmentSchema.index({ userId: 1, startAt: -1 });
+appointmentSchema.index({ parentAppointmentId: 1 });
 
 const appointmentModel =
   mongoose.models.appointment ||
