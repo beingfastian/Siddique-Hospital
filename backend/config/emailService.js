@@ -11,23 +11,31 @@ export const isEmailConfigured = () => {
     process.env.EMAIL_FROM
   );
 };
-// Create email transporter with validation
+// One shared, pooled SMTP transporter. Opening a connection and logging in to
+// Gmail takes 1-2 seconds, so connections are kept open and reused.
+let transporter = null;
 const createTransporter = () => {
   if (!isEmailConfigured()) {
     console.warn('Email configuration incomplete. Emails will not be sent.');
     return null;
   }
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development'
-  });
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      pool: true,
+      maxConnections: 2,
+      maxMessages: 100,
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
+    });
+  }
+  return transporter;
 };
 // Email template for Siddique Hospital
 const getEmailTemplate = (title, content, type = 'info') => {
@@ -68,11 +76,9 @@ const getEmailTemplate = (title, content, type = 'info') => {
 export const sendUserAppointmentConfirmation = async (userEmail, userName, doctorName, doctorSpeciality, appointmentDate, appointmentTime, fee) => {
   try {
     if (!isEmailConfigured()) {
-      console.log('Email not configured - User confirmation email skipped');
-      return;
+      return { success: false, error: 'Email not configured' };
     }
     const transporter = createTransporter();
-    if (!transporter) return;
     const content = `
       <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <h3 style="color: #333; margin-top: 0;">Dear ${userName},</h3>
@@ -125,21 +131,19 @@ export const sendUserAppointmentConfirmation = async (userEmail, userName, docto
       html: getEmailTemplate('Appointment Confirmed! ✅', content, 'success')
     };
     
-    await transporter.sendMail(mailOptions);
-    console.log('✅ User appointment confirmation email sent successfully');
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending user email:', error.message);
+    return { success: false, error: error.message };
   }
 };
 // Send appointment notification to doctor
 export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName, userName, userEmail, appointmentDate, appointmentTime, fee) => {
   try {
     if (!isEmailConfigured()) {
-      console.log('Email not configured - Doctor notification email skipped');
-      return;
+      return { success: false, error: 'Email not configured' };
     }
     const transporter = createTransporter();
-    if (!transporter) return;
     const content = `
       <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <h3 style="color: #333; margin-top: 0;">Dear Dr. ${doctorName},</h3>
@@ -188,10 +192,10 @@ export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName,
       html: getEmailTemplate('New Appointment Booked! 📅', content, 'info')
     };
     
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Doctor appointment notification email sent successfully');
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending doctor email:', error.message);
+    return { success: false, error: error.message };
   }
 };
 // Test email connection on startup

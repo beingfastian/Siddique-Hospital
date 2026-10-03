@@ -59,6 +59,23 @@ const appointmentSchema = new mongoose.Schema({
   discountPercent: { type: Number, default: 0 }, // Discount applied (if any)
   finalFee: { type: Number }, // Final fee after discount (if any)
   cnic: { type: String }, // Patient CNIC (for admin bookings)
+  // Outcome of each WhatsApp/email sent in the background (see services/notificationQueue.js)
+  notifications: {
+    type: [
+      new mongoose.Schema(
+        {
+          at: Date,
+          channel: { type: String, enum: ["whatsapp", "email"] },
+          recipient: { type: String, enum: ["patient", "doctor"] },
+          kind: String,
+          status: { type: String, enum: ["sent", "failed"] },
+          error: String,
+        },
+        { _id: false }
+      ),
+    ],
+    default: [],
+  },
   // When WhatsApp reminders were sent (or skipped), so each is sent only once
   reminders: {
     dayBefore: { type: Date },

@@ -10,7 +10,7 @@ import {
   completeAppointment,
   cancelAppointment,
   bookFollowUp,
-  sendBookingNotifications,
+  queueBookingNotifications,
 } from "../services/appointmentService.js";
 
 const changeAvailabilities = async (req, res) => {
@@ -142,8 +142,8 @@ const scheduleFollowUp = async (req, res) => {
       slotTime,
     });
 
-    // The doctor booked it, so only the patient gets a confirmation
-    const whatsappResults = await sendBookingNotifications(appointment, patient, doctor, { notifyDoctor: false });
+    // The doctor booked it, so only the patient gets a confirmation (sent in the background)
+    const notificationsQueued = queueBookingNotifications(appointment, patient, doctor, { notifyDoctor: false });
 
     // Let the admin/reception know
     const notification = await createNotification(
@@ -160,7 +160,7 @@ const scheduleFollowUp = async (req, res) => {
       success: true,
       message: "Follow-up scheduled",
       appointment,
-      patientNotified: whatsappResults.patient.sent || Boolean(patient.email),
+      patientNotified: notificationsQueued.patient.length > 0,
     });
   } catch (error) {
     if (!(error instanceof AppointmentError)) console.error(error);
