@@ -128,6 +128,18 @@ export const sendDoctorWhatsAppReminder = (phoneNumber, patientName, appointment
     appointmentTime,
   ]);
 
+// Reschedule notice to the patient (old and new time)
+export const sendWhatsAppReschedule = (phoneNumber, userName, doctorName, oldDate, oldTime, newDate, newTime) =>
+  sendTemplated(phoneNumber, "appointment_rescheduled", [
+    userName,
+    doctorName,
+    formatSlotDate(oldDate),
+    oldTime,
+    formatSlotDate(newDate),
+    newTime,
+    HOSPITAL_PHONE,
+  ]);
+
 // Cancellation notice to the patient. cancelledBy: e.g. "the hospital" or "your doctor"
 export const sendWhatsAppCancellation = (phoneNumber, userName, doctorName, appointmentDate, appointmentTime, cancelledBy) =>
   sendTemplated(phoneNumber, "appointment_cancelled", [

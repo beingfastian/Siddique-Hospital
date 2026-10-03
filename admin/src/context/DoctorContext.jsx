@@ -93,6 +93,43 @@ const DoctorContextProvider = (props) => {
     }
   };
 
+  const postDoctor = async (path, body) => {
+    try {
+      const { data } = await axios.post(backendUrl + path, body, { headers: { dToken } });
+      if (!data.success) toast.error(data.message);
+      return data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+      return { success: false };
+    }
+  };
+
+  // Move one of the doctor's appointments (patient is told on WhatsApp)
+  const rescheduleAppointment = async (appointmentId, slotDate, slotTime, reason) => {
+    const data = await postDoctor("/api/doctor/reschedule-appointment", { appointmentId, slotDate, slotTime, reason });
+    if (data.success) {
+      toast.success(data.message);
+      getAppointments();
+    }
+    return data.success;
+  };
+
+  // Move all of the doctor's appointments from one day to another
+  const rescheduleDay = async (_docId, fromSlotDate, toSlotDate, reason) => {
+    const data = await postDoctor("/api/doctor/reschedule-day", { fromSlotDate, toSlotDate, reason });
+    if (!data.success) return null;
+    getAppointments();
+    return data;
+  };
+
+  // Cancel all of the doctor's appointments on one day
+  const cancelDay = async (_docId, slotDate, reason) => {
+    const data = await postDoctor("/api/doctor/cancel-day", { slotDate, reason });
+    if (!data.success) return null;
+    getAppointments();
+    return data;
+  };
+
   const getDashData = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", {
@@ -234,6 +271,9 @@ const DoctorContextProvider = (props) => {
     completeAppointment,
     cancelAppointment,
     scheduleFollowUp,
+    rescheduleAppointment,
+    rescheduleDay,
+    cancelDay,
     dashData,
     getDashData,
     profileData,

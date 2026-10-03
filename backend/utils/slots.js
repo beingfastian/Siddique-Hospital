@@ -52,6 +52,29 @@ export const normalizeSlotTime = (slotTime) => {
   return `${time[1].padStart(2, "0")}:${time[2]} ${time[3].toUpperCase()}`;
 };
 
+// All slot times ("09:00 AM", "09:30 AM", ...) within a doctor's timings,
+// in the same 30-minute steps the booking screens use.
+export const SLOT_MINUTES = 30;
+export const dayTimes = (doctor) => {
+  const toMinutes = (hhmm) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const start = toMinutes(doctor.timings?.start || "10:00");
+  const end = toMinutes(doctor.timings?.end || "21:00");
+  const times = [];
+  for (let m = start; m < end; m += SLOT_MINUTES) {
+    const h24 = Math.floor(m / 60);
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    times.push(`${String(h12).padStart(2, "0")}:${String(m % 60).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`);
+  }
+  return times;
+};
+
+// "yyyy-mm-dd" of a moment in hospital time (for comparing with leave dates)
+export const hospitalIsoDate = (moment) =>
+  new Date(moment.getTime() + HOSPITAL_UTC_OFFSET_MINUTES * 60000).toISOString().slice(0, 10);
+
 // "d_m_yyyy" for a moment, as a date in hospital time (daysAhead: 0 = today, 1 = tomorrow)
 export const hospitalSlotDate = (moment = new Date(), daysAhead = 0) => {
   const local = new Date(moment.getTime() + HOSPITAL_UTC_OFFSET_MINUTES * 60000 + daysAhead * 86400000);

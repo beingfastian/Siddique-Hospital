@@ -2,8 +2,10 @@ import React, { useContext, useEffect, useState } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
-import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeAlt, FaCalendarDay } from "react-icons/fa";
 import FollowUpModal from "../../components/FollowUpModal";
+import { DoctorRescheduleModal } from "../../components/RescheduleModal";
+import DayActionsDialog from "../../components/DayActionsDialog";
 
 const DoctorAppointments = () => {
   const {
@@ -12,12 +14,17 @@ const DoctorAppointments = () => {
     getAppointments,
     completeAppointment,
     cancelAppointment,
+    rescheduleDay,
+    cancelDay,
+    profileData,
   } = useContext(DoctorContext);
   const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [followUpFor, setFollowUpFor] = useState(null);
+  const [rescheduleFor, setRescheduleFor] = useState(null);
+  const [showDayActions, setShowDayActions] = useState(false);
 
   // Follow-up booked from each visit: parent appointment id -> follow-up appointment
   const followUps = {};
@@ -52,6 +59,18 @@ const DoctorAppointments = () => {
       </p>
     );
 
+  const rescheduleButton = (item) =>
+    !item.cancelled && !item.isCompleted && (
+      <button
+        onClick={() => setRescheduleFor(item)}
+        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        title="Reschedule"
+        aria-label="Reschedule"
+      >
+        <FaExchangeAlt className="w-4 h-4" />
+      </button>
+    );
+
   const followUpButton = (item) =>
     !item.cancelled && (
       <button
@@ -77,7 +96,16 @@ const DoctorAppointments = () => {
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">All Appointments</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h1 className="text-2xl font-semibold text-gray-900">All Appointments</h1>
+          <button
+            onClick={() => setShowDayActions(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <FaCalendarDay className="text-blue-600" />
+            Manage a day
+          </button>
+        </div>
         
         {/* Search and Filter */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -181,7 +209,7 @@ const DoctorAppointments = () => {
                       {!item.cancelled && !item.isCompleted && (
                         <>
                           <button
-                            onClick={() => cancelAppointment(item._id)}
+                            onClick={() => window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) && cancelAppointment(item._id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Cancel"
                           >
@@ -200,7 +228,8 @@ const DoctorAppointments = () => {
                           </button>
                         </>
                       )}
-                      {followUpButton(item)}
+                      {rescheduleButton(item)}
+{followUpButton(item)}
                     </div>
                   </div>
                 </div>
@@ -262,7 +291,7 @@ const DoctorAppointments = () => {
                       {!item.cancelled && !item.isCompleted && (
                         <>
                           <button
-                            onClick={() => cancelAppointment(item._id)}
+                            onClick={() => window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) && cancelAppointment(item._id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Cancel"
                           >
@@ -281,7 +310,8 @@ const DoctorAppointments = () => {
                           </button>
                         </>
                       )}
-                      {followUpButton(item)}
+                      {rescheduleButton(item)}
+{followUpButton(item)}
                     </div>
                   </div>
                 </div>
@@ -336,6 +366,18 @@ const DoctorAppointments = () => {
 
       {followUpFor && (
         <FollowUpModal appointment={followUpFor} onClose={() => setFollowUpFor(null)} />
+      )}
+      {rescheduleFor && (
+        <DoctorRescheduleModal appointment={rescheduleFor} onClose={() => setRescheduleFor(null)} />
+      )}
+      {showDayActions && (
+        <DayActionsDialog
+          doctorName={profileData?.name}
+          appointments={appointments}
+          onMove={rescheduleDay}
+          onCancelDay={cancelDay}
+          onClose={() => setShowDayActions(false)}
+        />
       )}
     </div>
   );

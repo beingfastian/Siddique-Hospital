@@ -47,6 +47,13 @@ export const templates = {
       "Please check the doctor panel for details.",
     example: ["Siddique Hospital", "Ali Khan", "Friday, October 3, 2026", "06:30 PM"],
   },
+  appointment_rescheduled: {
+    category: "UTILITY",
+    body:
+      "Dear {{1}}, your appointment with Dr. {{2}} has been moved from {{3}} at {{4}} to {{5}} at {{6}}.\n\n" +
+      "If the new time doesn't suit you, please call {{7}}. Thank you.",
+    example: ["Ali Khan", "Ahmed Raza", "Tuesday, October 6, 2026", "10:00 AM", "Wednesday, October 7, 2026", "10:00 AM", "+923001234567"],
+  },
   appointment_cancelled: {
     category: "UTILITY",
     body:
