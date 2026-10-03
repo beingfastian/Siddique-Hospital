@@ -2,7 +2,8 @@ import React, { useContext, useEffect, useState } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
-import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus } from "react-icons/fa";
+import FollowUpModal from "../../components/FollowUpModal";
 
 const DoctorAppointments = () => {
   const {
@@ -16,6 +17,13 @@ const DoctorAppointments = () => {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [followUpFor, setFollowUpFor] = useState(null);
+
+  // Follow-up booked from each visit: parent appointment id -> follow-up appointment
+  const followUps = {};
+  appointments.forEach((a) => {
+    if (a.parentAppointmentId && !a.cancelled) followUps[a.parentAppointmentId] = a;
+  });
 
   useEffect(() => {
     dToken && getAppointments();
@@ -31,6 +39,30 @@ const DoctorAppointments = () => {
     
     return matchesSearch && matchesStatus;
   }).reverse();
+
+  const getTypeBadge = (item) =>
+    item.type === "follow_up" && (
+      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">Follow-up</span>
+    );
+
+  const followUpNote = (item) =>
+    followUps[item._id] && (
+      <p className="text-xs text-purple-700 mt-1">
+        Follow-up: {slotDateFormat(followUps[item._id].slotDate)}, {followUps[item._id].slotTime}
+      </p>
+    );
+
+  const followUpButton = (item) =>
+    !item.cancelled && (
+      <button
+        onClick={() => setFollowUpFor(item)}
+        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+        title="Schedule follow-up"
+        aria-label="Schedule follow-up"
+      >
+        <FaCalendarPlus className="w-4 h-4" />
+      </button>
+    );
 
   const getStatusBadge = (item) => {
     if (item.cancelled) {
@@ -118,6 +150,7 @@ const DoctorAppointments = () => {
                   <div className="col-span-2 text-gray-600">
                     <p className="font-medium">{slotDateFormat(item.slotDate)}</p>
                     <p className="text-sm text-gray-500">{item.slotTime}</p>
+                    {followUpNote(item)}
                   </div>
                   
                   <div className="col-span-1">
@@ -138,33 +171,37 @@ const DoctorAppointments = () => {
                     )}
                   </div>
                   
-                  <div className="col-span-1">
+                  <div className="col-span-1 flex flex-col items-start gap-1">
                     {getStatusBadge(item)}
+                    {getTypeBadge(item)}
                   </div>
                   
                   <div className="col-span-2">
-                    {!item.cancelled && !item.isCompleted && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => cancelAppointment(item._id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Cancel"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => completeAppointment(item._id)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Complete"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      {!item.cancelled && !item.isCompleted && (
+                        <>
+                          <button
+                            onClick={() => cancelAppointment(item._id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Cancel"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => completeAppointment(item._id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Complete"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      {followUpButton(item)}
+                    </div>
                   </div>
                 </div>
 
@@ -182,8 +219,9 @@ const DoctorAppointments = () => {
                         <p className="text-sm text-gray-500">Age: {calculateAge(item.userData.dob)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       {getStatusBadge(item)}
+                      {getTypeBadge(item)}
                     </div>
                   </div>
                   
@@ -192,6 +230,7 @@ const DoctorAppointments = () => {
                       <p className="text-gray-500">Date & Time</p>
                       <p className="font-medium">{slotDateFormat(item.slotDate)}</p>
                       <p className="text-gray-600">{item.slotTime}</p>
+                      {followUpNote(item)}
                     </div>
                     <div>
                       <p className="text-gray-500">Fee</p>
@@ -219,28 +258,31 @@ const DoctorAppointments = () => {
                       )}
                     </div>
                     
-                    {!item.cancelled && !item.isCompleted && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => cancelAppointment(item._id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Cancel"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => completeAppointment(item._id)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Complete"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      {!item.cancelled && !item.isCompleted && (
+                        <>
+                          <button
+                            onClick={() => cancelAppointment(item._id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Cancel"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => completeAppointment(item._id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Complete"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      {followUpButton(item)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -290,6 +332,10 @@ const DoctorAppointments = () => {
             <div className="text-sm text-gray-500">Cancelled</div>
           </div>
         </div>
+      )}
+
+      {followUpFor && (
+        <FollowUpModal appointment={followUpFor} onClose={() => setFollowUpFor(null)} />
       )}
     </div>
   );

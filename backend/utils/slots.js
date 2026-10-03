@@ -45,6 +45,13 @@ export const slotToDate = (slotDate, slotTime) => {
   return new Date(utcMs);
 };
 
+// Canonical slot time text, e.g. "9:30 am" -> "09:30 AM" (the format slots are stored in)
+export const normalizeSlotTime = (slotTime) => {
+  const time = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec((slotTime || "").trim());
+  if (!time) return null;
+  return `${time[1].padStart(2, "0")}:${time[2]} ${time[3].toUpperCase()}`;
+};
+
 // "d_m_yyyy" for a moment, as a date in hospital time (daysAhead: 0 = today, 1 = tomorrow)
 export const hospitalSlotDate = (moment = new Date(), daysAhead = 0) => {
   const local = new Date(moment.getTime() + HOSPITAL_UTC_OFFSET_MINUTES * 60000 + daysAhead * 86400000);

@@ -7,20 +7,17 @@ import appointmentModel from "../model/appointmentModel.js";
 import userModel from "../model/userModel.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
-import {
-  sendUserAppointmentConfirmation,
-  sendDoctorAppointmentNotification,
-  isEmailConfigured,
-} from "../config/emailService.js";
-import {
-  sendWhatsAppConfirmation,
-  sendDoctorWhatsAppConfirmation,
-  sendWhatsAppCancellation,
-  isWhatsAppConfigured,
-  getWhatsAppProvider,
-} from "../config/whatsappService.js";
+import { isEmailConfigured } from "../config/emailService.js";
+import { isWhatsAppConfigured, getWhatsAppProvider } from "../config/whatsappService.js";
 import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
-import { isValidSlotDate, reserveSlot, releaseSlot } from "../utils/slots.js";
+import { releaseSlot } from "../utils/slots.js";
+import {
+  AppointmentError,
+  validateSlot,
+  bookAppointment,
+  sendBookingNotifications,
+  cancelAppointment,
+} from "../services/appointmentService.js";
 
 // API for adding doctors
 const addDoctor = async (req, res) => {
@@ -613,9 +610,12 @@ const bookAppointmentForPatient = async (req, res) => {
       finalFee
     } = req.body;
 
-    if (!docId || !isValidSlotDate(slotDate) || !slotTime) {
-      return res.json({ success: false, message: "Please select a doctor, date and time slot" });
+    // Check the doctor and slot before creating anything
+    const docData = docId && await doctorModel.findById(docId).select("-password");
+    if (!docData) {
+      return res.json({ success: false, message: "Please select a doctor" });
     }
+    validateSlot(docData, slotDate, slotTime);
 
     let patientId = selectedPatientId;
     let userData;
@@ -671,215 +671,33 @@ const bookAppointmentForPatient = async (req, res) => {
       console.log('✅ Using existing patient:', userData.name);
     }
 
-    // Get doctor data
-    const docData = await doctorModel.findById(docId).select("-password");
-    if (!docData) {
-      return res.json({ success: false, message: "Doctor not found" });
-    }
-
-    if (!docData.available) {
-      return res.json({
-        success: false,
-        message: "Doctor is not available for appointments",
-      });
-    }
-
-    console.log('✅ Doctor found:', docData.name);
-
-    // Reserve the slot atomically so two bookings can't take the same slot
-    const reserved = await reserveSlot(docId, slotDate, slotTime);
-    if (!reserved) {
-      return res.json({
-        success: false,
-        message: "Selected time slot is not available",
-      });
-    }
-
-    // Snapshot of the doctor without the booking map
-    const docSnapshot = docData.toObject();
-    delete docSnapshot.slots_booked;
-
-    // Create appointment
-    const appointmentData = {
-      userId: patientId,
-      docId,
+    const patient = userData.toObject ? userData : await userModel.findById(patientId).select("-password");
+    const newAppointment = await bookAppointment({
+      patient,
+      doctor: docData,
       slotDate,
       slotTime,
-      userData: userData.toObject ? userData.toObject() : userData,
-      docData: docSnapshot,
       amount: finalFee || docData.fee,
-      date: new Date().getTime(),
-      ...(discountPercent && { discountPercent }),
-      ...(finalFee && { finalFee })
-    };
-
-    const newAppointment = new appointmentModel(appointmentData);
-    try {
-      await newAppointment.save();
-    } catch (saveError) {
-      await releaseSlot(docId, slotDate, slotTime);
-      throw saveError;
-    }
-
-    // Initialize notification results
-    let whatsappResults = {
-      patientSent: false,
-      doctorSent: false,
-      patientError: null,
-      doctorError: null
-    };
-
-    // Send notifications
-    try {
-      console.log('🔄 Starting notification process...');
-
-      // Patient WhatsApp notification
-      const patientPhone = userData.whatsappNumber || userData.phone;
-      if (userData.whatsappEnabled && patientPhone) {
-        console.log('📱 Sending WhatsApp to patient:', patientPhone);
-
-        try {
-          const patientWhatsAppResult = await sendWhatsAppConfirmation(
-            patientPhone,
-            userData.name,
-            docData.name,
-            docData.speciality,
-            slotDate,
-            slotTime,
-            finalFee || docData.fee,
-            newAppointment._id.toString()
-          );
-
-          if (patientWhatsAppResult.success) {
-            console.log('✅ Patient WhatsApp sent:', patientWhatsAppResult.messageId);
-            whatsappResults.patientSent = true;
-          } else {
-            console.error('❌ Patient WhatsApp failed:', patientWhatsAppResult.error);
-            whatsappResults.patientError = patientWhatsAppResult.error || patientWhatsAppResult.message;
-          }
-        } catch (patientWhatsAppError) {
-          console.error('❌ Patient WhatsApp exception:', patientWhatsAppError.message);
-          whatsappResults.patientError = patientWhatsAppError.message;
-        }
-      } else {
-        console.log('⏭️ Patient WhatsApp skipped - not enabled or no phone');
-      }
-
-      // Doctor WhatsApp notification
-      const doctorPhone = docData.whatsappNumber || docData.phone;
-      if (docData.whatsappEnabled && doctorPhone) {
-        console.log('📱 Sending WhatsApp to doctor:', doctorPhone);
-
-        try {
-          const doctorWhatsAppResult = await sendDoctorWhatsAppConfirmation(
-            doctorPhone,
-            docData.name,
-            userData.name,
-            patientPhone || userData.phone,
-            slotDate,
-            slotTime,
-            finalFee || docData.fee,
-            newAppointment._id.toString()
-          );
-
-          if (doctorWhatsAppResult.success) {
-            console.log('✅ Doctor WhatsApp sent:', doctorWhatsAppResult.messageId);
-            whatsappResults.doctorSent = true;
-          } else {
-            console.error('❌ Doctor WhatsApp failed:', doctorWhatsAppResult.error);
-            whatsappResults.doctorError = doctorWhatsAppResult.error || doctorWhatsAppResult.message;
-          }
-        } catch (doctorWhatsAppError) {
-          console.error('❌ Doctor WhatsApp exception:', doctorWhatsAppError.message);
-          whatsappResults.doctorError = doctorWhatsAppError.message;
-        }
-      } else {
-        console.log('⏭️ Doctor WhatsApp skipped - not enabled or no phone');
-      }
-
-      // Send email notifications (only if patient has email)
-      if (userData.email) {
-        console.log('📧 Sending email notifications...');
-        try {
-          await sendUserAppointmentConfirmation(
-            userData.email,
-            userData.name,
-            docData.name,
-            docData.speciality,
-            slotDate,
-            slotTime,
-            finalFee || docData.fee
-          );
-          console.log('✅ Patient email sent');
-        } catch (emailError) {
-          console.error('❌ Patient email failed:', emailError.message);
-        }
-
-        // Doctor email notification
-        if (docData.email) {
-          try {
-            await sendDoctorAppointmentNotification(
-              docData.email,
-              docData.name,
-              userData.name,
-              userData.email,
-              slotDate,
-              slotTime,
-              finalFee || docData.fee
-            );
-            console.log('✅ Doctor email sent');
-          } catch (emailError) {
-            console.error('❌ Doctor email failed:', emailError.message);
-          }
-        }
-      }
-
-    } catch (notificationError) {
-      console.error('❌ Notification system error:', notificationError.message);
-    }
-
-    // Prepare response with detailed notification status
-    const successMessage = patientSelectionMode === "new"
-      ? "New patient created and appointment booked successfully"
-      : "Appointment booked successfully";
-
-    const response = {
-      success: true,
-      message: successMessage,
-      appointmentId: newAppointment._id.toString(),
-      whatsappSent: whatsappResults.patientSent || whatsappResults.doctorSent,
-      whatsappResults: {
-        patient: {
-          sent: whatsappResults.patientSent,
-          error: whatsappResults.patientError,
-          enabled: userData.whatsappEnabled,
-          phone: userData.whatsappNumber || userData.phone
-        },
-        doctor: {
-          sent: whatsappResults.doctorSent,
-          error: whatsappResults.doctorError,
-          enabled: docData.whatsappEnabled,
-          phone: docData.whatsappNumber || docData.phone
-        }
-      }
-    };
-
-    console.log('📊 Final booking result:', {
-      success: true,
-      appointmentId: newAppointment._id.toString(),
-      patientWhatsApp: whatsappResults.patientSent,
-      doctorWhatsApp: whatsappResults.doctorSent
+      discountPercent,
+      finalFee,
+      actor: { role: "admin" },
     });
 
-    res.json(response);
+    const whatsappResults = await sendBookingNotifications(newAppointment, patient, docData);
+
+    res.json({
+      success: true,
+      message: patientSelectionMode === "new"
+        ? "New patient created and appointment booked successfully"
+        : "Appointment booked successfully",
+      appointmentId: newAppointment._id.toString(),
+      whatsappSent: whatsappResults.patient.sent || whatsappResults.doctor.sent,
+      whatsappResults,
+    });
 
   } catch (error) {
-    console.error('❌ Booking error:', error);
-    res.json({
-      success: false,
-      message: error.message,
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    if (!(error instanceof AppointmentError)) console.error('Booking error:', error);
+    res.json({ success: false, message: error.message });
   }
 };
 
@@ -939,43 +757,15 @@ const appointmentsAdmin = async (req, res) => {
 // API to cancel appointment
 const appointmentCancel = async (req, res) => {
   try {
-    const { appointmentId } = req.body;
-    const appointmentData = await appointmentModel.findById(appointmentId);
-
-    if (!appointmentData) {
-      return res.json({ success: false, message: "Appointment not found" });
-    }
-    if (appointmentData.cancelled) {
-      return res.json({ success: false, message: "Appointment is already cancelled" });
-    }
-
-    await appointmentModel.findByIdAndUpdate(appointmentId, {
-      cancelled: true,
-    });
-
-    // Release doctor's slot
-    const { docId, slotDate, slotTime } = appointmentData;
-    await releaseSlot(docId, slotDate, slotTime);
-
-    // Tell the patient (if they agreed to WhatsApp messages)
-    const patient = await userModel.findById(appointmentData.userId).select("name whatsappEnabled whatsappNumber phone");
-    if (patient?.whatsappEnabled) {
-      await sendWhatsAppCancellation(
-        patient.whatsappNumber || patient.phone,
-        patient.name,
-        appointmentData.docData?.name,
-        slotDate,
-        slotTime,
-        "the hospital"
-      );
-    }
-
+    const { appointmentId, reason } = req.body;
+    await cancelAppointment(appointmentId, { role: "admin" }, { reason, cancelledBy: "the hospital" });
     res.json({ success: true, message: "Appointment Cancelled" });
   } catch (error) {
-    console.error(error);
+    if (!(error instanceof AppointmentError)) console.error(error);
     res.json({ success: false, message: error.message });
   }
 };
+
 
 // API to get WhatsApp statistics
 const getWhatsAppStats = async (req, res) => {

@@ -4,7 +4,8 @@ import userModel from "../model/userModel.js";
 import crypto from 'crypto';
 import { sendWhatsAppConfirmation, sendWhatsAppReminder, sendWhatsAppText } from "../config/whatsappService.js";
 import { phoneVariants } from "../whatsapp/phone.js";
-import { formatSlotDate as formatDisplayDate, releaseSlot } from "../utils/slots.js";
+import { formatSlotDate as formatDisplayDate } from "../utils/slots.js";
+import { cancelAppointment } from "../services/appointmentService.js";
 import { HOSPITAL_PHONE } from "../config/hospital.js";
 
 // Reply text for an incoming WhatsApp message (STATUS / CANCEL / BOOK / CONTACT / HELP).
@@ -83,12 +84,11 @@ Reply *HELP* for more options.
             }).sort({ date: -1 });
             
             if (appointment) {
-              // Cancel the appointment
-              await appointmentModel.findByIdAndUpdate(appointment._id, {
-                cancelled: true
+              // Cancel (frees the slot); the bot reply below tells the patient
+              await cancelAppointment(appointment._id, { role: "patient", id: user._id.toString() }, {
+                reason: "Cancelled by patient on WhatsApp",
+                notifyPatient: false,
               });
-              
-              await releaseSlot(appointment.docId, appointment.slotDate, appointment.slotTime);
               
               responseMessage = `
 *Appointment Cancelled Successfully ❌*

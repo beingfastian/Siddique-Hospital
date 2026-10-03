@@ -70,6 +70,29 @@ const DoctorContextProvider = (props) => {
     }
   };
 
+  // Book a follow-up visit for the patient of one of the doctor's appointments
+  const scheduleFollowUp = async (appointmentId, slotDate, slotTime) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/doctor/follow-up",
+        { appointmentId, slotDate, slotTime },
+        { headers: { dToken } }
+      );
+      if (data.success) {
+        toast.success(
+          data.patientNotified ? "Follow-up scheduled. The patient has been notified." : "Follow-up scheduled."
+        );
+        getAppointments();
+        return true;
+      }
+      toast.error(data.message);
+      return false;
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+      return false;
+    }
+  };
+
   const getDashData = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", {
@@ -210,6 +233,7 @@ const DoctorContextProvider = (props) => {
     getAppointments,
     completeAppointment,
     cancelAppointment,
+    scheduleFollowUp,
     dashData,
     getDashData,
     profileData,

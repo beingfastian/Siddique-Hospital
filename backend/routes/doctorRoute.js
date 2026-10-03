@@ -13,6 +13,7 @@ import {
   listLeaveRequests,
   cancelLeaveRequest,
   getDoctorProfile,
+  scheduleFollowUp,
 } from "../controllers/doctorController.js";
 import authDoctor from "../middleware/authDoctor.js";
 
@@ -26,6 +27,7 @@ doctorRouter.post("/login", loginDoctor);
 doctorRouter.get("/appointments", authDoctor, appointmentsDoctor);
 doctorRouter.post("/complete-appointment", authDoctor, appointmentComplete);
 doctorRouter.post("/cancel-appointment", authDoctor, appointmentCancel);
+doctorRouter.post("/follow-up", authDoctor, scheduleFollowUp);
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, updateDoctorProfile);

@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import { getDaySlots } from "../../utils/slots";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { toast } from "react-toastify";
@@ -78,59 +79,12 @@ const BookAppointmentForPatient = () => {
     const slots = [];
     
     for (let date = new Date(currentDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      const dayOfWeek = date.getDay();
-      const dayName = daysOfWeek[dayOfWeek];
-      
-      if (doctor.sittingDays && !doctor.sittingDays.includes(dayName)) {
-        continue;
-      }
-      
-      let startTime = new Date(date);
-      let endTime = new Date(date);
-      
-      if (doctor.timings) {
-        const [startHour, startMin] = doctor.timings.start.split(':');
-        const [endHour, endMin] = doctor.timings.end.split(':');
-        startTime.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
-        endTime.setHours(parseInt(endHour), parseInt(endMin), 0, 0);
-      } else {
-        startTime.setHours(10, 0, 0, 0);
-        endTime.setHours(21, 0, 0, 0);
-      }
-      
-      if (date.toDateString() === today.toDateString() && today.getHours() >= startTime.getHours()) {
-        startTime.setHours(today.getHours() + 1, today.getMinutes() > 30 ? 30 : 0, 0, 0);
-      }
-      
-      let timeSlots = [];
-      let tempTime = new Date(startTime);
-      
-      while (tempTime < endTime) {
-        let formattedTime = tempTime.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-        
-        const slotDate = `${date.getDate()}_${date.getMonth() + 1}_${date.getFullYear()}`;
-        const isSlotAvailable = 
-          doctor.slots_booked[slotDate] && 
-          doctor.slots_booked[slotDate].includes(formattedTime) ? false : true;
-          
-        if (isSlotAvailable) {
-          timeSlots.push({
-            datetime: new Date(tempTime),
-            time: formattedTime,
-          });
-        }
-        tempTime.setMinutes(tempTime.getMinutes() + 30);
-      }
-      
+      const timeSlots = getDaySlots(doctor, date, today);
       if (timeSlots.length > 0) {
         slots.push(timeSlots);
       }
     }
-    
+
     setDocSlots(slots);
     setSlotsLoading(false);
   };

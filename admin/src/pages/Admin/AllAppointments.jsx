@@ -37,6 +37,17 @@ const AllAppointments = () => {
     return true;
   });
 
+  // Follow-up visits booked by a doctor
+  const getTypeBadge = (item) =>
+    item.type === "follow_up" && (
+      <span
+        className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
+        title={item.createdBy?.role === "doctor" ? "Scheduled by the doctor" : "Follow-up visit"}
+      >
+        Follow-up
+      </span>
+    );
+
   const getStatusBadge = (item) => {
     if (item.cancelled) {
       return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">Cancelled</span>;
@@ -177,8 +188,9 @@ const AllAppointments = () => {
                     )}
                   </div>
                   
-                  <div className="col-span-2">
+                  <div className="col-span-2 flex flex-wrap items-center gap-1">
                     {getStatusBadge(item)}
+                    {getTypeBadge(item)}
                   </div>
                 </div>
 
@@ -196,8 +208,9 @@ const AllAppointments = () => {
                         <p className="text-sm text-gray-500">Age: {calculateAge(item.userData.dob)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       {getStatusBadge(item)}
+                      {getTypeBadge(item)}
                     </div>
                   </div>
                   
