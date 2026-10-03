@@ -8,7 +8,7 @@ const notificationSchema = new mongoose.Schema({
   type: { 
     type: String, 
     required: true, 
-    enum: ['leave_request', 'leave_approved', 'leave_rejected', 'new_appointment', 'appointment_completed', 'new_patient']
+    enum: ['leave_request', 'leave_approved', 'leave_rejected', 'new_appointment', 'appointment_completed', 'appointment_rescheduled', 'appointment_cancelled', 'new_patient']
   },
   title: { type: String, required: true },
   message: { type: String, required: true },

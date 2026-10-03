@@ -103,14 +103,57 @@ const cancelAppointment = async (appointmentId) => {
     );
     if (data.success) {
       toast.success(data.message);
-      getDashData();
-      getAllAppointments();
+      refreshAfterChange();
     } else {
       toast.error(data.message);
     }
   } catch (error) {
     toast.error(error.response?.data?.message || error.message);
   }
+};
+
+// Refresh everything that shows appointments or free slots
+const refreshAfterChange = () => {
+  getDashData();
+  getAllAppointments();
+  getAllDoctors();
+};
+
+const postAdmin = async (path, body) => {
+  try {
+    const { data } = await axios.post(backendUrl + path, body, { headers: { atoken: aToken } });
+    if (!data.success) toast.error(data.message);
+    return data;
+  } catch (error) {
+    toast.error(error.response?.data?.message || error.message);
+    return { success: false };
+  }
+};
+
+// Move one appointment to a new date/time (patient is told on WhatsApp)
+const rescheduleAppointment = async (appointmentId, slotDate, slotTime, reason) => {
+  const data = await postAdmin("/api/admin/reschedule-appointment", { appointmentId, slotDate, slotTime, reason });
+  if (data.success) {
+    toast.success(data.message);
+    refreshAfterChange();
+  }
+  return data.success;
+};
+
+// Move all of a doctor's appointments from one day to another
+const rescheduleDay = async (docId, fromSlotDate, toSlotDate, reason) => {
+  const data = await postAdmin("/api/admin/reschedule-day", { docId, fromSlotDate, toSlotDate, reason });
+  if (!data.success) return null;
+  refreshAfterChange();
+  return data;
+};
+
+// Cancel all of a doctor's appointments on one day
+const cancelDay = async (docId, slotDate, reason) => {
+  const data = await postAdmin("/api/admin/cancel-day", { docId, slotDate, reason });
+  if (!data.success) return null;
+  refreshAfterChange();
+  return data;
 };
 
 // Dashboard
@@ -233,6 +276,9 @@ const getLeaveStats = async () => {
     appointments,
     getAllAppointments,
     cancelAppointment,
+    rescheduleAppointment,
+    rescheduleDay,
+    cancelDay,
     
     // Dashboard
     getDashData,

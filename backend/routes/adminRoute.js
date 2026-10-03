@@ -24,6 +24,7 @@ import {
 import upload from "../middleware/multer.js";
 import authAdmin from "../middleware/authAdmin.js";
 import { changeAvailabilities } from "../controllers/doctorController.js";
+import { rescheduleOne, rescheduleWholeDay, cancelWholeDay } from "../controllers/rescheduleController.js";
 
 const adminRouter = express.Router();
 
@@ -47,6 +48,9 @@ adminRouter.delete("/delete-patient/:patientId", authAdmin, deletePatient);
 adminRouter.get("/appointments", authAdmin, appointmentsAdmin);
 adminRouter.post("/cancel-appointment", authAdmin, appointmentCancel); // Fixed: removed 's'
 adminRouter.post("/book-appointment-for-patient", authAdmin, bookAppointmentForPatient);
+adminRouter.post("/reschedule-appointment", authAdmin, rescheduleOne("admin"));
+adminRouter.post("/reschedule-day", authAdmin, rescheduleWholeDay("admin"));
+adminRouter.post("/cancel-day", authAdmin, cancelWholeDay("admin"));
 
 // Leave Management Routes - Ensure these are properly defined
 adminRouter.get("/leave-requests", authAdmin, getAllLeaveRequests);

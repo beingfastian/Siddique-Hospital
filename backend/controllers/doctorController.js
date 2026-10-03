@@ -11,6 +11,7 @@ import {
   cancelAppointment,
   bookFollowUp,
   queueBookingNotifications,
+  upcomingLeaves,
 } from "../services/appointmentService.js";
 
 const changeAvailabilities = async (req, res) => {
@@ -209,8 +210,10 @@ const doctorDashboard = async (req, res) => {
 const doctorProfile = async (req, res) => {
   try {
     const { docId } = req.body;
-    const profileData = await doctorModel.findById(docId).select("-password");
-    res.json({ success: true, profileData });
+    const profileData = await doctorModel.findById(docId).select("-password").lean();
+    // Upcoming approved leave, so the follow-up/reschedule pickers can hide those days
+    const leaves = await upcomingLeaves([docId]);
+    res.json({ success: true, profileData: profileData && { ...profileData, leaves: leaves.get(docId) || [] } });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });

@@ -2,10 +2,15 @@ import React, { useContext, useEffect, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { assets } from "../../assets/assets.js";
-import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay } from "react-icons/fa";
+import { AdminRescheduleModal } from "../../components/RescheduleModal";
+import DayActionsDialog from "../../components/DayActionsDialog";
 
 const AllAppointments = () => {
-  const { aToken, appointments, getAllAppointments } = useContext(AdminContext);
+  const { aToken, appointments, getAllAppointments, doctors, getAllDoctors, cancelAppointment, rescheduleDay, cancelDay } =
+    useContext(AdminContext);
+  const [rescheduleFor, setRescheduleFor] = useState(null);
+  const [showDayActions, setShowDayActions] = useState(false);
   const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterNotification, setFilterNotification] = useState("all");
@@ -14,6 +19,7 @@ const AllAppointments = () => {
   useEffect(() => {
     if (aToken) {
       getAllAppointments();
+      getAllDoctors();
     }
   }, [aToken]);
 
@@ -48,6 +54,32 @@ const AllAppointments = () => {
       </span>
     );
 
+  // Reschedule / cancel for appointments that haven't happened yet
+  const actionButtons = (item) =>
+    !item.cancelled && !item.isCompleted && (
+      <>
+        <button
+          onClick={() => setRescheduleFor(item)}
+          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          title="Reschedule"
+          aria-label="Reschedule"
+        >
+          <FaExchangeAlt className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() =>
+            window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) &&
+            cancelAppointment(item._id)
+          }
+          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Cancel"
+          aria-label="Cancel appointment"
+        >
+          <FaTimes className="w-4 h-4" />
+        </button>
+      </>
+    );
+
   const getStatusBadge = (item) => {
     if (item.cancelled) {
       return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">Cancelled</span>;
@@ -66,10 +98,13 @@ const AllAppointments = () => {
             <h1 className="text-2xl font-semibold text-gray-900">All Appointments</h1>
             <p className="text-gray-600 mt-1">Overview of all appointments in the system</p>
           </div>
-          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-            <FaEye className="text-blue-600" />
-            <span className="text-sm text-blue-800 font-medium">View Only - Doctors manage appointments</span>
-          </div>
+          <button
+            onClick={() => setShowDayActions(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <FaCalendarDay className="text-blue-600" />
+            Manage a day
+          </button>
         </div>
         
         {/* Search and Filters */}
@@ -128,13 +163,14 @@ const AllAppointments = () => {
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
         {/* Desktop Header */}
         <div className="hidden lg:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-700">
-          <div className="col-span-3">Patient</div>
+          <div className="col-span-2">Patient</div>
           <div className="col-span-1">Age</div>
           <div className="col-span-2">Date & Time</div>
           <div className="col-span-2">Doctor</div>
           <div className="col-span-1">Fee</div>
           <div className="col-span-1">Contact</div>
           <div className="col-span-2">Status</div>
+          <div className="col-span-1">Actions</div>
         </div>
 
         {/* Appointments List */}
@@ -144,7 +180,7 @@ const AllAppointments = () => {
               <div key={index} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors">
                 {/* Desktop Layout */}
                 <div className="hidden lg:grid grid-cols-12 gap-4 p-4 items-center">
-                  <div className="col-span-3 flex items-center gap-3">
+                  <div className="col-span-2 flex items-center gap-3 min-w-0">
                     <img
                       className="w-10 h-10 rounded-full object-cover"
                       src={item.userData.image}
@@ -192,6 +228,8 @@ const AllAppointments = () => {
                     {getStatusBadge(item)}
                     {getTypeBadge(item)}
                   </div>
+
+                  <div className="col-span-1 flex gap-1">{actionButtons(item)}</div>
                 </div>
 
                 {/* Mobile Layout */}
@@ -241,6 +279,7 @@ const AllAppointments = () => {
                         </div>
                       )}
                     </div>
+                    <div className="flex gap-1">{actionButtons(item)}</div>
                   </div>
                 </div>
               </div>
@@ -272,10 +311,10 @@ const AllAppointments = () => {
         <div className="flex items-start gap-3">
           <FaEye className="text-blue-600 mt-0.5" />
           <div>
-            <h4 className="font-medium text-blue-900">Admin View Only</h4>
+            <h4 className="font-medium text-blue-900">Managing appointments</h4>
             <p className="text-sm text-blue-700 mt-1">
-              This is a read-only view for administrators. Appointments can only be managed (completed/cancelled) 
-              by the respective doctors through their dashboard. Use the "Book for Patient" feature to create new appointments.
+              Use the buttons on an upcoming appointment to reschedule or cancel it, or "Manage a day" to move or
+              cancel all of a doctor's appointments on one day. Patients are told on WhatsApp. Doctors mark visits as completed.
             </p>
           </div>
         </div>
@@ -307,6 +346,19 @@ const AllAppointments = () => {
             <div className="text-sm text-gray-500">Cancelled</div>
           </div>
         </div>
+      )}
+
+      {rescheduleFor && (
+        <AdminRescheduleModal appointment={rescheduleFor} onClose={() => setRescheduleFor(null)} />
+      )}
+      {showDayActions && (
+        <DayActionsDialog
+          doctors={doctors}
+          appointments={appointments}
+          onMove={rescheduleDay}
+          onCancelDay={cancelDay}
+          onClose={() => setShowDayActions(false)}
+        />
       )}
     </div>
   );

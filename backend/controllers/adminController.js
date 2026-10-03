@@ -17,6 +17,8 @@ import {
   bookAppointment,
   queueBookingNotifications,
   cancelAppointment,
+  getLeaveConflicts,
+  upcomingLeaves,
 } from "../services/appointmentService.js";
 
 // API for adding doctors
@@ -190,10 +192,16 @@ const getAllLeaveRequests = async (req, res) => {
       .select('name email speciality image');
     const doctorsById = new Map(doctors.map((d) => [d._id.toString(), d]));
 
-    const requestsWithDoctorData = leaveRequests.map((request) => ({
+    // Booked appointments that clash with pending or approved, not-yet-finished leave
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const requestsWithDoctorData = await Promise.all(leaveRequests.map(async (request) => ({
       ...request.toObject(),
-      doctorData: doctorsById.get(request.doctorId) || null
-    }));
+      doctorData: doctorsById.get(request.doctorId) || null,
+      conflicts: request.status !== "rejected" && request.toDate >= today
+        ? await getLeaveConflicts(request)
+        : [],
+    })));
 
     res.json({
       success: true,
@@ -731,11 +739,13 @@ const loginAdmin = async (req, res) => {
 // API to get all doctors list for admin panel
 const allDoctors = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({}).select("-password");
+    const doctors = await doctorModel.find({}).select("-password").lean();
+    // Upcoming approved leave, so booking screens can hide those days
+    const leaves = await upcomingLeaves(doctors.map((d) => d._id.toString()));
     res.json({
       success: true,
       message: "Doctors Data Fetch Successfully",
-      doctors,
+      doctors: doctors.map((d) => ({ ...d, leaves: leaves.get(d._id.toString()) || [] })),
     });
   } catch (error) {
     console.error(error);

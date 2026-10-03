@@ -11,11 +11,15 @@ import {
   reserveSlot,
   releaseSlot,
   HOSPITAL_UTC_OFFSET_MINUTES,
+  hospitalIsoDate,
+  dayTimes,
 } from "../utils/slots.js";
+import leaveRequestModel from "../model/leaveRequestModel.js";
 import {
   sendWhatsAppConfirmation,
   sendDoctorWhatsAppConfirmation,
   sendWhatsAppCancellation,
+  sendWhatsAppReschedule,
 } from "../config/whatsappService.js";
 import {
   sendUserAppointmentConfirmation,
@@ -65,6 +69,62 @@ export const validateSlot = (doctor, slotDate, slotTime, now = new Date()) => {
   return { slotDate, slotTime: time, startAt };
 };
 
+// --- Leave ---
+
+// Approved leave covering this moment (leave dates are whole days, hospital time)
+export const findLeaveOn = (docId, startAt) => {
+  const day = hospitalIsoDate(startAt);
+  return leaveRequestModel.findOne({
+    doctorId: docId,
+    status: "approved",
+    fromDate: { $lte: new Date(`${day}T00:00:00.000Z`) },
+    toDate: { $gte: new Date(`${day}T00:00:00.000Z`) },
+  });
+};
+
+const assertNotOnLeave = async (doctor, startAt) => {
+  if (await findLeaveOn(doctor._id.toString(), startAt)) {
+    throw new AppointmentError(`Dr. ${doctor.name} is on leave on that date`);
+  }
+};
+
+// Active appointments of a doctor during a leave, grouped by day:
+// [{ slotDate, count, appointments: [{ _id, slotTime, patient }] }]
+export const getLeaveConflicts = async (leave) => {
+  const from = new Date(new Date(leave.fromDate).getTime() - HOSPITAL_UTC_OFFSET_MINUTES * 60000);
+  const to = new Date(new Date(leave.toDate).getTime() + 86400000 - HOSPITAL_UTC_OFFSET_MINUTES * 60000);
+  const appointments = await appointmentModel
+    .find({ docId: leave.doctorId, ...ACTIVE, startAt: { $gte: from, $lt: to } })
+    .sort({ startAt: 1 })
+    .select("slotDate slotTime userData.name");
+  const byDay = new Map();
+  for (const apt of appointments) {
+    if (!byDay.has(apt.slotDate)) byDay.set(apt.slotDate, { slotDate: apt.slotDate, count: 0, appointments: [] });
+    const day = byDay.get(apt.slotDate);
+    day.count++;
+    day.appointments.push({ _id: apt._id, slotTime: apt.slotTime, patient: apt.userData?.name });
+  }
+  return [...byDay.values()];
+};
+
+// Upcoming approved leave per doctor, for booking screens to hide those days:
+// Map docId -> [{ from: "yyyy-mm-dd", to: "yyyy-mm-dd" }]
+export const upcomingLeaves = async (docIds) => {
+  const today = new Date(`${hospitalIsoDate(new Date())}T00:00:00.000Z`);
+  const leaves = await leaveRequestModel
+    .find({ doctorId: { $in: docIds }, status: "approved", toDate: { $gte: today } })
+    .select("doctorId fromDate toDate");
+  const byDoctor = new Map();
+  for (const leave of leaves) {
+    if (!byDoctor.has(leave.doctorId)) byDoctor.set(leave.doctorId, []);
+    byDoctor.get(leave.doctorId).push({
+      from: leave.fromDate.toISOString().slice(0, 10),
+      to: leave.toDate.toISOString().slice(0, 10),
+    });
+  }
+  return byDoctor;
+};
+
 const historyEntry = (action, actor, extra = {}) => ({ at: new Date(), by: actor, action, ...extra });
 
 // Create an appointment: validate, reserve the slot atomically, save.
@@ -82,6 +142,7 @@ export const bookAppointment = async ({
   actor,
 }) => {
   const slot = validateSlot(doctor, slotDate, slotTime);
+  await assertNotOnLeave(doctor, slot.startAt);
   const docId = doctor._id.toString();
 
   if (!(await reserveSlot(docId, slot.slotDate, slot.slotTime))) {
@@ -209,7 +270,8 @@ export const cancelAppointment = async (appointmentId, actor, { reason, cancelle
 // Move an active appointment to a new time with the same doctor.
 // Order: reserve the new slot -> update the appointment -> release the old slot,
 // so a failure never leaves the patient without a slot. Reminders are reset.
-export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, actor, { reason } = {}) => {
+// The patient is told on WhatsApp (old and new time) unless notifyPatient is false.
+export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, actor, { reason, notifyPatient = true } = {}) => {
   const appointment = await appointmentModel.findOne({ _id: appointmentId, ...ACTIVE });
   if (!appointment) throw new AppointmentError("This appointment can't be moved (already completed or cancelled)");
 
@@ -219,6 +281,7 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
   if (slot.slotDate === appointment.slotDate && slot.slotTime === appointment.slotTime) {
     throw new AppointmentError("The new time is the same as the current one");
   }
+  await assertNotOnLeave(doctor, slot.startAt);
 
   if (!(await reserveSlot(appointment.docId, slot.slotDate, slot.slotTime))) {
     throw new AppointmentError("Selected time slot is not available");
@@ -247,7 +310,111 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
   }
 
   await releaseSlot(appointment.docId, from.slotDate, from.slotTime);
+
+  if (notifyPatient) {
+    const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone");
+    if (patient?.whatsappEnabled) {
+      queueNotification({
+        appointmentId: updated._id.toString(),
+        channel: "whatsapp",
+        recipient: "patient",
+        kind: "reschedule",
+        send: () =>
+          sendWhatsAppReschedule(
+            patient.whatsappNumber || patient.phone,
+            patient.name,
+            updated.docData?.name,
+            from.slotDate,
+            from.slotTime,
+            updated.slotDate,
+            updated.slotTime
+          ),
+      });
+    }
+  }
   return updated;
+};
+
+// --- Whole-day actions (doctor away, emergency, approved leave) ---
+
+const activeOnDay = (docId, slotDate) =>
+  appointmentModel.find({ docId, slotDate, ...ACTIVE }).sort({ startAt: 1 });
+
+// Move every active appointment of a doctor from one day to another.
+// Each keeps its time if free, otherwise gets the nearest free time on the new day
+// (later first, then earlier). Returns { moved: [...], notMoved: [...] }.
+export const rescheduleDay = async ({ docId, fromSlotDate, toSlotDate, actor, reason }) => {
+  if (!isValidSlotDate(fromSlotDate) || !isValidSlotDate(toSlotDate)) {
+    throw new AppointmentError("Please choose both dates");
+  }
+  if (fromSlotDate === toSlotDate) throw new AppointmentError("Choose a different date to move to");
+  const doctor = await doctorModel.findById(docId).select("-password");
+  if (!doctor) throw new AppointmentError("Doctor not found");
+
+  const times = dayTimes(doctor);
+  const moved = [];
+  const pending = [];
+  const failures = new Map();
+
+  // Try one time; returns true if moved. "Taken" is recorded so the next time can be tried;
+  // anything else (leave, not a sitting day, past) applies to the whole day.
+  const tryMove = async (apt, time) => {
+    try {
+      const updated = await moveAppointment(apt._id, toSlotDate, time, actor, { reason });
+      moved.push({ _id: apt._id, patient: apt.userData?.name, from: apt.slotTime, to: updated.slotTime });
+      return true;
+    } catch (error) {
+      if (!(error instanceof AppointmentError)) throw error;
+      failures.set(apt._id.toString(), error.message);
+      return false;
+    }
+  };
+  const isTaken = (apt) => failures.get(apt._id.toString()) === "Selected time slot is not available";
+
+  // Pass 1: everyone whose same time is free keeps it
+  for (const apt of await activeOnDay(docId, fromSlotDate)) {
+    if (!(await tryMove(apt, apt.slotTime))) pending.push(apt);
+  }
+
+  // Pass 2: the rest get the nearest free time (later first, then earlier)
+  const notMoved = [];
+  for (const apt of pending) {
+    let done = false;
+    if (isTaken(apt)) {
+      const index = times.indexOf(apt.slotTime);
+      const later = index >= 0 ? times.slice(index + 1) : times;
+      const earlier = index > 0 ? times.slice(0, index).reverse() : [];
+      for (const time of [...later, ...earlier]) {
+        if (await tryMove(apt, time)) { done = true; break; }
+        if (!isTaken(apt)) break;
+      }
+    }
+    if (!done) {
+      const why = failures.get(apt._id.toString());
+      notMoved.push({
+        _id: apt._id,
+        patient: apt.userData?.name,
+        time: apt.slotTime,
+        reason: why === "Selected time slot is not available" ? "No free time left on the new day" : why,
+      });
+    }
+  }
+  return { moved, notMoved };
+};
+
+// Cancel every active appointment of a doctor on one day (patients are told on WhatsApp).
+export const cancelDay = async ({ docId, slotDate, actor, reason, cancelledBy }) => {
+  if (!isValidSlotDate(slotDate)) throw new AppointmentError("Please choose a date");
+  const cancelled = [];
+  for (const apt of await activeOnDay(docId, slotDate)) {
+    try {
+      await cancelAppointment(apt._id, actor, { reason, cancelledBy });
+      cancelled.push({ _id: apt._id, patient: apt.userData?.name, time: apt.slotTime });
+    } catch (error) {
+      if (!(error instanceof AppointmentError)) throw error;
+    }
+  }
+  return { cancelled };
 };
 
 // Follow-up visits are free within this many days of the original visit (0 = always charge)

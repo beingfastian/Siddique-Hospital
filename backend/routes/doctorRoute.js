@@ -16,6 +16,7 @@ import {
   scheduleFollowUp,
 } from "../controllers/doctorController.js";
 import authDoctor from "../middleware/authDoctor.js";
+import { rescheduleOne, rescheduleWholeDay, cancelWholeDay } from "../controllers/rescheduleController.js";
 
 const doctorRouter = express.Router();
 
@@ -28,6 +29,9 @@ doctorRouter.get("/appointments", authDoctor, appointmentsDoctor);
 doctorRouter.post("/complete-appointment", authDoctor, appointmentComplete);
 doctorRouter.post("/cancel-appointment", authDoctor, appointmentCancel);
 doctorRouter.post("/follow-up", authDoctor, scheduleFollowUp);
+doctorRouter.post("/reschedule-appointment", authDoctor, rescheduleOne("doctor"));
+doctorRouter.post("/reschedule-day", authDoctor, rescheduleWholeDay("doctor"));
+doctorRouter.post("/cancel-day", authDoctor, cancelWholeDay("doctor"));
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, updateDoctorProfile);

@@ -2,6 +2,9 @@ import React, { useContext, useEffect, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { FaCheck, FaTimes, FaEye, FaClock, FaFilter, FaCalendarAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { FaExclamationTriangle } from "react-icons/fa";
+import DayActionsDialog from "../../components/DayActionsDialog";
+import { AppContext } from "../../context/AppContext.jsx";
 
 const AdminLeaveManagement = () => {
   const { 
@@ -11,8 +14,17 @@ const AdminLeaveManagement = () => {
     approveLeaveRequest, 
     rejectLeaveRequest,
     leaveStats,
-    getLeaveStats 
+    getLeaveStats,
+    doctors,
+    getAllDoctors,
+    appointments,
+    getAllAppointments,
+    rescheduleDay,
+    cancelDay,
   } = useContext(AdminContext);
+  const { slotDateFormat } = useContext(AppContext);
+  // { docId, slotDate } of the day being managed from a leave conflict
+  const [manageDay, setManageDay] = useState(null);
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDoctor, setFilterDoctor] = useState("all");
@@ -32,6 +44,8 @@ const AdminLeaveManagement = () => {
     if (aToken) {
       getAllLeaveRequests();
       getLeaveStats();
+      getAllDoctors();
+      getAllAppointments();
     }
   }, [aToken]);
 
@@ -119,6 +133,31 @@ const AdminLeaveManagement = () => {
     };
     return colors[type] || colors.other;
   };
+
+
+  // Booked appointments that clash with this leave, with a button per day to move or cancel them
+  const conflictNote = (request) =>
+    request.conflicts?.length > 0 && (
+      <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+        <p className="flex items-center gap-1 font-medium">
+          <FaExclamationTriangle />
+          {request.conflicts.reduce((n, day) => n + day.count, 0)} booked appointment(s) during this leave
+        </p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {request.conflicts.map((day) => (
+            <button
+              key={day.slotDate}
+              type="button"
+              onClick={() => setManageDay({ docId: request.doctorId, slotDate: day.slotDate })}
+              className="px-2 py-0.5 rounded-full bg-white border border-amber-300 hover:bg-amber-100"
+              title="Move or cancel this day's appointments"
+            >
+              {slotDateFormat(day.slotDate)} ({day.count})
+            </button>
+          ))}
+        </div>
+      </div>
+    );
 
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
@@ -235,6 +274,7 @@ const AdminLeaveManagement = () => {
                         <div>
                           <p className="font-medium text-gray-900">{formatDate(request.fromDate)}</p>
                           <p className="text-sm text-gray-500">to {formatDate(request.toDate)}</p>
+                          {conflictNote(request)}
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -318,6 +358,7 @@ const AdminLeaveManagement = () => {
                         <FaClock className="text-xs" />
                         {calculateDays(request.fromDate, request.toDate)} days
                       </p>
+                      {conflictNote(request)}
                     </div>
                     <div>
                       <p className="text-gray-500">Type & Reason</p>
@@ -365,6 +406,21 @@ const AdminLeaveManagement = () => {
         )}
       </div>
 
+      {manageDay && (
+        <DayActionsDialog
+          doctors={doctors}
+          appointments={appointments}
+          defaultDocId={manageDay.docId}
+          defaultSlotDate={manageDay.slotDate}
+          onMove={rescheduleDay}
+          onCancelDay={cancelDay}
+          onClose={() => {
+            setManageDay(null);
+            getAllLeaveRequests();
+          }}
+        />
+      )}
+
       {/* Modal for Approve/Reject */}
       {showModal && selectedRequest && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -382,6 +438,19 @@ const AdminLeaveManagement = () => {
                 <strong>Reason:</strong> {selectedRequest.reason}
               </p>
             </div>
+
+            {modalType === 'approve' && selectedRequest.conflicts?.length > 0 && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <p className="font-medium flex items-center gap-1">
+                  <FaExclamationTriangle />
+                  {selectedRequest.conflicts.reduce((n, day) => n + day.count, 0)} patient(s) are booked during this leave.
+                </p>
+                <p className="mt-1">
+                  After approving, no new bookings can be made on these days. Use the date buttons in the list to move or
+                  cancel the existing ones; patients are told on WhatsApp.
+                </p>
+              </div>
+            )}
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
