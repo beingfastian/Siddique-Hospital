@@ -80,7 +80,7 @@ const DoctorContextProvider = (props) => {
       );
       if (data.success) {
         toast.success(
-          data.patientNotified ? "Follow-up scheduled. The patient has been notified." : "Follow-up scheduled."
+          data.patientNotified ? "Follow-up scheduled. The patient will be notified." : "Follow-up scheduled."
         );
         getAppointments();
         return true;

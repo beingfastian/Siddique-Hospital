@@ -15,7 +15,7 @@ import {
   AppointmentError,
   validateSlot,
   bookAppointment,
-  sendBookingNotifications,
+  queueBookingNotifications,
   cancelAppointment,
 } from "../services/appointmentService.js";
 
@@ -683,7 +683,8 @@ const bookAppointmentForPatient = async (req, res) => {
       actor: { role: "admin" },
     });
 
-    const whatsappResults = await sendBookingNotifications(newAppointment, patient, docData);
+    // WhatsApp/email go out in the background; the response doesn't wait for them
+    const notificationsQueued = queueBookingNotifications(newAppointment, patient, docData);
 
     res.json({
       success: true,
@@ -691,8 +692,7 @@ const bookAppointmentForPatient = async (req, res) => {
         ? "New patient created and appointment booked successfully"
         : "Appointment booked successfully",
       appointmentId: newAppointment._id.toString(),
-      whatsappSent: whatsappResults.patient.sent || whatsappResults.doctor.sent,
-      whatsappResults,
+      notificationsQueued,
     });
 
   } catch (error) {

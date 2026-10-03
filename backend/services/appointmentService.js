@@ -21,6 +21,7 @@ import {
   sendUserAppointmentConfirmation,
   sendDoctorAppointmentNotification,
 } from "../config/emailService.js";
+import { queueNotification } from "./notificationQueue.js";
 
 // An error whose message is safe to show to staff
 export class AppointmentError extends Error {}
@@ -122,40 +123,35 @@ export const bookAppointment = async ({
   }
 };
 
-// WhatsApp + email confirmations. Returns WhatsApp results for the admin screen.
-export const sendBookingNotifications = async (appointment, patient, doctor, { notifyDoctor = true } = {}) => {
+// Queue WhatsApp + email confirmations; returns at once (they are sent in the background).
+// Returns which messages were queued, e.g. { patient: ["whatsapp", "email"], doctor: ["email"] }.
+export const queueBookingNotifications = (appointment, patient, doctor, { notifyDoctor = true } = {}) => {
   const { slotDate, slotTime, amount } = appointment;
+  const appointmentId = appointment._id.toString();
   const patientPhone = patient.whatsappNumber || patient.phone;
-  const results = {
-    patient: { sent: false, error: null, enabled: Boolean(patient.whatsappEnabled), phone: patientPhone },
-    doctor: { sent: false, error: null, enabled: Boolean(doctor.whatsappEnabled), phone: doctor.whatsappNumber },
+  const queued = { patient: [], doctor: [] };
+  const add = (recipient, channel, send) => {
+    queueNotification({ appointmentId, channel, recipient, kind: "confirmation", send });
+    queued[recipient].push(channel);
   };
 
-  const tasks = [];
   if (patient.whatsappEnabled && patientPhone) {
-    tasks.push(
-      sendWhatsAppConfirmation(patientPhone, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount)
-        .then((r) => Object.assign(results.patient, { sent: r.success, error: r.success ? null : r.error }))
-    );
-  }
-  if (notifyDoctor && doctor.whatsappEnabled && doctor.whatsappNumber) {
-    tasks.push(
-      sendDoctorWhatsAppConfirmation(doctor.whatsappNumber, doctor.name, patient.name, patientPhone, slotDate, slotTime)
-        .then((r) => Object.assign(results.doctor, { sent: r.success, error: r.success ? null : r.error }))
-    );
+    add("patient", "whatsapp", () =>
+      sendWhatsAppConfirmation(patientPhone, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount));
   }
   if (patient.email) {
-    tasks.push(
-      sendUserAppointmentConfirmation(patient.email, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount)
-    );
+    add("patient", "email", () =>
+      sendUserAppointmentConfirmation(patient.email, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount));
+  }
+  if (notifyDoctor && doctor.whatsappEnabled && doctor.whatsappNumber) {
+    add("doctor", "whatsapp", () =>
+      sendDoctorWhatsAppConfirmation(doctor.whatsappNumber, doctor.name, patient.name, patientPhone, slotDate, slotTime));
   }
   if (notifyDoctor && doctor.email) {
-    tasks.push(
-      sendDoctorAppointmentNotification(doctor.email, doctor.name, patient.name, patient.email || "Not provided", slotDate, slotTime, amount)
-    );
+    add("doctor", "email", () =>
+      sendDoctorAppointmentNotification(doctor.email, doctor.name, patient.name, patient.email || "Not provided", slotDate, slotTime, amount));
   }
-  await Promise.allSettled(tasks);
-  return results;
+  return queued;
 };
 
 // Mark as completed. Only an active appointment can be completed.
@@ -190,14 +186,21 @@ export const cancelAppointment = async (appointmentId, actor, { reason, cancelle
   if (notifyPatient) {
     const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone");
     if (patient?.whatsappEnabled) {
-      await sendWhatsAppCancellation(
-        patient.whatsappNumber || patient.phone,
-        patient.name,
-        updated.docData?.name,
-        updated.slotDate,
-        updated.slotTime,
-        cancelledBy || "the hospital"
-      );
+      queueNotification({
+        appointmentId: updated._id.toString(),
+        channel: "whatsapp",
+        recipient: "patient",
+        kind: "cancellation",
+        send: () =>
+          sendWhatsAppCancellation(
+            patient.whatsappNumber || patient.phone,
+            patient.name,
+            updated.docData?.name,
+            updated.slotDate,
+            updated.slotTime,
+            cancelledBy || "the hospital"
+          ),
+      });
     }
   }
   return updated;
