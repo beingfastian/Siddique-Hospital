@@ -2,12 +2,12 @@ import React, { useContext, useEffect, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { assets } from "../../assets/assets.js";
-import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash } from "react-icons/fa";
 import { AdminRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
 
 const AllAppointments = () => {
-  const { aToken, appointments, getAllAppointments, doctors, getAllDoctors, cancelAppointment, rescheduleDay, cancelDay } =
+  const { aToken, appointments, getAllAppointments, doctors, getAllDoctors, cancelAppointment, rescheduleDay, cancelDay, markNoShow } =
     useContext(AdminContext);
   const [rescheduleFor, setRescheduleFor] = useState(null);
   const [showDayActions, setShowDayActions] = useState(false);
@@ -32,7 +32,8 @@ const AllAppointments = () => {
     if (filterStatus !== "all") {
       if (filterStatus === "cancelled" && !item.cancelled) return false;
       if (filterStatus === "completed" && item.isCompleted === false) return false;
-      if (filterStatus === "pending" && (item.cancelled || item.isCompleted)) return false;
+      if (filterStatus === "no_show" && item.status !== "no_show") return false;
+      if (filterStatus === "pending" && (item.cancelled || item.isCompleted || item.status === "no_show")) return false;
     }
     
     if (filterNotification !== "all") {
@@ -85,6 +86,8 @@ const AllAppointments = () => {
       return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">Cancelled</span>;
     } else if (item.isCompleted) {
       return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">Completed</span>;
+    } else if (item.status === "no_show") {
+      return <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">No-show</span>;
     } else {
       return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">Pending</span>;
     }
@@ -98,13 +101,19 @@ const AllAppointments = () => {
             <h1 className="text-2xl font-semibold text-gray-900">All Appointments</h1>
             <p className="text-gray-600 mt-1">Overview of all appointments in the system</p>
           </div>
-          <button
-            onClick={() => setShowDayActions(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <FaCalendarDay className="text-blue-600" />
-            Manage a day
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+              <FaEye className="text-blue-600" />
+              <span className="text-sm text-blue-800 font-medium">Reception marks no-shows</span>
+            </div>
+            <button
+              onClick={() => setShowDayActions(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <FaCalendarDay className="text-blue-600" />
+              Manage a day
+            </button>
+          </div>
         </div>
         
         {/* Search and Filters */}
@@ -131,6 +140,7 @@ const AllAppointments = () => {
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="no_show">No-show</option>
               </select>
               
               <select 
@@ -227,6 +237,18 @@ const AllAppointments = () => {
                   <div className="col-span-2 flex flex-wrap items-center gap-1">
                     {getStatusBadge(item)}
                     {getTypeBadge(item)}
+                    {!item.cancelled && !item.isCompleted && item.status !== "no_show" && (
+                      <button
+                        onClick={() =>
+                          window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
+                          markNoShow(item._id)
+                        }
+                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        title="Mark as no-show"
+                      >
+                        <FaUserSlash className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="col-span-1 flex gap-1">{actionButtons(item)}</div>
@@ -249,6 +271,18 @@ const AllAppointments = () => {
                     <div className="text-right flex flex-col items-end gap-1">
                       {getStatusBadge(item)}
                       {getTypeBadge(item)}
+                      {!item.cancelled && !item.isCompleted && item.status !== "no_show" && (
+                        <button
+                          onClick={() =>
+                            window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
+                            markNoShow(item._id)
+                          }
+                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Mark as no-show"
+                        >
+                          <FaUserSlash className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   
@@ -314,7 +348,8 @@ const AllAppointments = () => {
             <h4 className="font-medium text-blue-900">Managing appointments</h4>
             <p className="text-sm text-blue-700 mt-1">
               Use the buttons on an upcoming appointment to reschedule or cancel it, or "Manage a day" to move or
-              cancel all of a doctor's appointments on one day. Patients are told on WhatsApp. Doctors mark visits as completed.
+              cancel all of a doctor's appointments on one day. Patients are told on WhatsApp. Doctors mark visits
+              as completed; reception marks a missed patient as a no-show from this list.
             </p>
           </div>
         </div>
@@ -322,14 +357,14 @@ const AllAppointments = () => {
 
       {/* Summary Stats */}
       {appointments.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
             <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
             <div className="text-sm text-gray-500">Total</div>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
             <div className="text-2xl font-bold text-yellow-600">
-              {appointments.filter(a => !a.isCompleted && !a.cancelled).length}
+              {appointments.filter(a => !a.isCompleted && !a.cancelled && a.status !== "no_show").length}
             </div>
             <div className="text-sm text-gray-500">Pending</div>
           </div>
@@ -344,6 +379,12 @@ const AllAppointments = () => {
               {appointments.filter(a => a.cancelled).length}
             </div>
             <div className="text-sm text-gray-500">Cancelled</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {appointments.filter(a => a.status === "no_show").length}
+            </div>
+            <div className="text-sm text-gray-500">No-show</div>
           </div>
         </div>
       )}
