@@ -29,7 +29,7 @@ if (!/^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(baseUri)) {
   console.error("Refusing to run: CHECK_MONGODB_URI must be a local MongoDB (this script deletes its test database).");
   process.exit(1);
 }
-const dbName = "siddique_check_" + Date.now();
+const dbName = "qlinic_check_" + Date.now();
 await mongoose.connect(baseUri, { dbName });
 
 const { default: doctorModel } = await import("../model/doctorModel.js");

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { HOSPITAL_NAME, HOSPITAL_NAME_URDU } from "../../config";
 
 // Waiting-room screen (a TV or tablet at reception): which token each doctor is
 // seeing now and who is next. Token numbers only, never names. Labels are in
@@ -80,7 +81,7 @@ const QueueBoard = () => {
   }, [backendUrl]);
 
   useEffect(() => {
-    document.title = "Queue · Siddique Hospital";
+    document.title = `Queue · ${HOSPITAL_NAME}`;
     load();
     const poll = setInterval(load, POLL_MS);
     const tick = setInterval(() => setClock(new Date()), 1000);
@@ -124,8 +125,8 @@ const QueueBoard = () => {
     <div className="min-h-screen bg-slate-950 text-white flex flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800">
         <div>
-          <p className="text-2xl md:text-3xl font-bold">Siddique Hospital</p>
-          <p className="text-lg text-slate-300" dir="rtl" lang="ur">صدیق ہسپتال · او پی ڈی</p>
+          <p className="text-2xl md:text-3xl font-bold">{HOSPITAL_NAME}</p>
+          <p className="text-lg text-slate-300" dir="rtl" lang="ur">{HOSPITAL_NAME_URDU ? `${HOSPITAL_NAME_URDU} · ` : ""}او پی ڈی</p>
         </div>
         <div className="flex items-center gap-3">
           {!sound ? (

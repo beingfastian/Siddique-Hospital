@@ -44,7 +44,7 @@ export const templates = {
       "Time: {{6}}\n" +
       "Fee: Rs. {{7}}\n\n" +
       "Please arrive 15 minutes early. To change or cancel, call {{8}}. Thank you.",
-    example: ["Ali Khan", "Siddique Hospital", "Ahmed Raza", "General physician", "Friday, October 3, 2026", "06:30 PM", "1500", "+923001234567"],
+    example: ["Ali Khan", "City Care Hospital", "Ahmed Raza", "General physician", "Friday, October 3, 2026", "06:30 PM", "1500", "+923001234567"],
     ur: {
       body:
         "محترم {{1}}، {{2}} میں آپ کی اپائنٹمنٹ کنفرم ہو گئی ہے۔\n\n" +
@@ -53,7 +53,7 @@ export const templates = {
         "وقت: {{6}}\n" +
         "فیس: {{7}} روپے\n\n" +
         "براہ کرم 15 منٹ پہلے تشریف لائیں۔ تبدیلی یا منسوخی کے لیے {{8}} پر کال کریں۔ شکریہ۔",
-      example: ["علی خان", "Siddique Hospital", "احمد رضا", "General physician", "جمعہ، 3 اکتوبر، 2026", "شام 6:30", "1500", "+923001234567"],
+      example: ["علی خان", "City Care Hospital", "احمد رضا", "General physician", "جمعہ، 3 اکتوبر، 2026", "شام 6:30", "1500", "+923001234567"],
     },
   },
   appointment_confirmation_doctor: {
@@ -65,19 +65,19 @@ export const templates = {
       "Date: {{4}}\n" +
       "Time: {{5}}\n\n" +
       "Please check the doctor panel for details.",
-    example: ["Siddique Hospital", "Ali Khan", "+923001234567", "Friday, October 3, 2026", "06:30 PM"],
+    example: ["City Care Hospital", "Ali Khan", "+923001234567", "Friday, October 3, 2026", "06:30 PM"],
   },
   appointment_reminder: {
     category: "UTILITY",
     body:
       "Reminder from {{1}}: Dear {{2}}, you have an appointment with Dr. {{3}} on {{4}} at {{5}}.\n\n" +
       "To cancel, reply CANCEL or call {{6}}. Thank you.",
-    example: ["Siddique Hospital", "Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "+923001234567"],
+    example: ["City Care Hospital", "Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "+923001234567"],
     ur: {
       body:
         "یاد دہانی از {{1}}: محترم {{2}}، ڈاکٹر {{3}} کے ساتھ آپ کی اپائنٹمنٹ {{4}} کو {{5}} بجے ہے۔\n\n" +
         "منسوخ کرنے کے لیے CANCEL لکھ کر بھیجیں یا {{6}} پر کال کریں۔ شکریہ۔",
-      example: ["Siddique Hospital", "علی خان", "احمد رضا", "جمعہ، 3 اکتوبر، 2026", "شام 6:30", "+923001234567"],
+      example: ["City Care Hospital", "علی خان", "احمد رضا", "جمعہ، 3 اکتوبر، 2026", "شام 6:30", "+923001234567"],
     },
   },
   appointment_reminder_doctor: {
@@ -85,7 +85,7 @@ export const templates = {
     body:
       "Reminder from {{1}}: your appointment with patient {{2}} is on {{3}} at {{4}}.\n\n" +
       "Please check the doctor panel for details.",
-    example: ["Siddique Hospital", "Ali Khan", "Friday, October 3, 2026", "06:30 PM"],
+    example: ["City Care Hospital", "Ali Khan", "Friday, October 3, 2026", "06:30 PM"],
   },
   appointment_rescheduled: {
     category: "UTILITY",
@@ -105,7 +105,7 @@ export const templates = {
     body:
       "Dear {{1}}, your appointment with Dr. {{2}} on {{3}} at {{4}} has been cancelled by {{5}}.\n\n" +
       "To book again, call or message {{6}}. Thank you.",
-    example: ["Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "Siddique Hospital", "+923001234567"],
+    example: ["Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "City Care Hospital", "+923001234567"],
     ur: {
       body:
         "محترم {{1}}، ڈاکٹر {{2}} کے ساتھ {{3}} کو {{4}} بجے والی آپ کی اپائنٹمنٹ {{5}} کی طرف سے منسوخ کر دی گئی ہے۔\n\n" +
@@ -121,14 +121,14 @@ export const templates = {
       "Patients ahead of you: {{5}}. Approximate wait: {{6}} minutes.\n\n" +
       "See your turn live: {{7}}\n" +
       "We will message you again when your turn is near. Thank you.",
-    example: ["Ali Khan", "Siddique Hospital", "12", "Ahmed Raza", "5", "45", "https://siddiquehospital.com/queue/t/aB3dE9xY"],
+    example: ["Ali Khan", "City Care Hospital", "12", "Ahmed Raza", "5", "45", "https://cityhospital.example.com/queue/t/aB3dE9xY"],
     ur: {
       body:
         "محترم {{1}}، {{2}} میں آپ کا ٹوکن نمبر {{3}} ہے (ڈاکٹر {{4}})۔\n\n" +
         "آپ سے پہلے مریض: {{5}}۔ اندازاً انتظار: {{6}} منٹ۔\n\n" +
         "اپنی باری یہاں دیکھیں: {{7}}\n" +
         "باری قریب آنے پر ہم آپ کو دوبارہ میسج کریں گے۔ شکریہ۔",
-      example: ["علی خان", "Siddique Hospital", "12", "احمد رضا", "5", "45", "https://siddiquehospital.com/queue/t/aB3dE9xY"],
+      example: ["علی خان", "City Care Hospital", "12", "احمد رضا", "5", "45", "https://cityhospital.example.com/queue/t/aB3dE9xY"],
     },
   },
   // Live queue: sent once when only a few patients are ahead
@@ -137,12 +137,12 @@ export const templates = {
     body:
       "Dear {{1}}, your turn with Dr. {{2}} is near. Your token number is {{3}} and {{4}} patient(s) are ahead of you.\n\n" +
       "Please come back to the waiting area at {{5}}. Thank you.",
-    example: ["Ali Khan", "Ahmed Raza", "12", "2", "Siddique Hospital"],
+    example: ["Ali Khan", "Ahmed Raza", "12", "2", "City Care Hospital"],
     ur: {
       body:
         "محترم {{1}}، ڈاکٹر {{2}} کے پاس آپ کی باری قریب ہے۔ آپ کا ٹوکن نمبر {{3}} ہے اور آپ سے پہلے {{4}} مریض ہیں۔\n\n" +
         "براہ کرم {{5}} کے ویٹنگ ایریا میں واپس آ جائیں۔ شکریہ۔",
-      example: ["علی خان", "احمد رضا", "12", "2", "Siddique Hospital"],
+      example: ["علی خان", "احمد رضا", "12", "2", "City Care Hospital"],
     },
   },
 };

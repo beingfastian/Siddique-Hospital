@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { formatSlotDate as formatDate } from '../utils/slots.js';
-import { HOSPITAL_PHONE } from './hospital.js';
+import { HOSPITAL_ADDRESS, HOSPITAL_EMAIL, HOSPITAL_NAME, HOSPITAL_PHONE, PRODUCT_NAME, PRODUCT_TAGLINE } from './hospital.js';
 // Check if email configuration is available
 export const isEmailConfigured = () => {
   return !!(
@@ -37,7 +37,7 @@ const createTransporter = () => {
   }
   return transporter;
 };
-// Email template for Siddique Hospital
+// Email template with the hospital's details
 const getEmailTemplate = (title, content, type = 'info') => {
   const colors = {
     info: '#4CAF50',
@@ -47,7 +47,7 @@ const getEmailTemplate = (title, content, type = 'info') => {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: ${colors[type]}; margin-bottom: 10px;">🏥 Siddique Hospital</h1>
+        <h1 style="color: ${colors[type]}; margin-bottom: 10px;">🏥 ${HOSPITAL_NAME}</h1>
         <h2 style="color: #333; margin-top: 0;">${title}</h2>
       </div>
       
@@ -55,18 +55,21 @@ const getEmailTemplate = (title, content, type = 'info') => {
       
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
         <h3 style="color: #333; margin-top: 0;">📍 Hospital Information</h3>
-        <p style="color: #666; margin: 5px 0;"><strong>Address:</strong> Civil Lines, Lahore-Sargodha Road, Sheikhupura</p>
+        ${HOSPITAL_ADDRESS ? `<p style="color: #666; margin: 5px 0;"><strong>Address:</strong> ${HOSPITAL_ADDRESS}</p>` : ''}
         <p style="color: #666; margin: 5px 0;"><strong>Phone:</strong> ${HOSPITAL_PHONE}</p>
         <p style="color: #666; margin: 5px 0;"><strong>WhatsApp:</strong> ${HOSPITAL_PHONE}</p>
-        <p style="color: #666; margin: 5px 0;"><strong>Email:</strong> Siddiquehospital@gmail.com</p>
+        ${HOSPITAL_EMAIL ? `<p style="color: #666; margin: 5px 0;"><strong>Email:</strong> ${HOSPITAL_EMAIL}</p>` : ''}
       </div>
       
       <div style="text-align: center; margin-top: 30px;">
         <p style="color: #666; font-size: 14px;">
-          Thank you for choosing Siddique Hospital for your healthcare needs!
+          Thank you for choosing ${HOSPITAL_NAME} for your healthcare needs!
         </p>
         <p style="color: #999; font-size: 12px; margin-top: 20px;">
           This is an automated email. Please do not reply to this email.
+        </p>
+        <p style="color: #999; font-size: 12px; margin-top: 8px;">
+          Powered by <strong style="color: #5F6FFF;">${PRODUCT_NAME}</strong> · ${PRODUCT_TAGLINE}
         </p>
       </div>
     </div>
@@ -127,7 +130,7 @@ export const sendUserAppointmentConfirmation = async (userEmail, userName, docto
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: userEmail,
-      subject: '🏥 Appointment Confirmed - Siddique Hospital',
+      subject: `🏥 Appointment Confirmed - ${HOSPITAL_NAME}`,
       html: getEmailTemplate('Appointment Confirmed! ✅', content, 'success')
     };
     
@@ -188,7 +191,7 @@ export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName,
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: doctorEmail,
-      subject: '📅 New Appointment Booked - Siddique Hospital',
+      subject: `📅 New Appointment Booked - ${HOSPITAL_NAME}`,
       html: getEmailTemplate('New Appointment Booked! 📅', content, 'info')
     };
     

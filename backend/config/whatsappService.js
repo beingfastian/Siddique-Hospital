@@ -9,7 +9,7 @@
 // sent in English instead, so a patient never misses a message because of it.
 import twilio from "twilio";
 import { formatSlotDate, formatDateFor, formatTimeFor } from "../utils/slots.js";
-import { HOSPITAL_PHONE } from "./hospital.js";
+import { HOSPITAL_NAME, HOSPITAL_PHONE } from "./hospital.js";
 import { renderTemplate, hasLanguage } from "../whatsapp/templates.js";
 import { normalizePhone } from "../whatsapp/phone.js";
 import {
@@ -18,8 +18,6 @@ import {
   sendTemplate,
   sendText,
 } from "../whatsapp/cloudApi.js";
-
-const HOSPITAL_NAME = process.env.HOSPITAL_NAME || "Siddique Hospital";
 
 const isTwilioConfigured = () =>
   Boolean(

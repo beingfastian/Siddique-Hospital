@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { assets } from "../assets/assets.js";
 import { Link, NavLink } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
-import { HOSPITAL_PHONE } from "../config";
+import { HOSPITAL_NAME, HOSPITAL_PHONE } from "../config";
 
 const navLinks = [
   { to: "/", label: "Home" },
@@ -20,8 +20,8 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200 mb-5">
       <nav className="flex items-center justify-between h-16">
-        <Link to="/" aria-label="Siddique Hospital home" className="flex-shrink-0">
-          <img src={assets.logo} alt="Siddique Hospital" className="h-9 sm:h-10 w-auto" />
+        <Link to="/" aria-label={`${HOSPITAL_NAME} home`} className="flex-shrink-0">
+          <img src={assets.logo} alt={HOSPITAL_NAME} className="h-10 sm:h-11 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -71,7 +71,7 @@ const Navbar = () => {
       {showMenu && (
         <div className="md:hidden fixed inset-0 z-50 bg-white">
           <div className="flex items-center justify-between h-16 px-4 border-b">
-            <img className="h-9 w-auto" src={assets.logo} alt="Siddique Hospital" />
+            <img className="h-9 w-auto" src={assets.logo} alt={HOSPITAL_NAME} />
             <button
               type="button"
               onClick={() => setShowMenu(false)}

@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { FaPrint, FaCheckCircle } from "react-icons/fa";
+import { HOSPITAL_ADDRESS, HOSPITAL_NAME, HOSPITAL_NAME_URDU, HOSPITAL_PHONE } from "../config";
 
 // The patient's copy: a small slip printed on 80mm thermal paper (what receptions
 // usually have) or any printer the browser's print dialog offers. It opens a
 // window, writes the slip, prints and closes.
 //
 // Each slip has English and Urdu lines: many patients (or the family member with
-// them) read Urdu but not English. Same hospital details as backend/config and
-// frontend/src/config.js.
+// them) read Urdu but not English. Hospital details come from admin/src/config.js.
 const HOSPITAL = {
-  name: "Siddique Hospital",
-  nameUrdu: "صدیق ہسپتال",
-  address: "Civil Lines, Lahore-Sargodha Road, Sheikhupura",
-  phone: "+92 313 4294093",
+  name: HOSPITAL_NAME,
+  nameUrdu: HOSPITAL_NAME_URDU,
+  address: HOSPITAL_ADDRESS,
+  phone: HOSPITAL_PHONE,
 };
 
 const escapeHtml = (value) =>
@@ -75,8 +75,8 @@ const writeAndPrint = async (win, title, bodyHtml) => {
 
 const header = () => `
   <h1>${escapeHtml(HOSPITAL.name)}</h1>
-  <div class="center ur">${escapeHtml(HOSPITAL.nameUrdu)}</div>
-  <div class="addr">${escapeHtml(HOSPITAL.address)}<br>Ph: ${escapeHtml(HOSPITAL.phone)}</div>
+  ${HOSPITAL.nameUrdu ? `<div class="center ur">${escapeHtml(HOSPITAL.nameUrdu)}</div>` : ""}
+  <div class="addr">${HOSPITAL.address ? `${escapeHtml(HOSPITAL.address)}<br>` : ""}Ph: ${escapeHtml(HOSPITAL.phone)}</div>
   <hr>`;
 
 const row = (label, value) =>

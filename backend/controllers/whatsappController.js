@@ -12,7 +12,14 @@ import {
 } from "../utils/slots.js";
 import { patientLanguage } from "../whatsapp/templates.js";
 import { cancelAppointment } from "../services/appointmentService.js";
-import { HOSPITAL_PHONE } from "../config/hospital.js";
+import {
+  HOSPITAL_ADDRESS,
+  HOSPITAL_EMAIL,
+  HOSPITAL_NAME,
+  HOSPITAL_PHONE,
+  HOSPITAL_WEBSITE,
+  PRODUCT_NAME,
+} from "../config/hospital.js";
 
 // Reply text for an incoming WhatsApp message (STATUS / CANCEL / BOOK / CONTACT / HELP).
 // Shared by the Twilio and Kapso webhooks. Replies in the patient's language
@@ -26,7 +33,8 @@ const COMMANDS = {
 const commandOf = (text) =>
   Object.keys(COMMANDS).find((command) => COMMANDS[command].includes(text)) || "help";
 
-const WEBSITE = "siddiquehospital.com";
+// Optional lines, left out when the hospital hasn't set them
+const optionalLine = (value, label) => (value ? `${label} ${value}\n` : "");
 
 // Wording per language
 const TEXT = {
@@ -36,27 +44,27 @@ const TEXT = {
     statusFooter: () => "Need help? Reply *HELP* for more options.",
     noAppointments: (name) =>
       `*Hello ${name}! 👋*\n\nYou currently have no appointments.\n\n` +
-      `To book an appointment:\n🌐 Visit: ${WEBSITE}\n📞 Call: ${HOSPITAL_PHONE}\n💬 WhatsApp: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
+      `To book an appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n💬 WhatsApp: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
     statusError: () => "Sorry, there was an error fetching your appointments. Please try again later.",
     cancelled: (apt) =>
       `*Appointment Cancelled Successfully ❌*\n\nDetails:\n👨‍⚕️ Dr. ${apt.docData.name}\n📅 ${formatDisplayDate(apt.slotDate)}\n🕐 ${apt.slotTime}\n\n` +
-      `To book a new appointment:\n🌐 Visit: ${WEBSITE}\n📞 Call: ${HOSPITAL_PHONE}\n\nThank you!`,
+      `To book a new appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n\nThank you!`,
     nothingToCancel: () =>
       `*No Upcoming Appointment Found*\n\nYou don't have any upcoming appointments to cancel.\n\n` +
-      `To book a new appointment:\n🌐 Visit: ${WEBSITE}\n📞 Call: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
+      `To book a new appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
     cancelError: () => "Sorry, there was an error cancelling your appointment. Please try again later or contact us directly.",
     book: () =>
       `*Book New Appointment 📅*\n\nTo book an appointment with our doctors:\n\n` +
-      `🌐 *Website:* ${WEBSITE}\n📞 *Call:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n\n` +
+      `${optionalLine(HOSPITAL_WEBSITE, "🌐 *Website:*")}📞 *Call:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n\n` +
       `*Our Specialties:*\n• General Medicine\n• Pediatrics\n• Gynecology\n• Dermatology\n• Neurology\n• Gastroenterology\n\nWe're here to help! 🏥`,
     contact: () =>
-      `*Siddique Hospital Contact Info 🏥*\n\n📍 *Address:*\nCivil Lines, Lahore-Sargodha Road\nSheikhupura, Pakistan\n\n` +
-      `📞 *Phone:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n📧 *Email:* Siddiquehospital@gmail.com\n\n` +
-      `🌐 *Website:* ${WEBSITE}\n\n*Social Media:*\n📘 Facebook: Siddique Hospital\n📸 Instagram: @siddique.hospital\n\nWe're here 24/7 for emergencies! 🚑`,
+      `*${HOSPITAL_NAME} Contact Info 🏥*\n\n${optionalLine(HOSPITAL_ADDRESS, "📍 *Address:*")}` +
+      `📞 *Phone:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n${optionalLine(HOSPITAL_EMAIL, "📧 *Email:*")}` +
+      `${optionalLine(HOSPITAL_WEBSITE, "🌐 *Website:*")}\nWe're here 24/7 for emergencies! 🚑`,
     help: () =>
-      `*Welcome to Siddique Hospital Bot! 🏥*\n\n*Available Commands:*\n• *STATUS* - Check your appointments\n` +
+      `*Welcome to ${HOSPITAL_NAME}! 🏥*\n\n*Available Commands:*\n• *STATUS* - Check your appointments\n` +
       `• *CANCEL* - Cancel your next appointment\n• *BOOK* - Get booking information\n• *CONTACT* - Hospital contact details\n` +
-      `• *HELP* - Show this menu\n\n*Quick Actions:*\n🌐 Book Online: ${WEBSITE}\n📞 Call Direct: ${HOSPITAL_PHONE}\n\nHow can we help you today?`,
+      `• *HELP* - Show this menu\n\n*Quick Actions:*\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Book Online:")}📞 Call Direct: ${HOSPITAL_PHONE}\n\nHow can we help you today?\n\n_Powered by ${PRODUCT_NAME}_`,
   },
   ur: {
     statusHeader: (name) => `*السلام علیکم ${name}! 👋*\n\n*آپ کی حالیہ اپائنٹمنٹس:*\n\n`,
@@ -64,7 +72,7 @@ const TEXT = {
     statusFooter: () => "مزید معلومات کے لیے *مدد* یا *HELP* لکھ کر بھیجیں۔",
     noAppointments: (name) =>
       `*السلام علیکم ${name}! 👋*\n\nاس وقت آپ کی کوئی اپائنٹمنٹ نہیں ہے۔\n\n` +
-      `اپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}\n🌐 ویب سائٹ: ${WEBSITE}`,
+      `اپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}${HOSPITAL_WEBSITE ? `\n🌐 ویب سائٹ: ${HOSPITAL_WEBSITE}` : ""}`,
     statusError: () => "معذرت، آپ کی اپائنٹمنٹس دیکھنے میں مسئلہ ہوا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
     cancelled: (apt) =>
       `*آپ کی اپائنٹمنٹ منسوخ کر دی گئی ہے ❌*\n\n👨‍⚕️ ڈاکٹر ${apt.docData.name}\n` +
@@ -75,12 +83,12 @@ const TEXT = {
       `مزید معلومات کے لیے ${HOSPITAL_PHONE} پر کال کریں۔`,
     cancelError: () => "معذرت، اپائنٹمنٹ منسوخ کرنے میں مسئلہ ہوا۔ براہ کرم ہسپتال کو کال کریں۔",
     book: () =>
-      `*نئی اپائنٹمنٹ 📅*\n\nاپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}\n🌐 ویب سائٹ: ${WEBSITE}`,
+      `*نئی اپائنٹمنٹ 📅*\n\nاپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}${HOSPITAL_WEBSITE ? `\n🌐 ویب سائٹ: ${HOSPITAL_WEBSITE}` : ""}`,
     contact: () =>
-      `*صدیق ہسپتال 🏥*\n\n📍 سول لائنز، لاہور سرگودھا روڈ، شیخوپورہ\n📞 فون: ${HOSPITAL_PHONE}\n` +
+      `*${HOSPITAL_NAME} 🏥*\n\n${optionalLine(HOSPITAL_ADDRESS, "📍")}📞 فون: ${HOSPITAL_PHONE}\n` +
       `💬 واٹس ایپ: ${HOSPITAL_PHONE}\n\nایمرجنسی 24 گھنٹے کھلی ہے 🚑`,
     help: () =>
-      `*صدیق ہسپتال 🏥*\n\nیہ الفاظ لکھ کر بھیجیں:\n• *حالت* (STATUS) - اپنی اپائنٹمنٹس دیکھیں\n` +
+      `*${HOSPITAL_NAME} 🏥*\n\nیہ الفاظ لکھ کر بھیجیں:\n• *حالت* (STATUS) - اپنی اپائنٹمنٹس دیکھیں\n` +
       `• *منسوخ* (CANCEL) - اگلی اپائنٹمنٹ منسوخ کریں\n• *بکنگ* (BOOK) - اپائنٹمنٹ کی معلومات\n` +
       `• *رابطہ* (CONTACT) - ہسپتال کا پتہ اور فون\n\n📞 ${HOSPITAL_PHONE}`,
   },
@@ -88,7 +96,7 @@ const TEXT = {
 
 // Someone the hospital has no record of: reply in both languages
 const unknownUserReply = () =>
-  `*Welcome to Siddique Hospital! 🏥*\n\nWe couldn't find your account with this number.\n` +
+  `*Welcome to ${HOSPITAL_NAME}! 🏥*\n\nWe couldn't find your account with this number.\n` +
   `Please contact us at ${HOSPITAL_PHONE} to register or book an appointment.\n\n` +
   `ہمیں اس نمبر پر آپ کا ریکارڈ نہیں ملا۔ رجسٹریشن یا اپائنٹمنٹ کے لیے ${HOSPITAL_PHONE} پر کال کریں۔`;
 

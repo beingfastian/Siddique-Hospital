@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { HOSPITAL_PHONE } from "../../config";
+import { HOSPITAL_NAME, HOSPITAL_NAME_URDU, HOSPITAL_PHONE } from "../../config";
 
 // A patient's own token page, opened from the WhatsApp link or the QR code on the
 // slip (often on a family member's phone). Urdu first, English under it. Shows
@@ -49,7 +49,7 @@ const QueueTrack = () => {
   }, [backendUrl, publicId]);
 
   useEffect(() => {
-    document.title = "My token · Siddique Hospital";
+    document.title = `My token · ${HOSPITAL_NAME}`;
     load();
     const timer = setInterval(() => document.visibilityState === "visible" && load(), POLL_MS);
     const onVisible = () => document.visibilityState === "visible" && load();
@@ -144,8 +144,10 @@ const QueueTrack = () => {
     <div className="min-h-screen bg-gray-50 flex justify-center px-4 py-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-5">
-          <p className="text-xl font-bold text-gray-900">Siddique Hospital</p>
-          <p className="text-gray-600" dir="rtl" lang="ur">صدیق ہسپتال</p>
+          <p className="text-xl font-bold text-gray-900">{HOSPITAL_NAME}</p>
+          {HOSPITAL_NAME_URDU && (
+            <p className="text-gray-600" dir="rtl" lang="ur">{HOSPITAL_NAME_URDU}</p>
+          )}
         </div>
 
         {token && (
