@@ -4,7 +4,7 @@
 // Every function returns { success, messageId?, error? } and never throws.
 import twilio from "twilio";
 import { formatSlotDate } from "../utils/slots.js";
-import { HOSPITAL_PHONE } from "./hospital.js";
+import { HOSPITAL_NAME, HOSPITAL_PHONE } from "./hospital.js";
 import { renderTemplate } from "../whatsapp/templates.js";
 import { normalizePhone } from "../whatsapp/phone.js";
 import {
@@ -13,8 +13,6 @@ import {
   sendTemplate,
   sendText,
 } from "../whatsapp/cloudApi.js";
-
-const HOSPITAL_NAME = process.env.HOSPITAL_NAME || "Siddique Hospital";
 
 const isTwilioConfigured = () =>
   Boolean(

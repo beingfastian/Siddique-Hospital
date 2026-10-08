@@ -1,13 +1,13 @@
 import React from "react";
 import { assets } from "../assets/assets";
-import { FaFacebook, FaInstagram, FaWhatsapp, FaPhone, FaEnvelope } from "react-icons/fa";
-import { HOSPITAL_PHONE } from "../config";
+import { FaWhatsapp, FaPhone, FaEnvelope } from "react-icons/fa";
+import { HOSPITAL_EMAIL, HOSPITAL_NAME, HOSPITAL_PHONE, PRODUCT_NAME, PRODUCT_TAGLINE } from "../config";
 
 const Footer = () => {
   // Contact details
   const whatsappNumber = HOSPITAL_PHONE;
   const phoneNumber = HOSPITAL_PHONE;
-  const email = "Siddiquehospital@gmail.com";
+  const email = HOSPITAL_EMAIL;
   
   const handleWhatsAppClick = () => {
     const message = "Hello! I would like to get more information about your medical services.";
@@ -21,9 +21,9 @@ const Footer = () => {
       <div className="flex flex-col sm:grid grid-cols-[3fr_1fr_1fr] gap-14 my-10 mt-40 text-sm">
         {/* Left Section */}
         <div>
-          <img src={assets.logo} alt="" className="mb-5 w-40" />
+          <img src={assets.logo} alt={HOSPITAL_NAME} className="mb-5 w-44" />
           <p className="w-full md:w-2/3 text-gray-600 leading-6">
-            Siddique Hospital provides comprehensive healthcare services with a team of 
+            {HOSPITAL_NAME} provides comprehensive healthcare services with a team of
             experienced doctors and modern medical facilities. Contact us via WhatsApp 
             for quick appointment booking and medical consultations.
           </p>
@@ -80,32 +80,6 @@ const Footer = () => {
               <FaEnvelope className="text-purple-500" />
               <span>{email}</span>
             </li>
-            
-            {/* Social Media */}
-            <li className="flex gap-4 mt-3">
-              <a
-                href="https://www.facebook.com/share/1LVbk5wJp1/?mibextid=wwXIfr"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-2xl hover:text-blue-600 transition-colors"
-              >
-                <FaFacebook />
-              </a>
-              <a
-                href="https://www.instagram.com/siddique.hospital?igsh=b2I4MTRqYnVnMDdi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-2xl hover:text-pink-600 transition-colors"
-              >
-                <FaInstagram />
-              </a>
-              <button
-                onClick={handleWhatsAppClick}
-                className="text-2xl hover:text-green-600 transition-colors"
-              >
-                <FaWhatsapp />
-              </button>
-            </li>
           </ul>
         </div>
       </div>
@@ -113,9 +87,14 @@ const Footer = () => {
       <div>
         {/* Copyright Text */}
         <hr />
-        <p className="py-5 text-sm text-center">
-          Copyright 2025@Siddique Hospital - All Rights Reserved.
-        </p>
+        <div className="py-5 text-sm text-center text-gray-600 space-y-1">
+          <p>
+            © {new Date().getFullYear()} {HOSPITAL_NAME}. All rights reserved.
+          </p>
+          <p className="text-xs text-gray-400">
+            Powered by <span className="font-semibold text-primary">{PRODUCT_NAME}</span> · {PRODUCT_TAGLINE}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -3,10 +3,10 @@ import header_img from "./header_img.png";
 import group_profiles from "./group_profiles.png";
 import contact_image from "./contact_image.png";
 import about_image from "./about_image.png";
-import logo from "./logo.png";
+import logo from "./qlinic-logo.svg";
+import logo_mark from "./qlinic-mark.svg";
 import menu_icon from "./menu_icon.svg";
 import cross_icon from "./cross_icon.png";
-import ceo_image from "./CEO.jpg";
 import Dermatologist from "./Dermatologist.svg";
 import Gastroenterologist from "./Gastroenterologist.svg";
 import General_physician from "./General_physician.svg";
@@ -19,11 +19,11 @@ export const assets = {
   header_img,
   group_profiles,
   logo,
+  logo_mark,
   contact_image,
   about_image,
   menu_icon,
   cross_icon,
-  ceo_image,
 };
 
 export const specialityData = [

@@ -6,7 +6,18 @@ import { sendWhatsAppConfirmation, sendWhatsAppReminder, sendWhatsAppText } from
 import { phoneVariants } from "../whatsapp/phone.js";
 import { formatSlotDate as formatDisplayDate } from "../utils/slots.js";
 import { cancelAppointment } from "../services/appointmentService.js";
-import { HOSPITAL_PHONE } from "../config/hospital.js";
+import {
+  HOSPITAL_ADDRESS,
+  HOSPITAL_EMAIL,
+  HOSPITAL_NAME,
+  HOSPITAL_PHONE,
+  HOSPITAL_WEBSITE,
+  PRODUCT_NAME,
+} from "../config/hospital.js";
+
+// Optional website line, left out when the hospital hasn't set one
+const websiteLine = (label) => (HOSPITAL_WEBSITE ? `🌐 ${label} ${HOSPITAL_WEBSITE}
+` : "");
 
 // Reply text for an incoming WhatsApp message (STATUS / CANCEL / BOOK / CONTACT / HELP).
 // Shared by the Twilio and Kapso webhooks.
@@ -24,12 +35,12 @@ const buildBotReply = async (phoneNumber, userMessage) => {
     
     if (!user) {
       responseMessage = `
-*Welcome to Siddique Hospital! 🏥*
+*Welcome to ${HOSPITAL_NAME}! 🏥*
 
 We couldn't find your account with this number.
 Please contact us at ${HOSPITAL_PHONE} to register or book an appointment.
 
-Thank you for choosing Siddique Hospital!
+Thank you for choosing ${HOSPITAL_NAME}!
       `;
     } else {
       switch(userMessage) {
@@ -62,8 +73,7 @@ Thank you for choosing Siddique Hospital!
 You currently have no appointments.
 
 To book an appointment:
-🌐 Visit: siddiquehospital.com
-📞 Call: ${HOSPITAL_PHONE}
+${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
 💬 WhatsApp: ${HOSPITAL_PHONE}
 
 Reply *HELP* for more options.
@@ -99,8 +109,7 @@ Details:
 🕐 ${appointment.slotTime}
 
 To book a new appointment:
-🌐 Visit: siddiquehospital.com
-📞 Call: ${HOSPITAL_PHONE}
+${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
 
 Thank you!
               `;
@@ -111,8 +120,7 @@ Thank you!
 You don't have any upcoming appointments to cancel.
 
 To book a new appointment:
-🌐 Visit: siddiquehospital.com
-📞 Call: ${HOSPITAL_PHONE}
+${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
 
 Reply *HELP* for more options.
               `;
@@ -130,8 +138,7 @@ Reply *HELP* for more options.
 
 To book an appointment with our doctors:
 
-🌐 *Website:* siddiquehospital.com
-📞 *Call:* ${HOSPITAL_PHONE}  
+${websiteLine("*Website:*")}📞 *Call:* ${HOSPITAL_PHONE}  
 💬 *WhatsApp:* ${HOSPITAL_PHONE}
 
 *Our Specialties:*
@@ -149,22 +156,15 @@ We're here to help! 🏥
         case 'contact':
         case 'info':
           responseMessage = `
-*Siddique Hospital Contact Info 🏥*
-
+*${HOSPITAL_NAME} Contact Info 🏥*
+${HOSPITAL_ADDRESS ? `
 📍 *Address:*
-Civil Lines, Lahore-Sargodha Road
-Sheikhupura, Pakistan
-
+${HOSPITAL_ADDRESS}
+` : ""}
 📞 *Phone:* ${HOSPITAL_PHONE}
 💬 *WhatsApp:* ${HOSPITAL_PHONE}
-📧 *Email:* Siddiquehospital@gmail.com
-
-🌐 *Website:* siddiquehospital.com
-
-*Social Media:*
-📘 Facebook: Siddique Hospital
-📸 Instagram: @siddique.hospital
-
+${HOSPITAL_EMAIL ? `📧 *Email:* ${HOSPITAL_EMAIL}
+` : ""}${websiteLine("*Website:*")}
 We're here 24/7 for emergencies! 🚑
           `;
           break;
@@ -173,7 +173,7 @@ We're here 24/7 for emergencies! 🚑
         case 'menu':
         default:
           responseMessage = `
-*Welcome to Siddique Hospital Bot! 🏥*
+*Welcome to ${HOSPITAL_NAME}! 🏥*
 
 *Available Commands:*
 • *STATUS* - Check your appointments
@@ -183,10 +183,11 @@ We're here 24/7 for emergencies! 🚑
 • *HELP* - Show this menu
 
 *Quick Actions:*
-🌐 Book Online: siddiquehospital.com
-📞 Call Direct: ${HOSPITAL_PHONE}
+${websiteLine("Book Online:")}📞 Call Direct: ${HOSPITAL_PHONE}
 
 How can we help you today?
+
+_Powered by ${PRODUCT_NAME}_
           `;
       }
     }

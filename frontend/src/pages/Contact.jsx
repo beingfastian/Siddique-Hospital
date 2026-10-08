@@ -1,13 +1,13 @@
 import React from "react";
 import { assets } from "../assets/assets";
 import { FaWhatsapp, FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
-import { HOSPITAL_PHONE } from "../config";
+import { HOSPITAL_ADDRESS, HOSPITAL_EMAIL, HOSPITAL_PHONE } from "../config";
 
 const Contact = () => {
   // Contact details
   const whatsappNumber = HOSPITAL_PHONE;
   const phoneNumber = HOSPITAL_PHONE;
-  const email = "Siddiquehospital@gmail.com";
+  const email = HOSPITAL_EMAIL;
   
   const handleWhatsAppClick = () => {
     const message = "Hello! I would like to get in touch regarding your medical services.";
@@ -43,8 +43,7 @@ const Contact = () => {
           <div className="flex items-start gap-3 text-gray-500">
             <FaMapMarkerAlt className="text-primary mt-1" />
             <div>
-              <p>Civil Lines</p>
-              <p>Lahore-Sargodha Road, Sheikhupura</p>
+              <p>{HOSPITAL_ADDRESS}</p>
             </div>
           </div>
           

@@ -67,7 +67,7 @@ const ResetPassword = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
-          <img src={assets.logo} alt="Logo" className="h-16 w-auto mx-auto mb-4" />
+          <img src={assets.logo} alt="Qlinic" className="h-16 w-auto mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white">Reset Password</h2>
           <p className="text-blue-100 mt-2">Create a new password for your account</p>
         </div>
