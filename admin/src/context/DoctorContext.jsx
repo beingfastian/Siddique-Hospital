@@ -83,7 +83,8 @@ const DoctorContextProvider = (props) => {
           data.patientNotified ? "Follow-up scheduled. The patient will be notified." : "Follow-up scheduled."
         );
         getAppointments();
-        return true;
+        // The created appointment, so the caller can offer a printable slip
+        return data.appointment || true;
       }
       toast.error(data.message);
       return false;

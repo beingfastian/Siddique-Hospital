@@ -5,6 +5,7 @@ import { AppContext } from "../../context/AppContext.jsx";
 import { toast } from "react-toastify";
 import { FaWhatsapp, FaEnvelope, FaUser, FaCalendarAlt, FaSpinner, FaPlus, FaSearch, FaClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import axios from "axios";
+import PrintSlipDialog from "../../components/PrintSlip";
 
 const BookAppointmentForPatient = () => {
   const { aToken, doctors, getAllDoctors, backendUrl, patients, getAllPatients } = useContext(AdminContext);
@@ -38,6 +39,8 @@ const BookAppointmentForPatient = () => {
   const [step, setStep] = useState(1);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  // Set after a booking succeeds: printable slip details
+  const [slip, setSlip] = useState(null);
   const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   
   const months = [
@@ -200,14 +203,25 @@ const BookAppointmentForPatient = () => {
       
       if (data.success) {
         toast.success(data.message);
-        
+
         const patientData = selectedPatient || newPatientData;
         if (patientData.whatsappEnabled) {
           toast.info("WhatsApp confirmation will be sent to patient!");
         } else {
           toast.info("Email confirmation will be sent to patient!");
         }
-        
+
+        // Offer a printable slip while the details are still at hand — the
+        // walk-in patient leaves with the date/time on paper
+        setSlip({
+          patientName: patientData.name,
+          doctorName: selectedDoctor.name,
+          speciality: selectedDoctor.speciality,
+          dateText: slotDateFormat(slotDate),
+          time: slotTime,
+          fee: finalFee,
+        });
+
         // Reset form
         setSelectedPatient(null);
         setNewPatientData({
@@ -854,6 +868,10 @@ const BookAppointmentForPatient = () => {
             </div>
           )}
         </div>
+      )}
+
+      {slip && (
+        <PrintSlipDialog title="Appointment booked" details={slip} onClose={() => setSlip(null)} />
       )}
     </div>
   );
