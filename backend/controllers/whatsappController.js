@@ -4,7 +4,13 @@ import userModel from "../model/userModel.js";
 import crypto from 'crypto';
 import { sendWhatsAppConfirmation, sendWhatsAppReminder, sendWhatsAppText } from "../config/whatsappService.js";
 import { phoneVariants } from "../whatsapp/phone.js";
-import { formatSlotDate as formatDisplayDate } from "../utils/slots.js";
+import {
+  formatSlotDate as formatDisplayDate,
+  formatSlotDateUrdu,
+  formatSlotTimeUrdu,
+  slotToDate,
+} from "../utils/slots.js";
+import { patientLanguage } from "../whatsapp/templates.js";
 import { cancelAppointment } from "../services/appointmentService.js";
 import {
   HOSPITAL_ADDRESS,
@@ -15,184 +21,161 @@ import {
   PRODUCT_NAME,
 } from "../config/hospital.js";
 
-// Optional website line, left out when the hospital hasn't set one
-const websiteLine = (label) => (HOSPITAL_WEBSITE ? `🌐 ${label} ${HOSPITAL_WEBSITE}
-` : "");
-
 // Reply text for an incoming WhatsApp message (STATUS / CANCEL / BOOK / CONTACT / HELP).
-// Shared by the Twilio and Kapso webhooks.
+// Shared by the Twilio and Kapso webhooks. Replies in the patient's language
+// (Urdu or English); Urdu keywords work too (حالت، منسوخ، بکنگ، رابطہ).
+const COMMANDS = {
+  status: ["status", "حالت", "اسٹیٹس", "سٹیٹس"],
+  cancel: ["cancel", "منسوخ"],
+  book: ["book", "appointment", "بکنگ", "اپائنٹمنٹ"],
+  contact: ["contact", "info", "رابطہ"],
+};
+const commandOf = (text) =>
+  Object.keys(COMMANDS).find((command) => COMMANDS[command].includes(text)) || "help";
+
+// Optional lines, left out when the hospital hasn't set them
+const optionalLine = (value, label) => (value ? `${label} ${value}\n` : "");
+
+// Wording per language
+const TEXT = {
+  en: {
+    statusHeader: (name) => `*Hello ${name}! 👋*\n\n*Your Recent Appointments:*\n\n`,
+    labels: { cancelled: "❌ Cancelled", completed: "✅ Completed", no_show: "⚠️ Missed", upcoming: "⏰ Upcoming", past: "🕘 Past" },
+    statusFooter: () => "Need help? Reply *HELP* for more options.",
+    noAppointments: (name) =>
+      `*Hello ${name}! 👋*\n\nYou currently have no appointments.\n\n` +
+      `To book an appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n💬 WhatsApp: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
+    statusError: () => "Sorry, there was an error fetching your appointments. Please try again later.",
+    cancelled: (apt) =>
+      `*Appointment Cancelled Successfully ❌*\n\nDetails:\n👨‍⚕️ Dr. ${apt.docData.name}\n📅 ${formatDisplayDate(apt.slotDate)}\n🕐 ${apt.slotTime}\n\n` +
+      `To book a new appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n\nThank you!`,
+    nothingToCancel: () =>
+      `*No Upcoming Appointment Found*\n\nYou don't have any upcoming appointments to cancel.\n\n` +
+      `To book a new appointment:\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Visit:")}📞 Call: ${HOSPITAL_PHONE}\n\nReply *HELP* for more options.`,
+    cancelError: () => "Sorry, there was an error cancelling your appointment. Please try again later or contact us directly.",
+    book: () =>
+      `*Book New Appointment 📅*\n\nTo book an appointment with our doctors:\n\n` +
+      `${optionalLine(HOSPITAL_WEBSITE, "🌐 *Website:*")}📞 *Call:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n\n` +
+      `*Our Specialties:*\n• General Medicine\n• Pediatrics\n• Gynecology\n• Dermatology\n• Neurology\n• Gastroenterology\n\nWe're here to help! 🏥`,
+    contact: () =>
+      `*${HOSPITAL_NAME} Contact Info 🏥*\n\n${optionalLine(HOSPITAL_ADDRESS, "📍 *Address:*")}` +
+      `📞 *Phone:* ${HOSPITAL_PHONE}\n💬 *WhatsApp:* ${HOSPITAL_PHONE}\n${optionalLine(HOSPITAL_EMAIL, "📧 *Email:*")}` +
+      `${optionalLine(HOSPITAL_WEBSITE, "🌐 *Website:*")}\nWe're here 24/7 for emergencies! 🚑`,
+    help: () =>
+      `*Welcome to ${HOSPITAL_NAME}! 🏥*\n\n*Available Commands:*\n• *STATUS* - Check your appointments\n` +
+      `• *CANCEL* - Cancel your next appointment\n• *BOOK* - Get booking information\n• *CONTACT* - Hospital contact details\n` +
+      `• *HELP* - Show this menu\n\n*Quick Actions:*\n${optionalLine(HOSPITAL_WEBSITE, "🌐 Book Online:")}📞 Call Direct: ${HOSPITAL_PHONE}\n\nHow can we help you today?\n\n_Powered by ${PRODUCT_NAME}_`,
+  },
+  ur: {
+    statusHeader: (name) => `*السلام علیکم ${name}! 👋*\n\n*آپ کی حالیہ اپائنٹمنٹس:*\n\n`,
+    labels: { cancelled: "❌ منسوخ", completed: "✅ مکمل", no_show: "⚠️ نہیں آئے", upcoming: "⏰ آنے والی", past: "🕘 گزر چکی" },
+    statusFooter: () => "مزید معلومات کے لیے *مدد* یا *HELP* لکھ کر بھیجیں۔",
+    noAppointments: (name) =>
+      `*السلام علیکم ${name}! 👋*\n\nاس وقت آپ کی کوئی اپائنٹمنٹ نہیں ہے۔\n\n` +
+      `اپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}${HOSPITAL_WEBSITE ? `\n🌐 ویب سائٹ: ${HOSPITAL_WEBSITE}` : ""}`,
+    statusError: () => "معذرت، آپ کی اپائنٹمنٹس دیکھنے میں مسئلہ ہوا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    cancelled: (apt) =>
+      `*آپ کی اپائنٹمنٹ منسوخ کر دی گئی ہے ❌*\n\n👨‍⚕️ ڈاکٹر ${apt.docData.name}\n` +
+      `📅 ${formatSlotDateUrdu(apt.slotDate)}\n🕐 ${formatSlotTimeUrdu(apt.slotTime)}\n\n` +
+      `نئی اپائنٹمنٹ کے لیے ${HOSPITAL_PHONE} پر کال کریں۔ شکریہ!`,
+    nothingToCancel: () =>
+      `*کوئی آنے والی اپائنٹمنٹ نہیں ملی*\n\nمنسوخ کرنے کے لیے آپ کی کوئی آنے والی اپائنٹمنٹ نہیں ہے۔\n\n` +
+      `مزید معلومات کے لیے ${HOSPITAL_PHONE} پر کال کریں۔`,
+    cancelError: () => "معذرت، اپائنٹمنٹ منسوخ کرنے میں مسئلہ ہوا۔ براہ کرم ہسپتال کو کال کریں۔",
+    book: () =>
+      `*نئی اپائنٹمنٹ 📅*\n\nاپائنٹمنٹ کے لیے:\n📞 کال کریں: ${HOSPITAL_PHONE}\n💬 واٹس ایپ: ${HOSPITAL_PHONE}${HOSPITAL_WEBSITE ? `\n🌐 ویب سائٹ: ${HOSPITAL_WEBSITE}` : ""}`,
+    contact: () =>
+      `*${HOSPITAL_NAME} 🏥*\n\n${optionalLine(HOSPITAL_ADDRESS, "📍")}📞 فون: ${HOSPITAL_PHONE}\n` +
+      `💬 واٹس ایپ: ${HOSPITAL_PHONE}\n\nایمرجنسی 24 گھنٹے کھلی ہے 🚑`,
+    help: () =>
+      `*${HOSPITAL_NAME} 🏥*\n\nیہ الفاظ لکھ کر بھیجیں:\n• *حالت* (STATUS) - اپنی اپائنٹمنٹس دیکھیں\n` +
+      `• *منسوخ* (CANCEL) - اگلی اپائنٹمنٹ منسوخ کریں\n• *بکنگ* (BOOK) - اپائنٹمنٹ کی معلومات\n` +
+      `• *رابطہ* (CONTACT) - ہسپتال کا پتہ اور فون\n\n📞 ${HOSPITAL_PHONE}`,
+  },
+};
+
+// Someone the hospital has no record of: reply in both languages
+const unknownUserReply = () =>
+  `*Welcome to ${HOSPITAL_NAME}! 🏥*\n\nWe couldn't find your account with this number.\n` +
+  `Please contact us at ${HOSPITAL_PHONE} to register or book an appointment.\n\n` +
+  `ہمیں اس نمبر پر آپ کا ریکارڈ نہیں ملا۔ رجسٹریشن یا اپائنٹمنٹ کے لیے ${HOSPITAL_PHONE} پر کال کریں۔`;
+
+const statusLabel = (apt, labels, now = new Date()) => {
+  if (apt.cancelled) return labels.cancelled;
+  if (apt.isCompleted) return labels.completed;
+  if (apt.status === "no_show") return labels.no_show;
+  const startAt = apt.startAt || slotToDate(apt.slotDate, apt.slotTime);
+  return startAt && startAt <= now ? labels.past : labels.upcoming;
+};
+
 const buildBotReply = async (phoneNumber, userMessage) => {
-  let responseMessage = '';
+  // Find user by WhatsApp number
+  const variants = phoneVariants(phoneNumber);
+  const user = await userModel.findOne({
+    $or: [
+      { whatsappNumber: { $in: variants } },
+      { phone: { $in: variants } }
+    ]
+  });
+  if (!user) return unknownUserReply();
 
-    // Find user by WhatsApp number
-    const variants = phoneVariants(phoneNumber);
-    const user = await userModel.findOne({
-      $or: [
-        { whatsappNumber: { $in: variants } },
-        { phone: { $in: variants } }
-      ]
-    });
-    
-    if (!user) {
-      responseMessage = `
-*Welcome to ${HOSPITAL_NAME}! 🏥*
+  const lang = patientLanguage(user);
+  const t = TEXT[lang];
 
-We couldn't find your account with this number.
-Please contact us at ${HOSPITAL_PHONE} to register or book an appointment.
+  switch (commandOf(userMessage)) {
+    case "status":
+      try {
+        const appointments = await appointmentModel
+          .find({ userId: user._id.toString() })
+          .sort({ date: -1 })
+          .limit(3);
+        if (!appointments.length) return t.noAppointments(user.name);
 
-Thank you for choosing ${HOSPITAL_NAME}!
-      `;
-    } else {
-      switch(userMessage) {
-        case 'status':
-          try {
-            const appointments = await appointmentModel.find({ 
-              userId: user._id.toString()
-            }).sort({ date: -1 }).limit(3);
-            
-            if (appointments.length > 0) {
-              let statusText = `*Hello ${user.name}! 👋*\n\n*Your Recent Appointments:*\n\n`;
-              
-              appointments.forEach((apt, index) => {
-                const status = apt.cancelled ? '❌ Cancelled' : 
-                             apt.isCompleted ? '✅ Completed' : 
-                             '⏰ Upcoming';
-                             
-                statusText += `${index + 1}. *Dr. ${apt.docData.name}*\n`;
-                statusText += `   📅 ${formatDisplayDate(apt.slotDate)}\n`;
-                statusText += `   🕐 ${apt.slotTime}\n`;
-                statusText += `   ${status}\n\n`;
-              });
-              
-              statusText += `Need help? Reply *HELP* for more options.`;
-              responseMessage = statusText;
-            } else {
-              responseMessage = `
-*Hello ${user.name}! 👋*
-
-You currently have no appointments.
-
-To book an appointment:
-${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
-💬 WhatsApp: ${HOSPITAL_PHONE}
-
-Reply *HELP* for more options.
-              `;
-            }
-          } catch (error) {
-            console.error('Error fetching appointments:', error);
-            responseMessage = 'Sorry, there was an error fetching your appointments. Please try again later.';
-          }
-          break;
-          
-        case 'cancel':
-          try {
-            const appointment = await appointmentModel.findOne({ 
-              userId: user._id.toString(), 
-              cancelled: false,
-              isCompleted: false 
-            }).sort({ date: -1 });
-            
-            if (appointment) {
-              // Cancel (frees the slot); the bot reply below tells the patient
-              await cancelAppointment(appointment._id, { role: "patient", id: user._id.toString() }, {
-                reason: "Cancelled by patient on WhatsApp",
-                notifyPatient: false,
-              });
-              
-              responseMessage = `
-*Appointment Cancelled Successfully ❌*
-
-Details:
-👨‍⚕️ Dr. ${appointment.docData.name}
-📅 ${formatDisplayDate(appointment.slotDate)}
-🕐 ${appointment.slotTime}
-
-To book a new appointment:
-${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
-
-Thank you!
-              `;
-            } else {
-              responseMessage = `
-*No Active Appointment Found*
-
-You don't have any upcoming appointments to cancel.
-
-To book a new appointment:
-${websiteLine("Visit:")}📞 Call: ${HOSPITAL_PHONE}
-
-Reply *HELP* for more options.
-              `;
-            }
-          } catch (error) {
-            console.error('Error cancelling appointment:', error);
-            responseMessage = 'Sorry, there was an error cancelling your appointment. Please try again later or contact us directly.';
-          }
-          break;
-          
-        case 'book':
-        case 'appointment':
-          responseMessage = `
-*Book New Appointment 📅*
-
-To book an appointment with our doctors:
-
-${websiteLine("*Website:*")}📞 *Call:* ${HOSPITAL_PHONE}  
-💬 *WhatsApp:* ${HOSPITAL_PHONE}
-
-*Our Specialties:*
-• General Medicine
-• Pediatrics  
-• Gynecology
-• Dermatology
-• Neurology
-• Gastroenterology
-
-We're here to help! 🏥
-          `;
-          break;
-          
-        case 'contact':
-        case 'info':
-          responseMessage = `
-*${HOSPITAL_NAME} Contact Info 🏥*
-${HOSPITAL_ADDRESS ? `
-📍 *Address:*
-${HOSPITAL_ADDRESS}
-` : ""}
-📞 *Phone:* ${HOSPITAL_PHONE}
-💬 *WhatsApp:* ${HOSPITAL_PHONE}
-${HOSPITAL_EMAIL ? `📧 *Email:* ${HOSPITAL_EMAIL}
-` : ""}${websiteLine("*Website:*")}
-We're here 24/7 for emergencies! 🚑
-          `;
-          break;
-          
-        case 'help':
-        case 'menu':
-        default:
-          responseMessage = `
-*Welcome to ${HOSPITAL_NAME}! 🏥*
-
-*Available Commands:*
-• *STATUS* - Check your appointments
-• *CANCEL* - Cancel latest appointment  
-• *BOOK* - Get booking information
-• *CONTACT* - Hospital contact details
-• *HELP* - Show this menu
-
-*Quick Actions:*
-${websiteLine("Book Online:")}📞 Call Direct: ${HOSPITAL_PHONE}
-
-How can we help you today?
-
-_Powered by ${PRODUCT_NAME}_
-          `;
+        let text = t.statusHeader(user.name);
+        appointments.forEach((apt, index) => {
+          const date = lang === "ur" ? formatSlotDateUrdu(apt.slotDate) : formatDisplayDate(apt.slotDate);
+          const time = lang === "ur" ? formatSlotTimeUrdu(apt.slotTime) : apt.slotTime;
+          text += `${index + 1}. *${lang === "ur" ? "ڈاکٹر" : "Dr."} ${apt.docData.name}*\n`;
+          text += `   📅 ${date}\n   🕐 ${time}\n   ${statusLabel(apt, t.labels)}\n\n`;
+        });
+        return (text + t.statusFooter()).trim();
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        return t.statusError();
       }
-    }
 
-  return responseMessage.trim();
+    case "cancel":
+      try {
+        // The patient's next upcoming visit (never one in the past or a no-show)
+        const appointment = await appointmentModel
+          .findOne({
+            userId: user._id.toString(),
+            cancelled: false,
+            isCompleted: false,
+            status: { $ne: "no_show" },
+            startAt: { $gt: new Date() },
+          })
+          .sort({ startAt: 1 });
+        if (!appointment) return t.nothingToCancel();
+
+        // Cancel (frees the slot); this reply tells the patient
+        await cancelAppointment(appointment._id, { role: "patient", id: user._id.toString() }, {
+          reason: "Cancelled by patient on WhatsApp",
+          notifyPatient: false,
+        });
+        return t.cancelled(appointment);
+      } catch (error) {
+        console.error("Error cancelling appointment:", error);
+        return t.cancelError();
+      }
+
+    case "book":
+      return t.book();
+    case "contact":
+      return t.contact();
+    default:
+      return t.help();
+  }
 };
 
 const twimlReply = (res, text) => {
@@ -291,8 +274,7 @@ export const testWhatsApp = async (req, res) => {
       "General Medicine",
       "1_1_2024",
       "10:00 AM",
-      "100",
-      "test123"
+      "100"
     );
     
     if (result.success) {

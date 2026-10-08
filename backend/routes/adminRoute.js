@@ -7,6 +7,7 @@ import {
   loginAdmin,
   appointmentsAdmin,
   appointmentCancel,
+  appointmentNoShow,
   adminDashboard,
   addPatient,
   getAllPatients,

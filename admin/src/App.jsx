@@ -24,6 +24,7 @@ import { NotificationProvider } from "./context/NotificationContext.jsx";
 import ForgotPassword from "./pages/Doctor/ForgotPassword";
 import VerifyOTP from "./pages/Doctor/VerifyOTP";
 import ResetPassword from "./pages/Doctor/ResetPassword";
+import Queue from "./pages/Queue.jsx";
 
 const App = () => {
   const { aToken } = useContext(AdminContext);
@@ -43,6 +44,7 @@ const App = () => {
               {aToken ? (
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
+                  <Route path="/queue" element={<Queue />} />
                   <Route path="/all-appointments" element={<AllAppointments />} />
                   <Route path="/book-appointment" element={<BookAppointmentForPatient />} />
                   <Route path="/doctors" element={<ManageDoctors />} />
@@ -56,6 +58,7 @@ const App = () => {
               ) : (
                 <Routes>
                   <Route path="/doctor" element={<DoctorDashboard />} />
+                  <Route path="/doctor/queue" element={<Queue />} />
                   <Route path="/doctor/appointments" element={<DoctorAppointments />} />
                   <Route path="/doctor/profile" element={<DoctorProfile />} />
                   <Route path="/doctor/leave-requests" element={<DoctorLeaveRequest />} />

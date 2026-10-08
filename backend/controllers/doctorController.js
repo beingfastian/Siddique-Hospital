@@ -34,7 +34,10 @@ const changeAvailabilities = async (req, res) => {
 
 const doctorList = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({}).select(["-password", "-email"]);
+    // Public (patient website): no login details, personal WhatsApp numbers or booked slots
+    const doctors = await doctorModel
+      .find({})
+      .select(["-password", "-email", "-whatsappNumber", "-whatsappConsentAt", "-slots_booked"]);
     res.json({
       success: true,
       doctors,

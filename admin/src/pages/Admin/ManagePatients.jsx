@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import LanguageSelect from "../../components/LanguageSelect";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaWhatsapp, FaEnvelope } from "react-icons/fa";
@@ -97,7 +98,9 @@ const ManagePatients = () => {
           line2: editingPatient.address2
         },
         whatsappEnabled: editingPatient.whatsappEnabled,
-        whatsappNumber: editingPatient.whatsappNumber
+        whatsappNumber: editingPatient.whatsappNumber,
+        // Only sent once chosen; older patients without one use the hospital default
+        ...(editingPatient.language && { language: editingPatient.language })
       };
 
       const { data } = await axios.put(
@@ -479,6 +482,12 @@ const ManagePatients = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 outline-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">Include country code (+92 for Pakistan)</p>
+                    <div className="mt-3">
+                      <LanguageSelect
+                        value={editingPatient.language}
+                        onChange={(value) => setEditingPatient({ ...editingPatient, language: value })}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

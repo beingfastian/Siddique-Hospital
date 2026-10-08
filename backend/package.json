@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "server": "nodemon server.js",
     "templates:sync": "node scripts/syncTemplates.js",
-    "migrate:appointments": "node scripts/migrateAppointments.js"
+    "migrate:appointments": "node scripts/migrateAppointments.js",
+    "check:integration": "node scripts/checkIntegration.mjs"
   },
   "author": "",
   "license": "ISC",

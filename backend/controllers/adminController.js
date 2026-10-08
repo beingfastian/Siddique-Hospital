@@ -10,6 +10,7 @@ import { createNotification } from "./notificationController.js";
 import { isEmailConfigured } from "../config/emailService.js";
 import { isWhatsAppConfigured, getWhatsAppProvider } from "../config/whatsappService.js";
 import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
+import { LANGUAGES } from "../whatsapp/templates.js";
 import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES } from "../utils/slots.js";
 import {
   AppointmentError,
@@ -373,11 +374,14 @@ const deleteDoctor = async (req, res) => {
       return res.json({ success: false, message: "Doctor not found" });
     }
 
-    // Check for active appointments
+    // Check for upcoming appointments (past visits nobody closed and no-shows
+    // don't block deleting; records from before startAt existed still count)
     const activeAppointments = await appointmentModel.find({
       docId: doctorId,
       cancelled: false,
-      isCompleted: false
+      isCompleted: false,
+      status: { $ne: "no_show" },
+      $or: [{ startAt: { $gt: new Date() } }, { startAt: { $exists: false } }],
     });
 
     if (activeAppointments.length > 0) {
@@ -409,7 +413,8 @@ const addPatient = async (req, res) => {
       gender,
       address,
       whatsappEnabled,
-      whatsappNumber
+      whatsappNumber,
+      language
     } = req.body;
     const imageFile = req.file;
     const patientEmail = (email || "").trim();
@@ -455,6 +460,7 @@ const addPatient = async (req, res) => {
       whatsappEnabled: whatsappEnabled === 'true' || whatsappEnabled === true,
       whatsappNumber: whatsappNumber || phone,
       ...((whatsappEnabled === 'true' || whatsappEnabled === true) && { whatsappConsentAt: new Date() }),
+      ...(LANGUAGES.includes(language) && { language }),
       ...(patientEmail && { email: patientEmail }),
       ...(imageUrl && { image: imageUrl })
     };
@@ -512,7 +518,8 @@ const updatePatient = async (req, res) => {
       gender,
       address,
       whatsappEnabled,
-      whatsappNumber
+      whatsappNumber,
+      language
     } = req.body;
 
     // Validate input
@@ -561,7 +568,8 @@ const updatePatient = async (req, res) => {
       gender,
       address,
       whatsappEnabled: whatsappOn,
-      whatsappNumber: whatsappNumber || phone
+      whatsappNumber: whatsappNumber || phone,
+      ...(LANGUAGES.includes(language) && { language })
     });
 
     res.json({ success: true, message: "Patient updated successfully" });
@@ -631,7 +639,7 @@ const bookAppointmentForPatient = async (req, res) => {
 
     // Handle new patient creation
     if (patientSelectionMode === "new") {
-      const { name, phone, cnic, dob, gender, address, whatsappEnabled, whatsappNumber } = newPatientData;
+      const { name, phone, cnic, dob, gender, address, whatsappEnabled, whatsappNumber, language } = newPatientData;
       const patientEmail = (newPatientData.email || "").trim();
       if (patientEmail && !validator.isEmail(patientEmail)) {
         return res.json({ success: false, message: "Please enter a valid email" });
@@ -663,7 +671,8 @@ const bookAppointmentForPatient = async (req, res) => {
         address,
         whatsappEnabled: whatsappEnabled || false,
         whatsappNumber: whatsappNumber || phone,
-        ...(whatsappEnabled && { whatsappConsentAt: new Date() })
+        ...(whatsappEnabled && { whatsappConsentAt: new Date() }),
+        ...(LANGUAGES.includes(language) && { language })
       };
 
       const newPatient = new userModel(patientData);
@@ -680,15 +689,21 @@ const bookAppointmentForPatient = async (req, res) => {
       console.log('✅ Using existing patient:', userData.name);
     }
 
+    // The fee is worked out here from the doctor's fee and the discount, so what is
+    // stored, sent on WhatsApp and printed on the slip always agree (a 100%
+    // discount is a free visit, not the full fee)
+    const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+    const fee = Math.round(((Number(docData.fee) || 0) * (100 - percent)) / 100);
+
     const patient = userData.toObject ? userData : await userModel.findById(patientId).select("-password");
     const newAppointment = await bookAppointment({
       patient,
       doctor: docData,
       slotDate,
       slotTime,
-      amount: finalFee || docData.fee,
-      discountPercent,
-      finalFee,
+      amount: fee,
+      discountPercent: percent,
+      finalFee: fee,
       actor: { role: "admin" },
     });
 
@@ -701,6 +716,14 @@ const bookAppointmentForPatient = async (req, res) => {
         ? "New patient created and appointment booked successfully"
         : "Appointment booked successfully",
       appointmentId: newAppointment._id.toString(),
+      // What was booked, so the reception can print the patient's slip
+      appointment: {
+        _id: newAppointment._id.toString(),
+        patientName: patient.name,
+        slotDate: newAppointment.slotDate,
+        slotTime: newAppointment.slotTime,
+        amount: newAppointment.amount,
+      },
       notificationsQueued,
     });
 

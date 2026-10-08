@@ -165,8 +165,13 @@ const Settings = () => {
               <>
                 <ul className="divide-y divide-gray-100">
                   {status.templates.map((t) => (
-                    <li key={t.name} className="flex items-center justify-between py-2 text-sm">
-                      <span className="font-mono text-gray-700">{t.name}</span>
+                    <li key={`${t.name}-${t.language}`} className="flex items-center justify-between py-2 text-sm">
+                      <span className="font-mono text-gray-700">
+                        {t.name}
+                        {t.language && (
+                          <span className="ml-2 text-xs text-gray-400">{t.language === "ur" ? "Urdu" : "English"}</span>
+                        )}
+                      </span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${templateBadge[t.status] || templateBadge.MISSING}`}>
                         {t.status}
                       </span>
@@ -175,7 +180,8 @@ const Settings = () => {
                 </ul>
                 <p className="text-xs text-gray-400 mt-3">
                   Run <code>npm run templates:sync</code> in the backend to submit missing templates.
-                  Messages using a template send only once it is APPROVED.
+                  Messages using a template send only once it is APPROVED. Until an Urdu
+                  template is approved, Urdu patients get the English version.
                 </p>
               </>
             )}

@@ -18,6 +18,12 @@ const waiting = [];
 let running = 0;
 
 const record = async (job, status, error) => {
+  // Optional hook for callers that keep their own log (e.g. queue tokens)
+  try {
+    await job.onDone?.(status, error);
+  } catch (e) {
+    console.error("Notification onDone failed:", e.message);
+  }
   if (!job.appointmentId) return;
   try {
     await appointmentModel.updateOne(
@@ -81,7 +87,8 @@ const enqueue = (job) => {
 };
 
 // Add a send to the queue. `send` must return { success, error? }.
-// job: { appointmentId?, channel: "whatsapp" | "email", recipient: "patient" | "doctor", kind, send }
+// job: { appointmentId?, channel: "whatsapp" | "email", recipient: "patient" | "doctor", kind, send,
+//        onDone?(status: "sent" | "failed", error?) }
 export const queueNotification = (job) => enqueue({ attempt: 0, ...job });
 
 // For tests and monitoring

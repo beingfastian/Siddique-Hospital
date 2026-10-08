@@ -26,6 +26,8 @@ import {
   sendDoctorAppointmentNotification,
 } from "../config/emailService.js";
 import { queueNotification } from "./notificationQueue.js";
+import { patientLanguage } from "../whatsapp/templates.js";
+import { queueTokenModel } from "../model/queueModel.js";
 
 // An error whose message is safe to show to staff
 export class AppointmentError extends Error {}
@@ -36,8 +38,12 @@ const toMinutes = (hhmm) => {
   return h * 60 + m;
 };
 
-// Appointments that can still change (also matches records from before `status` existed)
+// Appointments that can still change (also matches records from before `status` existed).
+// Includes no-shows on purpose: a no-show can still be completed (patient came late),
+// cancelled (marked by mistake) or rebooked to a new time.
 const ACTIVE = { cancelled: { $ne: true }, isCompleted: { $ne: true } };
+// Appointments the patient is still expected to come to (ACTIVE minus no-shows)
+const EXPECTED = { ...ACTIVE, status: { $ne: "no_show" } };
 
 // Same rules as admin/src/utils/slots.js: valid format, in the future, doctor available,
 // on one of the doctor's sitting days and within their timings.
@@ -94,7 +100,7 @@ export const getLeaveConflicts = async (leave) => {
   const from = new Date(new Date(leave.fromDate).getTime() - HOSPITAL_UTC_OFFSET_MINUTES * 60000);
   const to = new Date(new Date(leave.toDate).getTime() + 86400000 - HOSPITAL_UTC_OFFSET_MINUTES * 60000);
   const appointments = await appointmentModel
-    .find({ docId: leave.doctorId, ...ACTIVE, startAt: { $gte: from, $lt: to } })
+    .find({ docId: leave.doctorId, ...EXPECTED, startAt: { $gte: from, $lt: to } })
     .sort({ startAt: 1 })
     .select("slotDate slotTime userData.name");
   const byDay = new Map();
@@ -176,7 +182,7 @@ export const bookAppointment = async ({
         }),
       ],
       ...(discountPercent && { discountPercent }),
-      ...(finalFee && { finalFee }),
+      ...(finalFee != null && { finalFee }),
     });
   } catch (error) {
     await releaseSlot(docId, slot.slotDate, slot.slotTime);
@@ -198,7 +204,7 @@ export const queueBookingNotifications = (appointment, patient, doctor, { notify
 
   if (patient.whatsappEnabled && patientPhone) {
     add("patient", "whatsapp", () =>
-      sendWhatsAppConfirmation(patientPhone, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount));
+      sendWhatsAppConfirmation(patientPhone, patient.name, doctor.name, doctor.speciality, slotDate, slotTime, amount, patientLanguage(patient)));
   }
   if (patient.email) {
     add("patient", "email", () =>
@@ -280,8 +286,18 @@ export const cancelAppointment = async (appointmentId, actor, { reason, cancelle
 
   await releaseSlot(updated.docId, updated.slotDate, updated.slotTime);
 
-  if (notifyPatient) {
-    const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone");
+  // If the patient was already checked in to the live queue, take them out of the line
+  await queueTokenModel.updateMany(
+    { appointmentId: updated._id.toString(), status: { $in: ["waiting", "skipped"] } },
+    { $set: { status: "left" }, $push: { events: { at: new Date(), by: actor, action: "left" } } }
+  );
+
+  // No message for a visit whose time has already passed (e.g. undoing a no-show)
+  const startAt = updated.startAt || slotToDate(updated.slotDate, updated.slotTime);
+  const alreadyPast = startAt && startAt <= new Date();
+
+  if (notifyPatient && !alreadyPast) {
+    const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone language");
     if (patient?.whatsappEnabled) {
       queueNotification({
         appointmentId: updated._id.toString(),
@@ -295,7 +311,8 @@ export const cancelAppointment = async (appointmentId, actor, { reason, cancelle
             updated.docData?.name,
             updated.slotDate,
             updated.slotTime,
-            cancelledBy || "the hospital"
+            cancelledBy || "the hospital",
+            patientLanguage(patient)
           ),
       });
     }
@@ -327,7 +344,8 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
   const updated = await appointmentModel.findOneAndUpdate(
     { _id: appointmentId, ...ACTIVE, slotDate: from.slotDate, slotTime: from.slotTime },
     {
-      $set: { slotDate: slot.slotDate, slotTime: slot.slotTime, startAt: slot.startAt },
+      // A rebooked no-show is expected again
+      $set: { slotDate: slot.slotDate, slotTime: slot.slotTime, startAt: slot.startAt, status: "booked" },
       $unset: { reminders: 1 },
       $push: {
         history: historyEntry("rescheduled", actor, {
@@ -348,7 +366,7 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
   await releaseSlot(appointment.docId, from.slotDate, from.slotTime);
 
   if (notifyPatient) {
-    const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone");
+    const patient = await userModel.findById(updated.userId).select("name whatsappEnabled whatsappNumber phone language");
     if (patient?.whatsappEnabled) {
       queueNotification({
         appointmentId: updated._id.toString(),
@@ -363,7 +381,8 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
             from.slotDate,
             from.slotTime,
             updated.slotDate,
-            updated.slotTime
+            updated.slotTime,
+            patientLanguage(patient)
           ),
       });
     }
@@ -373,8 +392,10 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
 
 // --- Whole-day actions (doctor away, emergency, approved leave) ---
 
+// No-shows are left alone: moving or cancelling them would message patients
+// about a visit they already missed and erase the no-show from the counts
 const activeOnDay = (docId, slotDate) =>
-  appointmentModel.find({ docId, slotDate, ...ACTIVE }).sort({ startAt: 1 });
+  appointmentModel.find({ docId, slotDate, ...EXPECTED }).sort({ startAt: 1 });
 
 // Move every active appointment of a doctor from one day to another.
 // Each keeps its time if free, otherwise gets the nearest free time on the new day
@@ -469,11 +490,13 @@ export const bookFollowUp = async ({ parentAppointmentId, doctorId, slotDate, sl
   if (!patient) throw new AppointmentError("Patient no longer exists");
   if (!doctor) throw new AppointmentError("Doctor not found");
 
-  // Free if within the follow-up window of the original visit
+  // Free if within the follow-up window of the original visit. A visit the patient
+  // missed (no-show) doesn't earn a free follow-up.
   const freeDays = followUpFreeDays();
   const parentStart = parent.startAt || slotToDate(parent.slotDate, parent.slotTime);
   const newStart = slotToDate(slotDate, normalizeSlotTime(slotTime) || "");
   const isFree =
+    parent.status !== "no_show" &&
     freeDays > 0 && parentStart && newStart && newStart - parentStart <= freeDays * 86400000;
 
   return bookAppointment({

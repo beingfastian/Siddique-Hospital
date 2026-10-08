@@ -15,6 +15,7 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   FaTimes,
+  FaListOl,
 } from "react-icons/fa";
 
 const adminSections = [
@@ -25,6 +26,7 @@ const adminSections = [
   {
     title: "Appointments",
     items: [
+      { path: "/queue", icon: <FaListOl />, label: "Live Queue" },
       { path: "/all-appointments", icon: <FaCalendarAlt />, label: "All Appointments" },
       { path: "/book-appointment", icon: <FaUserPlus />, label: "Book Appointment" },
     ],
@@ -58,6 +60,7 @@ const doctorSections = [
   {
     title: "My Work",
     items: [
+      { path: "/doctor/queue", icon: <FaListOl />, label: "Live Queue" },
       { path: "/doctor/appointments", icon: <FaCalendarAlt />, label: "Appointments" },
       { path: "/doctor/leave-requests", icon: <FaCalendarCheck />, label: "Leave Requests" },
       { path: "/doctor/profile", icon: <FaUserMd />, label: "Profile" },

@@ -1,4 +1,5 @@
 import React, { useContext, useState } from "react";
+import LanguageSelect from "../../components/LanguageSelect";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -16,6 +17,7 @@ const AddPatient = () => {
   const [address2, setAddress2] = useState("");
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [language, setLanguage] = useState("ur");
   const { backendUrl, aToken } = useContext(AdminContext);
   const [loading, setLoading] = useState(false);
 
@@ -64,6 +66,7 @@ const AddPatient = () => {
       formData.append("address", JSON.stringify({ line1: address1, line2: address2 }));
       formData.append("whatsappEnabled", whatsappEnabled);
       formData.append("whatsappNumber", whatsappNumber);
+      formData.append("language", language);
 
       const { data } = await axios.post(
         backendUrl + "/api/admin/add-patient",
@@ -75,7 +78,7 @@ const AddPatient = () => {
         toast.success(data.message);
         // Reset form
         setName(""); setCnic(""); setPhone(""); setEmail(""); setDob(""); setGender("Male");
-        setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");
+        setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber(""); setLanguage("ur");
         setPatientImage(false);
       } else {
         toast.error(data.message);
@@ -302,6 +305,9 @@ const AddPatient = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-green-500"
                         />
                         <p className="text-xs text-gray-500 mt-1">Include country code (+92 for Pakistan)</p>
+                        <div className="mt-3">
+                          <LanguageSelect value={language} onChange={setLanguage} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -332,7 +338,7 @@ const AddPatient = () => {
                 onClick={() => {
                   if (window.confirm("Reset all fields? This cannot be undone.")) {
                     setName(""); setCnic(""); setPhone(""); setEmail(""); setDob(""); setGender("Male");
-                    setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");
+                    setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber(""); setLanguage("ur");
                     setPatientImage(false);
                   }
                 }}

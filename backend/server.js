@@ -11,6 +11,7 @@ import doctorRouter from "./routes/doctorRoute.js";
 import whatsappRouter from "./routes/whatsappRoute.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import queueRouter from "./routes/queueRoute.js";
 import { testEmailConnection } from "./config/emailService.js";
 import { getWhatsAppProvider } from "./config/whatsappService.js";
 import { startReminderScheduler } from "./jobs/reminders.js";
@@ -82,6 +83,7 @@ app.use("/api/doctor", doctorRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/queue", queueRouter);
 
 app.get("/", (req, res) => {
   res.status(200).send("API Working");

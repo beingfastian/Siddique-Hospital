@@ -99,3 +99,28 @@ export const releaseSlot = async (docId, slotDate, slotTime) => {
     $pull: { [`slots_booked.${slotDate}`]: slotTime },
   });
 };
+
+// --- Urdu wording for patient messages ---
+
+// "ہفتہ، 3 اکتوبر، 2026"
+export const formatSlotDateUrdu = (slotDate) => {
+  const date = parseSlotDate(slotDate);
+  if (!date) return slotDate;
+  return date.toLocaleDateString("ur-PK", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+};
+
+// "06:30 PM" -> "شام 6:30": the part of day is how times are said in Urdu,
+// and is clearer than AM/PM for people who don't read English
+export const formatSlotTimeUrdu = (slotTime) => {
+  const time = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec((slotTime || "").trim());
+  if (!time) return slotTime;
+  let h24 = Number(time[1]) % 12;
+  if (time[3].toUpperCase() === "PM") h24 += 12;
+  const part = h24 < 4 ? "رات" : h24 < 12 ? "صبح" : h24 < 16 ? "دوپہر" : h24 < 20 ? "شام" : "رات";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${part} ${h12}:${time[2]}`;
+};
+
+// Date and time in a patient's language ("en" | "ur")
+export const formatDateFor = (slotDate, lang) => (lang === "ur" ? formatSlotDateUrdu(slotDate) : formatSlotDate(slotDate));
+export const formatTimeFor = (slotTime, lang) => (lang === "ur" ? formatSlotTimeUrdu(slotTime) : slotTime);

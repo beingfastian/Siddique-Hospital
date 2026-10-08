@@ -1,0 +1,307 @@
+// End-to-end checks for appointments, no-shows, Urdu WhatsApp messages, the live
+// queue and the WhatsApp bot. Run with: npm run check:integration
+//
+// Needs a LOCAL MongoDB (default mongodb://127.0.0.1:27017, or CHECK_MONGODB_URI).
+// It creates its own throwaway database, deletes it at the end, and fakes the
+// WhatsApp API, so nothing real is read, changed or sent. It refuses remote URIs.
+process.env.WHATSAPP_PROVIDER = "meta";
+process.env.META_ACCESS_TOKEN = "test";
+process.env.WHATSAPP_PHONE_NUMBER_ID = "123";
+process.env.PUBLIC_SITE_URL = "https://site.test/";
+process.env.QUEUE_NOTIFY_AHEAD = "2";
+process.env.FOLLOW_UP_FREE_DAYS = "7";
+delete process.env.WHATSAPP_DEFAULT_LANGUAGE;
+
+const sent = [];
+let urduApproved = false;
+globalThis.fetch = async (url, options) => {
+  const body = JSON.parse(options.body || "{}");
+  if (body.type === "template" && body.template.language.code === "ur" && !urduApproved) {
+    return { ok: false, status: 404, json: async () => ({ error: { code: 132001, message: "Template name does not exist in the translation" } }) };
+  }
+  sent.push({ to: body.to, name: body.template?.name, lang: body.template?.language?.code, params: body.template?.components?.[0]?.parameters?.map((p) => p.text) });
+  return { ok: true, json: async () => ({ messages: [{ id: "m" + sent.length }] }) };
+};
+
+const mongoose = (await import("mongoose")).default;
+const baseUri = process.env.CHECK_MONGODB_URI || "mongodb://127.0.0.1:27017";
+if (!/^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(baseUri)) {
+  console.error("Refusing to run: CHECK_MONGODB_URI must be a local MongoDB (this script deletes its test database).");
+  process.exit(1);
+}
+const dbName = "qlinic_check_" + Date.now();
+await mongoose.connect(baseUri, { dbName });
+
+const { default: doctorModel } = await import("../model/doctorModel.js");
+const { default: userModel } = await import("../model/userModel.js");
+const { default: appointmentModel } = await import("../model/appointmentModel.js");
+const svc = await import("../services/appointmentService.js");
+const q = await import("../services/queueService.js");
+const { hospitalSlotDate, HOSPITAL_UTC_OFFSET_MINUTES } = await import("../utils/slots.js");
+
+let failures = 0;
+const check = (label, cond, extra = "") => {
+  console.log(`${cond ? "PASS" : "FAIL"}  ${label}${!cond && extra ? "  -> " + extra : ""}`);
+  if (!cond) failures++;
+};
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const admin = { role: "admin" };
+
+// A slot time today in hospital time, `minutesAhead` from now, on the 30-min grid
+const slotToday = (minutesAhead) => {
+  const local = new Date(Date.now() + HOSPITAL_UTC_OFFSET_MINUTES * 60000 + minutesAhead * 60000);
+  let mins = Math.ceil((local.getUTCHours() * 60 + local.getUTCMinutes()) / 30) * 30;
+  const h24 = Math.floor(mins / 60) % 24, m = mins % 60;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`;
+};
+
+try {
+  const doctor = await doctorModel.create({
+    name: "Test Doc", email: "d@t.test", password: "x", image: "i", speciality: "General physician",
+    degree: "MBBS", experience: "1", about: "a", fee: 1000, address: {}, date: Date.now(),
+    timings: { start: "00:00", end: "23:59" }, sittingDays: [],
+  });
+  const docId = String(doctor._id);
+  const urduPatient = await userModel.create({ name: "Ali", phone: "03001234567", dob: "1990", address: {}, whatsappEnabled: true, whatsappNumber: "03001234567" });
+  const enPatient = await userModel.create({ name: "Sara", phone: "03007654321", dob: "1990", address: {}, whatsappEnabled: true, whatsappNumber: "03007654321", language: "en" });
+  const today = hospitalSlotDate(new Date());
+  const tomorrow = hospitalSlotDate(new Date(), 1);
+
+  // --- Urdu templates with English fallback ---
+  const a1 = await svc.bookAppointment({ patient: urduPatient, doctor, slotDate: tomorrow, slotTime: "10:00 AM", amount: 1000, actor: admin });
+  svc.queueBookingNotifications(a1, urduPatient, doctor);
+  await wait(300);
+  let msg = sent.find((s) => s.name === "appointment_confirmation" && s.to === "923001234567");
+  check("Urdu patient (no language set) falls back to English while Urdu template unapproved", msg?.lang === "en", JSON.stringify(msg));
+  check("Fallback message uses English date wording", /[A-Za-z]/.test(msg?.params?.[4] || ""), msg?.params?.[4]);
+
+  urduApproved = true;
+  sent.length = 0;
+  // Cached as unavailable for 30 min: still English right after
+  svc.queueBookingNotifications(a1, urduPatient, doctor);
+  await wait(300);
+  check("Unavailable Urdu template is remembered (no failing call per message)", sent[0]?.lang === "en", JSON.stringify(sent[0]));
+
+  // A fresh process would retry Urdu: simulate by importing a new instance is hard; test Twilio-free path via English patient
+  sent.length = 0;
+  const a2 = await svc.bookAppointment({ patient: enPatient, doctor, slotDate: tomorrow, slotTime: "11:00 AM", amount: 0, actor: admin });
+  svc.queueBookingNotifications(a2, enPatient, doctor);
+  await wait(300);
+  msg = sent.find((s) => s.to === "923007654321");
+  check("English patient gets English, fee 0 kept as 0", msg?.lang === "en" && msg?.params?.[6] === "0", JSON.stringify(msg));
+
+  // Urdu formatting directly (template approved path) via cancellation of a different template name
+  sent.length = 0;
+  await svc.cancelAppointment(a1._id, admin, { cancelledBy: "your doctor" });
+  await wait(300);
+  msg = sent.find((s) => s.name === "appointment_cancelled");
+  check("Urdu cancellation sent in Urdu with Urdu date/time and 'آپ کے ڈاکٹر'",
+    msg?.lang === "ur" && /اکتوبر|نومبر|دسمبر|جنوری|فروری|مارچ|اپریل|مئی|جون|جولائی|اگست|ستمبر/.test(msg.params[2]) && msg.params[3] === "صبح 10:00" && msg.params[4] === "آپ کے ڈاکٹر",
+    JSON.stringify(msg));
+
+  // --- No-show fixes ---
+  const past = await appointmentModel.create({
+    userId: String(enPatient._id), docId, slotDate: today, slotTime: "12:00 AM", startAt: new Date(Date.now() - 3600e3),
+    userData: { name: "Sara" }, docData: { name: "Test Doc" }, amount: 1000, date: Date.now(), status: "booked",
+  });
+  await svc.markNoShow(past._id, admin);
+  const laterToday = slotToday(120);
+  const upcoming = await svc.bookAppointment({ patient: enPatient, doctor, slotDate: today, slotTime: laterToday, amount: 1000, actor: admin });
+  sent.length = 0;
+  const day = await svc.rescheduleDay({ docId, fromSlotDate: today, toSlotDate: hospitalSlotDate(new Date(), 2), actor: admin });
+  const pastAfter = await appointmentModel.findById(past._id);
+  check("Whole-day reschedule leaves the no-show alone", pastAfter.status === "no_show" && pastAfter.slotDate === today);
+  check("Whole-day reschedule still moves the expected appointment", day.moved.some((m) => String(m._id) === String(upcoming._id)), JSON.stringify(day));
+
+  const moved = await svc.moveAppointment(past._id, tomorrow, "03:00 PM", admin);
+  check("Rebooking a no-show sets it back to booked", moved.status === "booked");
+
+  // Free follow-up not given for a no-show parent
+  const ns2 = await appointmentModel.create({
+    userId: String(enPatient._id), docId, slotDate: today, slotTime: "12:30 AM", startAt: new Date(Date.now() - 1800e3),
+    userData: { name: "Sara" }, docData: { name: "Test Doc" }, amount: 1000, date: Date.now(), status: "no_show",
+  });
+  const fu = await svc.bookFollowUp({ parentAppointmentId: ns2._id, doctorId: docId, slotDate: tomorrow, slotTime: "04:00 PM" });
+  check("No-show parent doesn't get a free follow-up", fu.appointment.amount === 1000, fu.appointment.amount);
+
+  // Cancelling a past no-show (undo) doesn't message the patient
+  sent.length = 0;
+  await svc.cancelAppointment(ns2._id, admin, {});
+  await wait(200);
+  check("Cancelling a past visit sends no WhatsApp", sent.length === 0, JSON.stringify(sent));
+
+  // --- Queue ---
+  sent.length = 0;
+  const w1 = (await q.issueToken({ docId, patientName: "Walk One", actor: admin })).token;
+  const w2 = (await q.issueToken({ docId, patientName: "Walk Two", phone: "0300 1112223", notify: true, language: "ur", actor: admin })).token;
+  const w3 = (await q.issueToken({ docId, patientName: "Walk Three", phone: "03004445556", notify: true, language: "en", actor: admin })).token;
+  check("Token numbers start at 1 and increase", w1.number === 1 && w2.number === 2 && w3.number === 3);
+  check("Walk-in fee defaults to doctor's fee", w1.fee === 1000);
+  await wait(300);
+  const tokMsg = sent.find((s) => s.name === "queue_token" && s.to === "923004445556");
+  check("Queue token WhatsApp has track link and ahead count", tokMsg && tokMsg.params[6].startsWith("https://site.test/queue/t/") && tokMsg.params[4] === "2", JSON.stringify(tokMsg));
+  check("No WhatsApp for walk-in without consent", !sent.some((s) => s.params?.[0] === "Walk One"));
+
+  let threw = "";
+  try { await q.issueToken({ docId, patientName: "Land", phone: "0423 1234567", notify: true, actor: admin }); } catch (e) { threw = e.message; }
+  check("WhatsApp to a landline is refused", /mobile/.test(threw), threw);
+  try { await q.issueToken({ docId, patientName: "  ", actor: admin }); threw = ""; } catch (e) { threw = e.message; }
+  check("Empty name refused", /name/.test(threw));
+
+  // Concurrent issuing: numbers stay unique
+  const many = await Promise.all([1, 2, 3, 4, 5].map((i) => q.issueToken({ docId, patientName: "C" + i, actor: admin })));
+  const nums = many.map((m) => m.token.number);
+  check("Concurrent tokens get unique numbers", new Set(nums).size === 5, nums.join(","));
+  const far = (await q.issueToken({ docId, patientName: "Far Back", phone: "03009998887", notify: true, language: "ur", actor: admin })).token;
+  check("Far-back patient is not pre-marked as notified", !far.nearNotifiedAt);
+
+  // Appointment check-in: an on-time appointment for later is placed at its time
+  const apt = await svc.bookAppointment({ patient: urduPatient, doctor, slotDate: today, slotTime: slotToday(60), amount: 1000, actor: admin });
+  const chk = await q.issueToken({ docId, appointmentId: apt._id, actor: admin });
+  const chk2 = await q.issueToken({ docId, appointmentId: apt._id, actor: admin });
+  check("Checking in twice returns the same token", chk2.existing && chk2.token.number === chk.token.number);
+  let view = await q.staffView(docId);
+  check("Early appointment waits behind walk-ins who are already here", view.waiting[view.waiting.length - 1]?.appointmentId === String(apt._id),
+    view.waiting.map((t) => t.number).join(","));
+  check("Checked-in appointment no longer in check-in list", !view.appointmentsToCheckIn.some((a) => String(a._id) === String(apt._id)));
+
+  // Urgent goes first
+  const urgent = (await q.issueToken({ docId, patientName: "Emergency", urgent: true, actor: admin })).token;
+  view = await q.staffView(docId);
+  check("Urgent token is first in line", String(view.waiting[0]._id) === String(urgent._id));
+
+  // Call next: urgent first, then 1, 2 ...
+  sent.length = 0;
+  let called = await q.callNext(docId, admin);
+  check("Call next takes the urgent patient", String(called._id) === String(urgent._id));
+  called = await q.callNext(docId, admin);
+  check("Next call finishes the previous one and takes token 1", called.number === 1);
+  const urgentAfter = await (await import("../model/queueModel.js")).queueTokenModel.findById(urgent._id);
+  check("Previous token marked done with times", urgentAfter.status === "done" && urgentAfter.doneAt && urgentAfter.calledAt);
+  await wait(200);
+  check("No turn-near while far back", !sent.some((s) => s.name === "queue_turn_near"));
+  const { queueTokenModel: QT } = await import("../model/queueModel.js");
+  // Take patients out of line until "Far Back" is 2 from the front
+  for (let i = 0; i < 20; i++) {
+    const v = await q.staffView(docId);
+    const idx = v.waiting.findIndex((t) => String(t._id) === String(far._id));
+    if (idx <= 2) break;
+    await q.tokenAction(docId, v.waiting.find((t) => String(t._id) !== String(far._id) && t.kind === "walk_in" && t.number > 3)._id, "left", admin);
+  }
+  await wait(400);
+  const near = sent.filter((s) => s.name === "queue_turn_near");
+  check("Turn-near sent once to the far-back patient when 2 ahead, in Urdu", near.length === 1 && near[0].to === "923009998887" && near[0].lang === "ur", JSON.stringify(near));
+  const nearCount = near.length;
+  await q.tokenAction(docId, called._id, "skip", admin);
+  await wait(300);
+  check("Turn-near not repeated", sent.filter((s) => s.name === "queue_turn_near").length === nearCount);
+
+  // Skip + back in line
+  view = await q.staffView(docId);
+  const firstRegular = view.waiting.find((t) => !t.urgent);
+  await q.tokenAction(docId, called._id, "back_in_line", admin);
+  view = await q.staffView(docId);
+  check("Skipped patient who returns goes to the front", String(view.waiting[0]._id) === String(called._id),
+    `${view.waiting[0].number} vs first regular ${firstRegular?.number}`);
+
+  // Calling the appointment token then next completes the appointment
+  await q.callNext(docId, admin, chk.token._id);
+  await q.callNext(docId, admin);
+  const aptAfter = await appointmentModel.findById(apt._id);
+  check("Finishing an appointment token completes the appointment", aptAfter.isCompleted && aptAfter.status === "completed");
+  check("Check-in recorded in appointment history", aptAfter.history.some((h) => h.action === "checked_in"));
+
+  // Other doctor can't touch this queue
+  try { await q.tokenAction(String(new mongoose.Types.ObjectId()), w1._id, "left", admin); threw = ""; } catch (e) { threw = e.message; }
+  check("Token of another doctor is rejected", /not found/i.test(threw));
+
+  // Pause shows on public board, no names exposed
+  await q.setPaused(docId, true, "Namaz break");
+  const board = await q.publicBoard();
+  const b = board.doctors[0];
+  check("Public board shows pause, now serving and next numbers", b.paused && b.pauseNote === "Namaz break" && typeof b.nowServing === "number" && b.next.length > 0, JSON.stringify(b));
+  check("Public board has no patient names", !JSON.stringify(board).match(/Walk|Emergency|Ali|Sara/));
+  await q.setPaused(docId, false);
+
+  const pt = await q.publicToken(w3.publicId);
+  check("Public token page shows place and wait", pt && pt.status === "waiting" && pt.ahead >= 0 && pt.waitMinutes >= 0, JSON.stringify(pt));
+  check("Public token page has no patient name", !JSON.stringify(pt).includes("Walk"));
+  check("Unknown public id returns nothing", (await q.publicToken("zzzzzzzz")) === null);
+
+  // No-show patient arrives late: check-in undoes the no-show
+  const lateApt = await appointmentModel.create({
+    userId: String(enPatient._id), docId, slotDate: today, slotTime: "01:00 AM", startAt: new Date(Date.now() - 600e3),
+    userData: { name: "Sara" }, docData: { name: "Test Doc" }, amount: 1000, date: Date.now(), status: "no_show",
+  });
+  view = await q.staffView(docId);
+  check("Late no-show appears in the check-in list marked as no-show", view.appointmentsToCheckIn.some((a) => String(a._id) === String(lateApt._id) && a.noShow));
+  await q.issueToken({ docId, appointmentId: lateApt._id, actor: admin });
+  check("Late arrival check-in sets status back to booked", (await appointmentModel.findById(lateApt._id)).status === "booked");
+
+  // Races: two receptionists / doctor + reception pressing at the same moment
+  const { queueTokenModel: QTM } = await import("../model/queueModel.js");
+  await QTM.init(); // make sure the unique indexes exist before racing
+  const raceApt = await svc.bookAppointment({ patient: enPatient, doctor, slotDate: today, slotTime: slotToday(150), amount: 1000, actor: admin });
+  const checks = await Promise.all([1, 2, 3].map(() => q.issueToken({ docId, appointmentId: raceApt._id, actor: admin }).catch((e) => ({ error: e.message }))));
+  const raceTokens = await QTM.find({ appointmentId: String(raceApt._id) });
+  check("Simultaneous check-ins of one appointment give one token", raceTokens.length === 1 && checks.every((c) => !c.error && c.token.number === raceTokens[0].number),
+    JSON.stringify(checks.map((c) => c.error || c.token.number)));
+
+  for (const name of ["R1", "R2", "R3", "R4"]) await q.issueToken({ docId, patientName: name, actor: admin });
+  const before = await q.staffView(docId);
+  const results = await Promise.all([1, 2, 3].map(() => q.callNext(docId, admin, undefined, before.current?._id ? String(before.current._id) : "").then((t) => t?.number ?? null, (e) => "ERR:" + e.message)));
+  const calledNow = await QTM.find({ docId, day: today, status: "called" });
+  check("Simultaneous 'call next' calls exactly one patient", calledNow.length === 1 && results.filter((r) => typeof r === "number").length === 1,
+    JSON.stringify(results));
+
+  // A screen that is out of date (shows nobody with the doctor) can't finish the current patient
+  let stale = "";
+  try { await q.callNext(docId, admin, undefined, ""); } catch (e) { stale = e.message; }
+  check("Out-of-date screen can't finish someone it didn't show", /changed/.test(stale) && (await QTM.countDocuments({ _id: calledNow[0]._id, status: "called" })) === 1, stale);
+
+  // Calling a token that can't be called leaves the current patient with the doctor
+  let bad = "";
+  try { await q.callNext(docId, admin, String(urgent._id), String(calledNow[0]._id)); } catch (e) { bad = e.message; }
+  check("Failed call doesn't finish the current patient", /can't be called/.test(bad) && (await QTM.countDocuments({ _id: calledNow[0]._id, status: "called" })) === 1, bad);
+
+  // Cancelling a checked-in appointment takes the token out of the line
+  const cxApt = await svc.bookAppointment({ patient: enPatient, doctor, slotDate: today, slotTime: slotToday(180), amount: 1000, actor: admin });
+  const cxTok = (await q.issueToken({ docId, appointmentId: cxApt._id, actor: admin })).token;
+  await svc.cancelAppointment(cxApt._id, admin, {});
+  check("Cancelled appointment leaves the queue", (await QTM.findById(cxTok._id)).status === "left");
+
+  // Bot: CANCEL picks the next upcoming visit, never a past no-show
+  const { handleWhatsAppWebhook } = await import("../controllers/whatsappController.js");
+  const ask = async (from, text) => {
+    let out = "";
+    await handleWhatsAppWebhook({ body: { Body: text, From: "whatsapp:" + from } }, { writeHead() {}, end(x) { out = x; }, status() { return this; }, send() {} });
+    return out;
+  };
+  const botUser = await userModel.create({ name: "Bot Patient", phone: "03005550001", dob: "1990", address: {}, language: "ur" });
+  const mk = (slotDate, slotTime, startAt, status, booked) => appointmentModel.create({
+    userId: String(botUser._id), docId, slotDate, slotTime, startAt, userData: { name: "Bot Patient" }, docData: { name: "Test Doc" },
+    amount: 1000, date: booked, status,
+  });
+  const farFuture = await mk(hospitalSlotDate(new Date(), 10), "10:00 AM", new Date(Date.now() + 10 * 86400e3), "booked", Date.now() - 5000);
+  const soon = await mk(hospitalSlotDate(new Date(), 3), "10:00 AM", new Date(Date.now() + 3 * 86400e3), "booked", Date.now() - 4000);
+  const missed = await mk(hospitalSlotDate(new Date(), -2), "10:00 AM", new Date(Date.now() - 2 * 86400e3), "no_show", Date.now());
+  const statusReply = await ask("+923005550001", "حالت");
+  check("Bot STATUS in Urdu shows the missed visit as missed", statusReply.includes("نہیں آئے") && statusReply.includes("آنے والی"), statusReply.slice(0, 300));
+  const cancelReply = await ask("+923005550001", "منسوخ");
+  check("Bot CANCEL (Urdu keyword) cancels the nearest upcoming visit only",
+    (await appointmentModel.findById(soon._id)).cancelled && !(await appointmentModel.findById(farFuture._id)).cancelled && (await appointmentModel.findById(missed._id)).status === "no_show",
+    cancelReply.slice(0, 200));
+  const helpEn = await ask("+923007654321", "hello");
+  check("Bot replies in English to an English patient", helpEn.includes("Available Commands"));
+  const unknown = await ask("+923009999999", "status");
+  check("Unknown number gets a bilingual reply", unknown.includes("couldn't find") && unknown.includes("ریکارڈ"));
+} catch (error) {
+  console.error("TEST CRASHED:", error);
+  failures++;
+} finally {
+  await mongoose.connection.dropDatabase();
+  await mongoose.disconnect();
+  console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
+  process.exitCode = failures ? 1 : 0;
+}

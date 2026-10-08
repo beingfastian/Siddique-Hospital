@@ -3,6 +3,8 @@
 const env = import.meta.env;
 
 export const HOSPITAL_NAME = env.VITE_HOSPITAL_NAME || "Qlinic Demo Hospital";
+// Optional: shown under the English name on the queue screens
+export const HOSPITAL_NAME_URDU = env.VITE_HOSPITAL_NAME_URDU || "";
 // Contact number used for WhatsApp buttons, calls and contact info.
 export const HOSPITAL_PHONE = env.VITE_HOSPITAL_PHONE || "+920000000000";
 export const HOSPITAL_EMAIL = env.VITE_HOSPITAL_EMAIL || "info@example.com";

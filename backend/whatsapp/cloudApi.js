@@ -3,7 +3,7 @@
 //
 //   WHATSAPP_PROVIDER=kapso -> https://api.kapso.ai/meta/whatsapp, header X-API-Key
 //   WHATSAPP_PROVIDER=meta  -> https://graph.facebook.com,          header Authorization: Bearer
-import { templates, TEMPLATE_LANGUAGE } from "./templates.js";
+import { templates, LANGUAGES, hasLanguage, templateBody, templateExample, metaLanguageCode } from "./templates.js";
 import { normalizePhone } from "./phone.js";
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || "v24.0";
@@ -43,7 +43,10 @@ const request = async (method, path, body) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = data?.error?.message || data?.error || `HTTP ${response.status}`;
-    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+    const error = new Error(typeof message === "string" ? message : JSON.stringify(message));
+    // Meta's numeric error code, e.g. 132001 = template doesn't exist in that language
+    error.code = data?.error?.code;
+    throw error;
   }
   return data;
 };
@@ -64,14 +67,14 @@ const sendMessage = async (payload) => {
 export const sendText = (to, body) =>
   sendMessage({ to: toRecipient(to), type: "text", text: { body } });
 
-// Approved template with positional parameters ({{1}}, {{2}}, ...)
-export const sendTemplate = (to, name, params) =>
+// Approved template with positional parameters ({{1}}, {{2}}, ...), in "en" or "ur"
+export const sendTemplate = (to, name, params, lang = "en") =>
   sendMessage({
     to: toRecipient(to),
     type: "template",
     template: {
       name,
-      language: { code: TEMPLATE_LANGUAGE },
+      language: { code: metaLanguageCode(lang) },
       components: [
         {
           type: "body",
@@ -102,30 +105,37 @@ export const listTemplates = async () => {
   return all;
 };
 
-export const createTemplate = (name) => {
-  const definition = templates[name];
-  return request("POST", `/${wabaId()}/message_templates`, {
+// Submit one language of a template (a new language of an existing name is
+// added by Meta as a translation of it)
+export const createTemplate = (name, lang = "en") =>
+  request("POST", `/${wabaId()}/message_templates`, {
     name,
-    language: TEMPLATE_LANGUAGE,
-    category: definition.category,
+    language: metaLanguageCode(lang),
+    category: templates[name].category,
     parameter_format: "POSITIONAL",
     components: [
       {
         type: "BODY",
-        text: definition.body,
-        example: { body_text: [definition.example] },
+        text: templateBody(name, lang),
+        example: { body_text: [templateExample(name, lang)] },
       },
     ],
   });
-};
 
-// Status of each template defined in code: APPROVED / PENDING / REJECTED / MISSING
+// Every (template, language) pair defined in code
+export const templateLanguagePairs = () =>
+  Object.keys(templates).flatMap((name) =>
+    LANGUAGES.filter((lang) => hasLanguage(name, lang)).map((lang) => ({ name, lang }))
+  );
+
+// Status of each template and language defined in code: APPROVED / PENDING / REJECTED / MISSING
 export const getTemplateStatuses = async () => {
   const existing = await listTemplates();
-  return Object.keys(templates).map((name) => {
-    const match = existing.find((t) => t.name === name && t.language === TEMPLATE_LANGUAGE);
+  return templateLanguagePairs().map(({ name, lang }) => {
+    const match = existing.find((t) => t.name === name && t.language === metaLanguageCode(lang));
     return {
       name,
+      language: lang,
       status: match?.status || "MISSING",
       category: match?.category || templates[name].category,
       rejectedReason: match?.rejected_reason || null,
