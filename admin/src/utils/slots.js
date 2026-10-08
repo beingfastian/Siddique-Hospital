@@ -65,3 +65,15 @@ export const getUpcomingSlots = (doctor, days = 30, now = new Date()) => {
   }
   return result;
 };
+
+// Has the appointment's time arrived? (startAt from the server; older records fall
+// back to "d_m_yyyy" + "hh:mm AM", read in this computer's time zone)
+export const hasStarted = (appointment, now = new Date()) => {
+  if (appointment.startAt) return new Date(appointment.startAt) <= now;
+  const [day, month, year] = String(appointment.slotDate || "").split("_").map(Number);
+  const match = /^(\d{1,2}):(\d{2})\s*([AP]M)$/i.exec(String(appointment.slotTime || "").trim());
+  if (!day || !month || !year || !match) return true;
+  let hours = Number(match[1]) % 12;
+  if (match[3].toUpperCase() === "PM") hours += 12;
+  return new Date(year, month - 1, day, hours, Number(match[2])) <= now;
+};

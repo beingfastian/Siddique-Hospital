@@ -2,7 +2,9 @@ import React, { useContext, useEffect, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { assets } from "../../assets/assets.js";
-import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash, FaPrint } from "react-icons/fa";
+import { printAppointmentSlip } from "../../components/PrintSlip";
+import { hasStarted } from "../../utils/slots";
 import { AdminRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
 
@@ -55,10 +57,31 @@ const AllAppointments = () => {
       </span>
     );
 
+  // The patient's slip again (lost slip, or booked by phone and collected at the counter)
+  const printSlip = (item) => {
+    const ok = printAppointmentSlip({
+      patientName: item.userData?.name,
+      doctorName: item.docData?.name,
+      speciality: item.docData?.speciality,
+      dateText: slotDateFormat(item.slotDate),
+      time: item.slotTime,
+      fee: typeof item.amount === "number" ? item.amount : undefined,
+    });
+    if (!ok) window.alert("The print window was blocked. Allow pop-ups for this site and try again.");
+  };
+
   // Reschedule / cancel for appointments that haven't happened yet
   const actionButtons = (item) =>
     !item.cancelled && !item.isCompleted && (
       <>
+        <button
+          onClick={() => printSlip(item)}
+          className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+          title="Print slip"
+          aria-label="Print slip"
+        >
+          <FaPrint className="w-4 h-4" />
+        </button>
         <button
           onClick={() => setRescheduleFor(item)}
           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -223,7 +246,7 @@ const AllAppointments = () => {
                   </div>
                   
                   <div className="col-span-1 font-semibold text-gray-900">
-                    {currency} {item.docData.fee}
+                    {currency} {item.amount ?? item.docData.fee}
                   </div>
                   
                   <div className="col-span-1">
@@ -237,7 +260,7 @@ const AllAppointments = () => {
                   <div className="col-span-2 flex flex-wrap items-center gap-1">
                     {getStatusBadge(item)}
                     {getTypeBadge(item)}
-                    {!item.cancelled && !item.isCompleted && item.status !== "no_show" && (
+                    {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
                       <button
                         onClick={() =>
                           window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
@@ -271,7 +294,7 @@ const AllAppointments = () => {
                     <div className="text-right flex flex-col items-end gap-1">
                       {getStatusBadge(item)}
                       {getTypeBadge(item)}
-                      {!item.cancelled && !item.isCompleted && item.status !== "no_show" && (
+                      {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
                         <button
                           onClick={() =>
                             window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
@@ -295,7 +318,7 @@ const AllAppointments = () => {
                     <div>
                       <p className="text-gray-500">Doctor</p>
                       <p className="font-medium">{item.docData.name}</p>
-                      <p className="text-gray-600">{currency} {item.docData.fee}</p>
+                      <p className="text-gray-600">{currency} {item.amount ?? item.docData.fee}</p>
                     </div>
                   </div>
                   

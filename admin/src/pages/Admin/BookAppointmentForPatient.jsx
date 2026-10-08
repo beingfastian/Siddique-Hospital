@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { FaWhatsapp, FaEnvelope, FaUser, FaCalendarAlt, FaSpinner, FaPlus, FaSearch, FaClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import axios from "axios";
 import PrintSlipDialog from "../../components/PrintSlip";
+import LanguageSelect from "../../components/LanguageSelect";
 
 const BookAppointmentForPatient = () => {
   const { aToken, doctors, getAllDoctors, backendUrl, patients, getAllPatients } = useContext(AdminContext);
@@ -26,7 +27,8 @@ const BookAppointmentForPatient = () => {
     gender: "Male",
     address: { line1: "", line2: "" },
     whatsappEnabled: false,
-    whatsappNumber: ""
+    whatsappNumber: "",
+    language: "ur"
   });
   // Appointment booking state
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -204,7 +206,9 @@ const BookAppointmentForPatient = () => {
       if (data.success) {
         toast.success(data.message);
 
-        const patientData = selectedPatient || newPatientData;
+        // The patient that was actually booked (a patient picked earlier may still be
+        // selected after switching to "Add New Patient")
+        const patientData = patientSelectionMode === "new" ? newPatientData : selectedPatient;
         if (patientData.whatsappEnabled) {
           toast.info("WhatsApp confirmation will be sent to patient!");
         } else {
@@ -213,20 +217,21 @@ const BookAppointmentForPatient = () => {
 
         // Offer a printable slip while the details are still at hand — the
         // walk-in patient leaves with the date/time on paper
+        // The server's values, so the slip matches what was saved
         setSlip({
-          patientName: patientData.name,
+          patientName: data.appointment?.patientName || patientData.name,
           doctorName: selectedDoctor.name,
           speciality: selectedDoctor.speciality,
-          dateText: slotDateFormat(slotDate),
-          time: slotTime,
-          fee: finalFee,
+          dateText: slotDateFormat(data.appointment?.slotDate || slotDate),
+          time: data.appointment?.slotTime || slotTime,
+          fee: typeof data.appointment?.amount === "number" ? data.appointment.amount : finalFee,
         });
 
         // Reset form
         setSelectedPatient(null);
         setNewPatientData({
           name: "", email: "", phone: "", cnic: "", dob: "", gender: "Male",
-          address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: ""
+          address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: "", language: "ur"
         });
         setSelectedDoctor(null);
         setStep(1);
@@ -250,7 +255,7 @@ const BookAppointmentForPatient = () => {
     setSelectedPatient(null);
     setNewPatientData({
       name: "", email: "", phone: "", cnic: "", dob: "", gender: "Male",
-      address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: ""
+      address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: "", language: "ur"
     });
     setSelectedDoctor(null);
     setStep(1);
@@ -522,6 +527,12 @@ const BookAppointmentForPatient = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md outline-primary"
                     />
                     <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +92 for Pakistan)</p>
+                    <div className="mt-3">
+                      <LanguageSelect
+                        value={newPatientData.language}
+                        onChange={(value) => handleNewPatientDataChange('language', value)}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

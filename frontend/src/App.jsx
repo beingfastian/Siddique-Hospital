@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import Doctors from "./pages/Doctors.jsx";
@@ -7,10 +7,13 @@ import Contact from "./pages/Contact.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import WelcomeScreen from "./components/WelcomeScreen.jsx";
+import QueueBoard from "./pages/queue/QueueBoard.jsx";
+import QueueTrack from "./pages/queue/QueueTrack.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const App = () => {
+  const location = useLocation();
   const [showWelcome, setShowWelcome] = useState(true);
   const [hasVisited, setHasVisited] = useState(false);
 
@@ -29,6 +32,18 @@ const App = () => {
     // Remember that user has seen welcome screen for this session
     sessionStorage.setItem('hasVisitedWelcome', 'true');
   };
+
+  // Queue screens (waiting-room TV, a patient's token link): full screen,
+  // without the welcome animation, site header or footer
+  if (location.pathname === "/queue" || location.pathname.startsWith("/queue/")) {
+    return (
+      <Routes>
+        <Route path="/queue" element={<QueueBoard />} />
+        <Route path="/queue/t/:publicId" element={<QueueTrack />} />
+        <Route path="*" element={<QueueBoard />} />
+      </Routes>
+    );
+  }
 
   // Show welcome screen on first visit
   if (showWelcome && !hasVisited) {

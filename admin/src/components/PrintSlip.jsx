@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { FaPrint, FaCheckCircle } from "react-icons/fa";
 
 // The patient's copy: a small slip printed on 80mm thermal paper (what receptions
-// usually have) or any printer the browser's print dialog offers. No dependencies —
-// it opens a window, writes the slip, prints and closes. Same hospital details as
-// backend/config and frontend/src/config.js.
+// usually have) or any printer the browser's print dialog offers. It opens a
+// window, writes the slip, prints and closes.
+//
+// Each slip has English and Urdu lines: many patients (or the family member with
+// them) read Urdu but not English. Same hospital details as backend/config and
+// frontend/src/config.js.
 const HOSPITAL = {
   name: "Siddique Hospital",
+  nameUrdu: "صدیق ہسپتال",
   address: "Civil Lines, Lahore-Sargodha Road, Sheikhupura",
   phone: "+92 313 4294093",
 };
@@ -23,21 +28,13 @@ const escapeHtml = (value) =>
 const feeText = (fee) =>
   typeof fee === "number" ? (fee > 0 ? `Rs. ${fee}` : "Free") : "See at counter";
 
-// details: { patientName, doctorName, speciality, dateText, time, fee }
-// Returns false when the popup was blocked so the caller can tell the user.
-export const printAppointmentSlip = (details) => {
-  const win = window.open("", "_blank", "width=380,height=640");
-  if (!win) return false;
-
-  win.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Appointment Slip</title>
-<style>
+const SLIP_STYLE = `
   @page { margin: 4mm; }
   body { width: 66mm; margin: 0; font-family: "Courier New", monospace; font-size: 12px; color: #000; }
   h1 { font-size: 14px; text-align: center; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 1px; }
+  .ur { font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Urdu Typesetting", "Arial", sans-serif; direction: rtl; font-size: 12px; }
+  span.ur { display: inline-block; letter-spacing: 0; text-transform: none; }
+  .center { text-align: center; }
   .addr { text-align: center; font-size: 10px; margin-bottom: 6px; }
   hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
   .type { text-align: center; font-weight: bold; text-transform: uppercase; margin: 4px 0; }
@@ -45,28 +42,113 @@ export const printAppointmentSlip = (details) => {
   .k { color: #333; }
   .v { font-weight: bold; text-align: right; }
   .foot { text-align: center; font-size: 10px; margin-top: 8px; }
-</style>
+  .token { text-align: center; font-size: 56px; font-weight: bold; line-height: 1; margin: 6px 0 2px; font-family: Arial, sans-serif; }
+  .urgent { text-align: center; font-weight: bold; border: 2px solid #000; padding: 2px; margin: 4px 0; }
+  .qr { text-align: center; margin-top: 6px; }
+  .qr img { width: 34mm; height: 34mm; }
+  .small { font-size: 9px; word-break: break-all; text-align: center; }
+`;
+
+// Open the print window at once (still inside the click, so it isn't blocked as a
+// popup), then fill it — possibly after async work like drawing a QR code.
+// Returns null when the popup was blocked.
+export const openPrintWindow = () => window.open("", "_blank", "width=380,height=680");
+
+const writeAndPrint = async (win, title, bodyHtml) => {
+  win.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<style>${SLIP_STYLE}</style>
 </head>
-<body>
-  <h1>${escapeHtml(HOSPITAL.name)}</h1>
-  <div class="addr">${escapeHtml(HOSPITAL.address)}<br>Ph: ${escapeHtml(HOSPITAL.phone)}</div>
-  <hr>
-  <div class="type">Appointment Slip</div>
-  <div class="row"><span class="k">Patient</span><span class="v">${escapeHtml(details.patientName)}</span></div>
-  <div class="row"><span class="k">Doctor</span><span class="v">Dr. ${escapeHtml(details.doctorName)}</span></div>
-  ${details.speciality ? `<div class="row"><span class="k">Speciality</span><span class="v">${escapeHtml(details.speciality)}</span></div>` : ""}
-  <div class="row"><span class="k">Date</span><span class="v">${escapeHtml(details.dateText)}</span></div>
-  <div class="row"><span class="k">Time</span><span class="v">${escapeHtml(details.time)}</span></div>
-  <div class="row"><span class="k">Fee</span><span class="v">${escapeHtml(feeText(details.fee))}</span></div>
-  <hr>
-  <div class="foot">Please arrive 15 minutes early.<br>Keep this slip for your next visit.</div>
-</body>
+<body>${bodyHtml}</body>
 </html>`);
   win.document.close();
+  // Let images (the QR code) finish decoding before the print dialog
+  await Promise.all([...win.document.images].map((img) => (img.decode ? img.decode().catch(() => {}) : null)));
   win.focus();
   // Close the window once the print dialog is done (Chrome/Firefox/Edge)
   win.onafterprint = () => win.close();
   win.print();
+};
+
+const header = () => `
+  <h1>${escapeHtml(HOSPITAL.name)}</h1>
+  <div class="center ur">${escapeHtml(HOSPITAL.nameUrdu)}</div>
+  <div class="addr">${escapeHtml(HOSPITAL.address)}<br>Ph: ${escapeHtml(HOSPITAL.phone)}</div>
+  <hr>`;
+
+const row = (label, value) =>
+  `<div class="row"><span class="k">${escapeHtml(label)}</span><span class="v">${escapeHtml(value)}</span></div>`;
+
+// details: { patientName, doctorName, speciality, dateText, time, fee }
+// Returns false when the popup was blocked so the caller can tell the user.
+export const printAppointmentSlip = (details) => {
+  const win = openPrintWindow();
+  if (!win) return false;
+  writeAndPrint(
+    win,
+    "Appointment Slip",
+    `${header()}
+  <div class="type">Appointment Slip</div>
+  <div class="center ur">اپائنٹمنٹ کی پرچی</div>
+  ${row("Patient", details.patientName)}
+  ${row("Doctor", `Dr. ${details.doctorName}`)}
+  ${details.speciality ? row("Speciality", details.speciality) : ""}
+  ${row("Date", details.dateText)}
+  ${row("Time", details.time)}
+  ${row("Fee", feeText(details.fee))}
+  <hr>
+  <div class="foot">Please arrive 15 minutes early.<br>Keep this slip for your next visit.</div>
+  <div class="foot ur">براہ کرم 15 منٹ پہلے تشریف لائیں۔ اگلی بار یہ پرچی ساتھ لائیں۔</div>`
+  );
+  return true;
+};
+
+// details: { number, patientName, doctorName, dateText, issuedTime, ahead, waitMinutes, urgent, trackUrl }
+// win: a window from openPrintWindow() opened earlier in the click (e.g. before
+// an API call), so the browser doesn't block it
+export const printTokenSlip = (details, win = openPrintWindow()) => {
+  if (!win || win.closed) return false;
+  (async () => {
+    let qr = "";
+    if (details.trackUrl) {
+      try {
+        qr = await QRCode.toDataURL(details.trackUrl, { margin: 1, width: 240, errorCorrectionLevel: "M" });
+      } catch {
+        qr = "";
+      }
+    }
+    const wait =
+      typeof details.ahead === "number"
+        ? `${details.ahead} ahead · about ${details.waitMinutes} min`
+        : "";
+    await writeAndPrint(
+      win,
+      `Token ${details.number}`,
+      `${header()}
+  <div class="type">Token / <span class="ur">ٹوکن نمبر</span></div>
+  <div class="token">${escapeHtml(details.number)}</div>
+  ${details.urgent ? `<div class="urgent">URGENT / <span class="ur">فوری</span></div>` : ""}
+  ${row("Doctor", `Dr. ${details.doctorName}`)}
+  ${row("Patient", details.patientName)}
+  ${row("Date", details.dateText)}
+  ${row("Issued", details.issuedTime)}
+  ${wait ? row("Wait", wait) : ""}
+  <hr>
+  <div class="foot">Wait for your number to be called.<br>If you step out, come back before your turn.</div>
+  <div class="foot ur">اپنا نمبر پکارے جانے کا انتظار کریں۔ باہر جائیں تو اپنی باری سے پہلے واپس آ جائیں۔</div>
+  ${
+    qr
+      ? `<div class="qr"><img src="${qr}" alt=""></div>
+  <div class="foot">Scan to see your turn on a phone</div>
+  <div class="foot ur">اپنی باری فون پر دیکھنے کے لیے اسکین کریں</div>
+  <div class="small">${escapeHtml(details.trackUrl)}</div>`
+      : ""
+  }`
+    );
+  })().catch(() => win.close());
   return true;
 };
 

@@ -16,7 +16,8 @@ const historySchema = new mongoose.Schema(
     by: { type: actorSchema },
     action: {
       type: String,
-      enum: ["booked", "follow_up_booked", "completed", "cancelled", "no_show", "rescheduled"],
+      // checked_in: the patient arrived and got a queue token
+      enum: ["booked", "follow_up_booked", "completed", "cancelled", "no_show", "rescheduled", "checked_in"],
       required: true,
     },
     from: { slotDate: String, slotTime: String },

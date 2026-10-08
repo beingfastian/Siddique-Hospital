@@ -12,6 +12,9 @@ const userSchema = new mongoose.Schema({
   whatsappNumber: { type: String, default: "" },
   // When the patient agreed to receive WhatsApp messages (set when WhatsApp is enabled)
   whatsappConsentAt: { type: Date },
+  // Language of WhatsApp messages: "ur" (Urdu) or "en" (English). Missing on older
+  // records, which then use WHATSAPP_DEFAULT_LANGUAGE (Urdu unless set).
+  language: { type: String, enum: ["ur", "en"] },
   email: { type: String, unique: true, sparse: true },
   password: { type: String },
 });

@@ -18,6 +18,7 @@ import {
   sendWhatsAppReminder,
   sendDoctorWhatsAppReminder,
 } from "../config/whatsappService.js";
+import { patientLanguage } from "../whatsapp/templates.js";
 
 const CHECK_EVERY_MS = 5 * 60 * 1000;
 
@@ -46,14 +47,15 @@ const claim = async (appointmentId, field) => {
 };
 
 const sendPatientReminder = async (apt) => {
-  const patient = await userModel.findById(apt.userId).select("name whatsappEnabled whatsappNumber phone");
+  const patient = await userModel.findById(apt.userId).select("name whatsappEnabled whatsappNumber phone language");
   if (patient?.whatsappEnabled) {
     await sendWhatsAppReminder(
       patient.whatsappNumber || patient.phone,
       patient.name,
       apt.docData?.name,
       apt.slotDate,
-      apt.slotTime
+      apt.slotTime,
+      patientLanguage(patient)
     );
   }
 };
@@ -71,6 +73,7 @@ export const runReminderCheck = async (now = new Date()) => {
     slotDate: { $in: [hospitalSlotDate(now, 0), hospitalSlotDate(now, 1)] },
     cancelled: false,
     isCompleted: false,
+    status: { $ne: "no_show" },
   });
 
   const evening = dayBeforeAt();

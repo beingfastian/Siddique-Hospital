@@ -6,6 +6,7 @@ import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeA
 import FollowUpModal from "../../components/FollowUpModal";
 import { DoctorRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
+import { hasStarted } from "../../utils/slots";
 
 const DoctorAppointments = () => {
   const {
@@ -231,7 +232,7 @@ const DoctorAppointments = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </button>
-                          {item.status !== "no_show" && (
+                          {item.status !== "no_show" && hasStarted(item) && (
                             <button
                               onClick={() =>
                                 window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
@@ -325,7 +326,7 @@ const DoctorAppointments = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </button>
-                          {item.status !== "no_show" && (
+                          {item.status !== "no_show" && hasStarted(item) && (
                             <button
                               onClick={() =>
                                 window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
