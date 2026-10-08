@@ -70,6 +70,27 @@ const DoctorContextProvider = (props) => {
     }
   };
 
+  // Mark a past appointment as no-show (patient never came)
+  const markNoShow = async (appointmentId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/doctor/mark-no-show",
+        { appointmentId },
+        { headers: { dToken } }
+      );
+      if (data.success) {
+        toast.success(data.message);
+        getAppointments();
+        getDashData();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
   // Book a follow-up visit for the patient of one of the doctor's appointments
   const scheduleFollowUp = async (appointmentId, slotDate, slotTime) => {
     try {
@@ -271,6 +292,7 @@ const DoctorContextProvider = (props) => {
     getAppointments,
     completeAppointment,
     cancelAppointment,
+    markNoShow,
     scheduleFollowUp,
     rescheduleAppointment,
     rescheduleDay,

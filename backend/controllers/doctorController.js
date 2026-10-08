@@ -12,6 +12,7 @@ import {
   bookFollowUp,
   queueBookingNotifications,
   upcomingLeaves,
+  markNoShow,
 } from "../services/appointmentService.js";
 
 const changeAvailabilities = async (req, res) => {
@@ -132,6 +133,23 @@ const appointmentCancel = async (req, res) => {
   }
 };
 
+// API to mark appointment as no-show for doctor panel (patient never came)
+const appointmentNoShow = async (req, res) => {
+  try {
+    const { docId, appointmentId } = req.body;
+    const appointmentData = await appointmentModel.findById(appointmentId);
+    if (!appointmentData || appointmentData.docId !== docId) {
+      return res.json({ success: false, message: "Appointment not found" });
+    }
+
+    await markNoShow(appointmentId, { role: "doctor", id: docId });
+    res.json({ success: true, message: "Marked as no-show" });
+  } catch (error) {
+    if (!(error instanceof AppointmentError)) console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 // Doctor schedules a follow-up visit for the patient of one of their appointments
 const scheduleFollowUp = async (req, res) => {
   try {
@@ -196,6 +214,8 @@ const doctorDashboard = async (req, res) => {
       earnings,
       appointments: appointments.length,
       patients: patients.length,
+      // Additive: how many patients never came (for the no-show pitch number)
+      noShow: appointments.filter((item) => item.status === "no_show").length,
       latestAppointments: appointments.reverse().slice(0, 5),
     };
 
@@ -384,6 +404,7 @@ export {
   appointmentsDoctor,
   appointmentComplete,
   appointmentCancel,
+  appointmentNoShow,
   doctorDashboard,
   doctorProfile,
   updateDoctorProfile,

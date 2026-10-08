@@ -156,6 +156,26 @@ const cancelDay = async (docId, slotDate, reason) => {
   return data;
 };
 
+// Mark a past appointment as no-show (patient never came)
+const markNoShow = async (appointmentId) => {
+  try {
+    const { data } = await axios.post(
+      backendUrl + "/api/admin/mark-no-show",
+      { appointmentId },
+      { headers: { atoken: aToken } }
+    );
+    if (data.success) {
+      toast.success(data.message);
+      getDashData();
+      getAllAppointments();
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || error.message);
+  }
+};
+
 // Dashboard
 const getDashData = async () => {
   try {
@@ -279,6 +299,7 @@ const getLeaveStats = async () => {
     rescheduleAppointment,
     rescheduleDay,
     cancelDay,
+    markNoShow,
     
     // Dashboard
     getDashData,

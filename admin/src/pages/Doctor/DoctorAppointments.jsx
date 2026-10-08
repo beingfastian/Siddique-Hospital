@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
-import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeAlt, FaCalendarDay } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeAlt, FaCalendarDay, FaUserSlash } from "react-icons/fa";
 import FollowUpModal from "../../components/FollowUpModal";
 import { DoctorRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
@@ -17,6 +17,7 @@ const DoctorAppointments = () => {
     rescheduleDay,
     cancelDay,
     profileData,
+    markNoShow,
   } = useContext(DoctorContext);
   const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
   
@@ -42,7 +43,8 @@ const DoctorAppointments = () => {
     const matchesStatus = filterStatus === "all" || 
       (filterStatus === "completed" && item.isCompleted) ||
       (filterStatus === "cancelled" && item.cancelled) ||
-      (filterStatus === "pending" && !item.isCompleted && !item.cancelled);
+      (filterStatus === "no_show" && item.status === "no_show") ||
+      (filterStatus === "pending" && !item.isCompleted && !item.cancelled && item.status !== "no_show");
     
     return matchesSearch && matchesStatus;
   }).reverse();
@@ -88,6 +90,8 @@ const DoctorAppointments = () => {
       return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">Cancelled</span>;
     } else if (item.isCompleted) {
       return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Completed</span>;
+    } else if (item.status === "no_show") {
+      return <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">No-show</span>;
     } else {
       return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">Pending</span>;
     }
@@ -131,6 +135,7 @@ const DoctorAppointments = () => {
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+              <option value="no_show">No-show</option>
             </select>
           </div>
         </div>
@@ -226,6 +231,18 @@ const DoctorAppointments = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </button>
+                          {item.status !== "no_show" && (
+                            <button
+                              onClick={() =>
+                                window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
+                                markNoShow(item._id)
+                              }
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              title="Mark as no-show"
+                            >
+                              <FaUserSlash className="w-4 h-4" />
+                            </button>
+                          )}
                         </>
                       )}
                       {rescheduleButton(item)}
@@ -308,6 +325,18 @@ const DoctorAppointments = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </button>
+                          {item.status !== "no_show" && (
+                            <button
+                              onClick={() =>
+                                window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
+                                markNoShow(item._id)
+                              }
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              title="Mark as no-show"
+                            >
+                              <FaUserSlash className="w-4 h-4" />
+                            </button>
+                          )}
                         </>
                       )}
                       {rescheduleButton(item)}
@@ -338,14 +367,14 @@ const DoctorAppointments = () => {
 
       {/* Summary Stats */}
       {appointments.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
             <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
             <div className="text-sm text-gray-500">Total</div>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
             <div className="text-2xl font-bold text-yellow-600">
-              {appointments.filter(a => !a.isCompleted && !a.cancelled).length}
+              {appointments.filter(a => !a.isCompleted && !a.cancelled && a.status !== "no_show").length}
             </div>
             <div className="text-sm text-gray-500">Pending</div>
           </div>
@@ -360,6 +389,12 @@ const DoctorAppointments = () => {
               {appointments.filter(a => a.cancelled).length}
             </div>
             <div className="text-sm text-gray-500">Cancelled</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {appointments.filter(a => a.status === "no_show").length}
+            </div>
+            <div className="text-sm text-gray-500">No-show</div>
           </div>
         </div>
       )}

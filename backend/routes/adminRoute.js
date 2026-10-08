@@ -47,6 +47,7 @@ adminRouter.delete("/delete-patient/:patientId", authAdmin, deletePatient);
 // Appointment Management Routes
 adminRouter.get("/appointments", authAdmin, appointmentsAdmin);
 adminRouter.post("/cancel-appointment", authAdmin, appointmentCancel); // Fixed: removed 's'
+adminRouter.post("/mark-no-show", authAdmin, appointmentNoShow);
 adminRouter.post("/book-appointment-for-patient", authAdmin, bookAppointmentForPatient);
 adminRouter.post("/reschedule-appointment", authAdmin, rescheduleOne("admin"));
 adminRouter.post("/reschedule-day", authAdmin, rescheduleWholeDay("admin"));

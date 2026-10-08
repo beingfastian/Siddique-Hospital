@@ -6,6 +6,7 @@ import {
   loginDoctor,
   appointmentComplete,
   appointmentCancel,
+  appointmentNoShow,
   doctorDashboard,
   doctorProfile,
   updateDoctorProfile,
@@ -28,6 +29,7 @@ doctorRouter.post("/login", loginDoctor);
 doctorRouter.get("/appointments", authDoctor, appointmentsDoctor);
 doctorRouter.post("/complete-appointment", authDoctor, appointmentComplete);
 doctorRouter.post("/cancel-appointment", authDoctor, appointmentCancel);
+doctorRouter.post("/mark-no-show", authDoctor, appointmentNoShow);
 doctorRouter.post("/follow-up", authDoctor, scheduleFollowUp);
 doctorRouter.post("/reschedule-appointment", authDoctor, rescheduleOne("doctor"));
 doctorRouter.post("/reschedule-day", authDoctor, rescheduleWholeDay("doctor"));

@@ -10,7 +10,7 @@ import { createNotification } from "./notificationController.js";
 import { isEmailConfigured } from "../config/emailService.js";
 import { isWhatsAppConfigured, getWhatsAppProvider } from "../config/whatsappService.js";
 import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
-import { releaseSlot } from "../utils/slots.js";
+import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES } from "../utils/slots.js";
 import {
   AppointmentError,
   validateSlot,
@@ -19,6 +19,7 @@ import {
   cancelAppointment,
   getLeaveConflicts,
   upcomingLeaves,
+  markNoShow,
 } from "../services/appointmentService.js";
 
 // API for adding doctors
@@ -776,6 +777,18 @@ const appointmentCancel = async (req, res) => {
   }
 };
 
+// API to mark a past appointment as no-show (patient never came)
+const appointmentNoShow = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const updated = await markNoShow(appointmentId, { role: "admin" });
+    res.json({ success: true, message: "Marked as no-show", appointment: updated });
+  } catch (error) {
+    if (!(error instanceof AppointmentError)) console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 
 // API to get WhatsApp statistics
 const getWhatsAppStats = async (req, res) => {
@@ -835,17 +848,49 @@ const getSystemStatus = async (req, res) => {
   });
 };
 
+// Counts for one time range [startMs, endMs), used by the dashboard's
+// "today" and "last 30 days" stats. Based on startAt (the real moment), so
+// very old records saved before startAt existed are not counted.
+// noShowRate = no-shows / (completed + no-shows): of the patients whose
+// appointment time passed and who didn't cancel ahead, how many never came.
+const appointmentStats = async ([startMs, endMs]) => {
+  const rows = await appointmentModel
+    .find({ startAt: { $gte: new Date(startMs), $lt: new Date(endMs) } })
+    .select("status cancelled isCompleted")
+    .lean();
+  const stats = { total: rows.length, booked: 0, completed: 0, cancelled: 0, noShow: 0, noShowRate: 0 };
+  for (const row of rows) {
+    if (row.cancelled) stats.cancelled++;
+    else if (row.isCompleted) stats.completed++;
+    else if (row.status === "no_show") stats.noShow++;
+    else stats.booked++;
+  }
+  const decided = stats.completed + stats.noShow;
+  stats.noShowRate = decided ? Math.round((stats.noShow * 100) / decided) : 0;
+  return stats;
+};
+
 // API to get dashboard data for admin panel
 const adminDashboard = async (req, res) => {
   try {
-    const [doctors, patients, appointments, latestAppointments] = await Promise.all([
+    const [doctors, patients, appointments, latestAppointments, today, last30Days] = await Promise.all([
       doctorModel.countDocuments({}),
       userModel.countDocuments({}),
       appointmentModel.countDocuments({}),
       appointmentModel.find({}).sort({ date: -1 }).limit(5),
+      appointmentStats(
+        // Today in hospital time (Pakistan +5, no DST), as a UTC range
+        (() => {
+          const offsetMs = HOSPITAL_UTC_OFFSET_MINUTES * 60000;
+          const start = Math.floor((Date.now() + offsetMs) / 86400000) * 86400000 - offsetMs;
+          return [start, start + 86400000];
+        })()
+      ),
+      appointmentStats([Date.now() - 30 * 86400000, Date.now()]),
     ]);
 
-    const dashData = { doctors, patients, appointments, latestAppointments };
+    // Additive fields only: existing screens keep reading doctors/patients/appointments/latestAppointments
+    const dashData = { doctors, patients, appointments, latestAppointments, today, last30Days };
     res.json({ success: true, dashData });
   } catch (error) {
     console.error(error);
@@ -866,6 +911,7 @@ export {
   allDoctors,
   appointmentsAdmin,
   appointmentCancel,
+  appointmentNoShow,
   getWhatsAppStats,
   adminDashboard,
   // Add these new exports:
