@@ -1,5 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { assets } from "../assets/assets";
+import { HOSPITAL_NAME, PRODUCT_NAME } from "../config";
 import { useNavigate } from "react-router-dom";
 import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext";
@@ -103,8 +104,8 @@ const Navbar = ({ onMenuClick }) => {
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <img
-                    src={assets.logo}
-                    alt="Logo"
+                    src={assets.logo_mark}
+                    alt={PRODUCT_NAME}
                     className="h-8 w-auto sm:h-10 cursor-pointer transition-transform duration-300 hover:scale-105"
                   />
                   {/* Subtle glow effect */}
@@ -114,9 +115,9 @@ const Navbar = ({ onMenuClick }) => {
                 {/* Brand text - hidden on mobile */}
                 <div className="hidden sm:block">
                   <h1 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Siddique Hospital
+                    {PRODUCT_NAME}
                   </h1>
-                  <p className="text-xs text-gray-500 -mt-1">Management System</p>
+                  <p className="text-xs text-gray-500 -mt-1">{HOSPITAL_NAME}</p>
                 </div>
               </div>
               {/* Role Badge */}

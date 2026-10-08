@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="232" height="64" viewBox="0 0 232 64" role="img" aria-label="Qlinic - Care without the wait.">
+  <rect x="2" y="4" width="56" height="56" rx="16" fill="#5F6FFF"/>
+  <circle cx="29" cy="30" r="13" fill="none" stroke="#FFFFFF" stroke-width="5.5"/>
+  <path d="M35 37 L44 46" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round"/>
+  <text x="70" y="34" font-family="Outfit, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1F2937" letter-spacing="-0.5">Qlinic</text>
+  <text x="71" y="53" font-family="Outfit, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#6B7280">Care without the wait.</text>
+</svg>

@@ -20,7 +20,7 @@ export const templates = {
       "Time: {{6}}\n" +
       "Fee: Rs. {{7}}\n\n" +
       "Please arrive 15 minutes early. To change or cancel, call {{8}}. Thank you.",
-    example: ["Ali Khan", "Siddique Hospital", "Ahmed Raza", "General physician", "Friday, October 3, 2026", "06:30 PM", "1500", "+923001234567"],
+    example: ["Ali Khan", "City Care Hospital", "Ahmed Raza", "General physician", "Friday, October 3, 2026", "06:30 PM", "1500", "+923001234567"],
   },
   appointment_confirmation_doctor: {
     category: "UTILITY",
@@ -31,21 +31,21 @@ export const templates = {
       "Date: {{4}}\n" +
       "Time: {{5}}\n\n" +
       "Please check the doctor panel for details.",
-    example: ["Siddique Hospital", "Ali Khan", "+923001234567", "Friday, October 3, 2026", "06:30 PM"],
+    example: ["City Care Hospital", "Ali Khan", "+923001234567", "Friday, October 3, 2026", "06:30 PM"],
   },
   appointment_reminder: {
     category: "UTILITY",
     body:
       "Reminder from {{1}}: Dear {{2}}, you have an appointment with Dr. {{3}} on {{4}} at {{5}}.\n\n" +
       "To cancel, reply CANCEL or call {{6}}. Thank you.",
-    example: ["Siddique Hospital", "Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "+923001234567"],
+    example: ["City Care Hospital", "Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "+923001234567"],
   },
   appointment_reminder_doctor: {
     category: "UTILITY",
     body:
       "Reminder from {{1}}: your appointment with patient {{2}} is on {{3}} at {{4}}.\n\n" +
       "Please check the doctor panel for details.",
-    example: ["Siddique Hospital", "Ali Khan", "Friday, October 3, 2026", "06:30 PM"],
+    example: ["City Care Hospital", "Ali Khan", "Friday, October 3, 2026", "06:30 PM"],
   },
   appointment_rescheduled: {
     category: "UTILITY",
@@ -59,7 +59,7 @@ export const templates = {
     body:
       "Dear {{1}}, your appointment with Dr. {{2}} on {{3}} at {{4}} has been cancelled by {{5}}.\n\n" +
       "To book again, call or message {{6}}. Thank you.",
-    example: ["Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "Siddique Hospital", "+923001234567"],
+    example: ["Ali Khan", "Ahmed Raza", "Friday, October 3, 2026", "06:30 PM", "City Care Hospital", "+923001234567"],
   },
 };
 

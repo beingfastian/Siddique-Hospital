@@ -1,4 +1,5 @@
 import { createTransporter, getEmailTemplate } from "./emailService.js";
+import { HOSPITAL_NAME } from "./hospital.js";
 
 // Function to send OTP email
 export const sendOTPEmail = async (email, otp) => {
@@ -40,7 +41,7 @@ export const sendOTPEmail = async (email, otp) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: '🔐 Password Reset OTP - Siddique Hospital',
+      subject: `🔐 Password Reset OTP - ${HOSPITAL_NAME}`,
       html: getEmailTemplate('Password Reset Request', content, 'warning')
     };
     
