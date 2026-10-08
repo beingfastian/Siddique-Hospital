@@ -229,6 +229,42 @@ export const completeAppointment = async (appointmentId, actor) => {
   return updated;
 };
 
+// Mark as no-show: the patient never came. The slot is not released (its time
+// has passed, so nobody can book it), and cancelled/isCompleted stay false, so
+// existing screens keep working — the doctor can still Complete (patient showed
+// up late) or Cancel (mistake) afterwards, which also acts as the undo.
+// Ground reality: reception marks this after the slot time, so a future
+// appointment is rejected to prevent clicking the wrong row.
+export const markNoShow = async (appointmentId, actor) => {
+  const appointment = await appointmentModel.findOne({
+    _id: appointmentId,
+    ...ACTIVE,
+    status: { $ne: "no_show" },
+  });
+  if (!appointment) {
+    throw new AppointmentError(
+      "This appointment can't be marked as no-show (already completed, cancelled or marked)"
+    );
+  }
+  const startAt = appointment.startAt || slotToDate(appointment.slotDate, appointment.slotTime);
+  if (startAt && startAt > new Date()) {
+    throw new AppointmentError("That appointment hasn't happened yet");
+  }
+
+  const updated = await appointmentModel.findOneAndUpdate(
+    { _id: appointmentId, ...ACTIVE, status: { $ne: "no_show" } },
+    {
+      $set: { status: "no_show" },
+      $push: { history: historyEntry("no_show", actor) },
+    },
+    { new: true }
+  );
+  if (!updated) {
+    throw new AppointmentError("This appointment was changed by someone else. Please refresh and try again.");
+  }
+  return updated;
+};
+
 // Cancel, free the slot, and tell the patient (if they agreed to WhatsApp).
 // cancelledBy: wording for the patient message, e.g. "the hospital" or "your doctor"
 export const cancelAppointment = async (appointmentId, actor, { reason, cancelledBy, notifyPatient = true } = {}) => {

@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { assets } from "../../assets/assets.js";
 import { AppContext } from "../../context/AppContext.jsx";
-import { FaWhatsapp, FaEnvelope, FaUserMd, FaCalendarCheck, FaUsers, FaChartLine } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaUserMd, FaCalendarCheck, FaUsers, FaChartLine, FaUserSlash } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -38,8 +38,8 @@ const Dashboard = () => {
     return (
       <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
         <div className="animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="bg-gray-200 h-32 rounded-2xl"></div>
             ))}
           </div>
@@ -78,6 +78,18 @@ const Dashboard = () => {
       icon: <FaWhatsapp className="text-2xl" />,
       color: "text-green-600",
       bgColor: "bg-green-100"
+    },
+    {
+      // The pitch number: of patients who should have come (and didn't cancel
+      // ahead), how many never showed, over the last 30 days
+      title: "No-shows (30 days)",
+      value: dashData.last30Days ? dashData.last30Days.noShow : 0,
+      subtitle: dashData.last30Days
+        ? `${dashData.last30Days.noShowRate}% missed · ${dashData.last30Days.cancelled} cancelled ahead`
+        : undefined,
+      icon: <FaUserSlash className="text-2xl" />,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100"
     }
   ];
 
@@ -89,7 +101,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {statsCards.map((card, index) => (
           <div
             key={index}
@@ -178,6 +190,10 @@ const Dashboard = () => {
                   ) : item.isCompleted ? (
                     <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium">
                       Completed
+                    </span>
+                  ) : item.status === "no_show" ? (
+                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-full font-medium">
+                      No-show
                     </span>
                   ) : (
                     <div className="flex items-center gap-2">
