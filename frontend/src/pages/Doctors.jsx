@@ -1,157 +1,86 @@
-import React, { useContext, useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useContext, useMemo } from "react";
+import { NavLink, useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext.jsx";
-import { FaWhatsapp } from "react-icons/fa";
-import { HOSPITAL_PHONE } from "../config";
+import { useLanguage } from "../i18n";
+import DoctorCard, { Latin } from "../components/DoctorCard";
+import { Container, buttonClass, cx, sitsToday } from "../components/site";
 
 const Doctors = () => {
-  const { speciality } = useParams();
-  const [filteredDoc, setFilteredDoc] = useState([]);
-  const [showFilter, setShowFilter] = useState(false);
-  const { doctors } = useContext(AppContext);
+  const { speciality: selected } = useParams();
+  const { t, speciality } = useLanguage();
+  const { doctors, doctorsStatus, reloadDoctors } = useContext(AppContext);
 
-  // WhatsApp contact details
-  const whatsappNumber = HOSPITAL_PHONE;
+  // Filters come from the hospital's own doctors (no fixed list)
+  const specialities = useMemo(() => {
+    const counts = new Map();
+    for (const d of doctors) counts.set(d.speciality, (counts.get(d.speciality) || 0) + 1);
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [doctors]);
 
-  const applyFilter = () => {
-    if (speciality) {
-      setFilteredDoc(doctors.filter((doc) => doc.speciality === speciality));
-    } else {
-      setFilteredDoc(doctors);
-    }
-  };
+  // Bookable first, then sitting today, then by name
+  const shown = useMemo(
+    () =>
+      doctors
+        .filter((d) => !selected || d.speciality === selected)
+        .sort((a, b) => (b.available !== false) - (a.available !== false) || sitsToday(b) - sitsToday(a) || a.name.localeCompare(b.name)),
+    [doctors, selected]
+  );
 
-  const handleDoctorWhatsApp = (doctorName, speciality) => {
-    const message = `Hello! I would like to request an appointment with Dr. ${doctorName} (${speciality}). Please let me know the available time slots.`;
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${whatsappNumber.replace('+', '')}?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  // In Doctors.js component
-useEffect(() => {
-  try {
-    applyFilter();
-  } catch (error) {
-    console.error("Error applying filter:", error);
-    setFilteredDoc([]);
-  }
-}, [speciality, doctors]);
+  const chip = ({ isActive }) =>
+    cx(
+      "inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-sm font-medium transition-colors",
+      isActive ? "border-primary bg-primary text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+    );
 
   return (
-    <div>
-      <p className="text-gray-600">Browse through our specialist doctors.</p>
-      <div className="flex flex-col sm:flex-row items-start gap-5 mt-5">
-        <button
-          className={`py-1 px-3 border rounded text-md transition-all sm:hidden ${
-            showFilter ? "bg-primary text-white" : ""
-          }`}
-          onClick={() => setShowFilter((prev) => !prev)}
-        >
-          Filters
-        </button>
-        <div
-          className={`flex-col gap-4 text-sm text-gray-600 ${
-            showFilter ? "flex" : "hidden sm:flex"
-          }`}
-        >
-          <p
-            onClick={() => window.location.href = speciality === "General physician" ? "/doctors" : "/doctors/General physician"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "General physician" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            General physician
-          </p>
-          <p
-            onClick={() => window.location.href = speciality === "Gynecologist" ? "/doctors" : "/doctors/Gynecologist"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Gynecologist" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            Gynecologist
-          </p>
-          <p
-            onClick={() => window.location.href = speciality === "Dermatologist" ? "/doctors" : "/doctors/Dermatologist"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Dermatologist" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            Dermatologist
-          </p>
-          <p
-            onClick={() => window.location.href = speciality === "Pediatricians" ? "/doctors" : "/doctors/Pediatricians"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Pediatricians" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            Pediatricians
-          </p>
-          <p
-            onClick={() => window.location.href = speciality === "Neurologist" ? "/doctors" : "/doctors/Neurologist"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Neurologist" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            Neurologist
-          </p>
-          <p
-            onClick={() => window.location.href = speciality === "Gastroenterologist" ? "/doctors" : "/doctors/Gastroenterologist"}
-            className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Gastroenterologist" ? "bg-primary-100 text-black" : ""
-            }`}
-          >
-            Gastroenterologist
-          </p>
-        </div>
-        <div className="w-full grid grid-cols-auto gap-4 gap-y-6">
-          {filteredDoc.map((item, index) => (
-            <div
-              key={index}
-              className="border border-primary-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500"
-            >
-              <img className="bg-primary-50" src={item.image} alt={item.name} />
-              <div className="p-4">
-                <div
-                  className={`flex items-center gap-2 text-sm text-center ${
-                    item.available ? "text-green-500" : "text-gray-500"
-                  }`}
-                >
-                  <p
-                    className={`w-2 h-2 ${
-                      item.available ? "bg-green-500" : "bg-gray-500"
-                    } rounded-full`}
-                  ></p>
-                  <p>{item.available ? "Available" : "Not Available"}</p>
-                </div>
-                <p className="text-gray-900 text-lg font-medium">{item.name}</p>
-                <p className="text-gray-600 text-sm mb-3">{item.speciality}</p>
-                <p className="text-gray-600 text-sm mb-3">Fee: Rs. {item.fee}</p>
-                
-                {item.available && (
-                  <button
-                    onClick={() => handleDoctorWhatsApp(item.name, item.speciality)}
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300"
-                  >
-                    <FaWhatsapp />
-                    Request Appointment
-                  </button>
-                )}
-                
-                {!item.available && (
-                  <button
-                    disabled
-                    className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
-                  >
-                    Currently Unavailable
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+    <Container className="py-8 sm:py-10">
+      <h1 className="text-3xl font-bold text-slate-900">{t("doctors.title")}</h1>
+      <p className="mt-2 max-w-2xl text-slate-600">{t("doctors.lead")}</p>
+
+      {specialities.length > 1 && (
+        <nav aria-label={t("home.specialitiesTitle")} className="-mx-4 mt-6 overflow-x-auto px-4 pb-1">
+          <ul className="flex gap-2">
+            <li>
+              <NavLink to="/doctors" end className={chip}>
+                {t("doctors.all")} <Latin className="text-xs opacity-80">{doctors.length}</Latin>
+              </NavLink>
+            </li>
+            {specialities.map(([name, count]) => (
+              <li key={name}>
+                <NavLink to={`/doctors/${encodeURIComponent(name)}`} className={chip}>
+                  {speciality(name)} <Latin className="text-xs opacity-80">{count}</Latin>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      <div className="mt-6">
+        {doctorsStatus === "error" && !doctors.length ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+            <p>{t("doctors.failed")}</p>
+            <button type="button" onClick={reloadDoctors} className={buttonClass("secondary", "sm", "mt-3")}>
+              {t("doctors.retry")}
+            </button>
+          </div>
+        ) : doctorsStatus === "loading" && !doctors.length ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t("doctors.loading")}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-64 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : shown.length ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((d) => (
+              <DoctorCard key={d._id} doctor={d} />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-600">{t("doctors.empty")}</p>
+        )}
       </div>
-    </div>
+    </Container>
   );
 };
 

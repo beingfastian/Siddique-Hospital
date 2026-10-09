@@ -74,12 +74,11 @@ const Login = () => {
     <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
       {/* Brand panel (large screens) */}
       <aside className="hidden lg:flex flex-col justify-between bg-primary-900 p-12 text-white">
-        <div className="flex items-center gap-3">
-          <img src={assets.logo_mark} alt="" className="h-10 w-10 rounded-lg bg-white/10" />
-          <div className="leading-tight">
-            <p className="font-display text-xl font-semibold">{PRODUCT_NAME}</p>
-            <p className="text-sm text-primary-100">{HOSPITAL_NAME}</p>
+        <div>
+          <div className="inline-block rounded-xl bg-white px-5 py-3">
+            <img src={assets.logo} alt={PRODUCT_NAME} className="h-12 w-auto" />
           </div>
+          <p className="mt-3 text-sm text-primary-100">{HOSPITAL_NAME}</p>
         </div>
         <div>
           <p className="font-display text-4xl font-semibold leading-tight">{PRODUCT_TAGLINE}</p>
@@ -101,12 +100,9 @@ const Login = () => {
       {/* Sign-in form */}
       <main className="flex min-h-screen items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <img src={assets.logo_mark} alt="" className="h-10 w-10" />
-            <div className="leading-tight">
-              <p className="font-display text-lg font-semibold text-slate-900">{PRODUCT_NAME}</p>
-              <p className="text-sm text-slate-500">{HOSPITAL_NAME}</p>
-            </div>
+          <div className="mb-8 lg:hidden">
+            <img src={assets.logo} alt={PRODUCT_NAME} className="h-12 w-auto" />
+            <p className="mt-2 text-sm text-slate-500">{HOSPITAL_NAME}</p>
           </div>
 
           <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>

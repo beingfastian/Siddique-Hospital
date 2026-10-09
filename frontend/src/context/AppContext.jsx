@@ -1,27 +1,29 @@
 import { createContext, useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
 
 export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
   const [doctors, setDoctors] = useState([]);
+  // "loading" | "ready" | "error": pages show a retry instead of an empty list
+  const [doctorsStatus, setDoctorsStatus] = useState("loading");
   const currencySymbol = "Rs."; // Changed to Pakistani Rupees
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
 const getDoctorsData = async () => {
+  setDoctorsStatus((prev) => (prev === "ready" ? prev : "loading"));
   try {
-    const { data } = await axios.get(backendUrl + "/api/doctor/list");
-    
+    const { data } = await axios.get(backendUrl + "/api/doctor/list", { timeout: 20000 });
     if (data.success) {
       setDoctors(data.doctors);
+      setDoctorsStatus("ready");
     } else {
       console.error("Backend error:", data.message);
-      toast.error(data.message);
+      setDoctorsStatus("error");
     }
   } catch (error) {
     console.error("Error fetching doctors:", error);
-    toast.error("Failed to load doctors");
+    setDoctorsStatus("error");
   }
 };
 
@@ -134,6 +136,9 @@ const getDoctorAvailabilityStatus = (doctor) => {
 
   const value = {
     doctors,
+    doctorsStatus,
+    reloadDoctors: getDoctorsData,
+    backendUrl,
     currencySymbol,
     getDoctorAvailabilityStatus,
     formatWorkingHours,

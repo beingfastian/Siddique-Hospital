@@ -1,113 +1,90 @@
-import React from "react";
-import { assets } from "../assets/assets";
-import { FaWhatsapp, FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
-import { HOSPITAL_ADDRESS, HOSPITAL_EMAIL, HOSPITAL_PHONE } from "../config";
+import { FaClock, FaEnvelope, FaExclamationTriangle, FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp } from "react-icons/fa";
+import { HOSPITAL_ADDRESS, HOSPITAL_EMAIL, HOSPITAL_HOURS, HOSPITAL_HOURS_URDU, HOSPITAL_PHONE } from "../config";
+import { useLanguage } from "../i18n";
+import { Latin } from "../components/DoctorCard";
+import { Container, buttonClass, mapUrl, telUrl, whatsappUrl } from "../components/site";
+
+// One way to reach the hospital: icon, what it is for, the number/address
+const Method = ({ href, external, icon, title, hint, value, iconClass }) => (
+  <a
+    href={href}
+    {...(external && { target: "_blank", rel: "noopener noreferrer" })}
+    className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-primary-300 hover:bg-primary-50/30"
+  >
+    <span aria-hidden="true" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg ${iconClass}`}>
+      {icon}
+    </span>
+    <span className="min-w-0">
+      <span className="block font-semibold text-slate-900">{title}</span>
+      <span className="block text-sm text-slate-600">{hint}</span>
+      <span className="mt-1 block break-words font-medium text-slate-900">{value}</span>
+    </span>
+  </a>
+);
 
 const Contact = () => {
-  // Contact details
-  const whatsappNumber = HOSPITAL_PHONE;
-  const phoneNumber = HOSPITAL_PHONE;
-  const email = HOSPITAL_EMAIL;
-  
-  const handleWhatsAppClick = () => {
-    const message = "Hello! I would like to get in touch regarding your medical services.";
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${whatsappNumber.replace('+', '')}?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const handlePhoneClick = () => {
-    window.open(`tel:${phoneNumber}`, '_self');
-  };
-
-  const handleEmailClick = () => {
-    window.open(`mailto:${email}`, '_self');
-  };
-
+  const { lang, t } = useLanguage();
+  const hours = lang === "ur" ? HOSPITAL_HOURS_URDU || HOSPITAL_HOURS : HOSPITAL_HOURS;
   return (
-    <div>
-      <div className="text-center text-2xl pt-10 text-gray-500">
-        <p>
-          CONTACT <span className="text-gray-700 font-semibold">US</span>
-        </p>
-      </div>
-      
-      <div className="my-10 flex flex-col justify-center md:flex-row gap-10 mb-28 text-md">
-        <img
-          className="w-full md:max-w-[360px]"
-          src={assets.contact_image}
-          alt="Contact"
+    <Container className="py-8 sm:py-10">
+      <h1 className="text-3xl font-bold text-slate-900">{t("contact.title")}</h1>
+      <p className="mt-2 max-w-2xl text-slate-600">{t("contact.lead")}</p>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <Method
+          href={whatsappUrl(t("wa.general"))}
+          external
+          icon={<FaWhatsapp />}
+          iconClass="bg-emerald-50 text-emerald-700"
+          title={t("action.whatsappShort")}
+          hint={t("contact.whatsappHint")}
+          value={<Latin>{HOSPITAL_PHONE}</Latin>}
         />
-        <div className="flex flex-col justify-center items-start gap-6">
-          <p className="font-semibold text-xl text-gray-600">OUR OFFICE</p>
-          <div className="flex items-start gap-3 text-gray-500">
-            <FaMapMarkerAlt className="text-primary mt-1" />
-            <div>
-              <p>{HOSPITAL_ADDRESS}</p>
+        <Method
+          href={telUrl}
+          icon={<FaPhoneAlt />}
+          iconClass="bg-primary-50 text-primary-700"
+          title={t("action.callShort")}
+          hint={t("contact.callHint")}
+          value={<Latin>{HOSPITAL_PHONE}</Latin>}
+        />
+        <Method
+          href={`mailto:${HOSPITAL_EMAIL}`}
+          icon={<FaEnvelope />}
+          iconClass="bg-slate-100 text-slate-700"
+          title={t("action.email")}
+          hint={t("contact.emailHint")}
+          value={<Latin>{HOSPITAL_EMAIL}</Latin>}
+        />
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-start gap-4">
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-lg text-slate-700">
+              <FaMapMarkerAlt />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-semibold text-slate-900">{t("contact.address")}</h2>
+              <p className="mt-1 text-slate-900">{HOSPITAL_ADDRESS}</p>
+              {hours && (
+                <p className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                  <FaClock aria-hidden="true" className="text-slate-500" />
+                  <span>
+                    <span className="sr-only">{t("contact.hours")}: </span>
+                    {hours}
+                  </span>
+                </p>
+              )}
+              <a href={mapUrl} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm", "mt-4")}>
+                <FaMapMarkerAlt aria-hidden="true" /> {t("action.map")}
+              </a>
             </div>
-          </div>
-          
-          {/* Contact Methods */}
-          <div className="space-y-4 w-full">
-            {/* WhatsApp Contact */}
-            <button
-              onClick={handleWhatsAppClick}
-              className="flex items-center gap-3 w-full p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-all duration-300 border border-green-200"
-            >
-              <FaWhatsapp className="text-green-500 text-2xl" />
-              <div className="text-left">
-                <p className="font-medium text-gray-700">WhatsApp</p>
-                <p className="text-green-600">{whatsappNumber}</p>
-                <p className="text-sm text-gray-500">Quick response via WhatsApp</p>
-              </div>
-            </button>
-
-            {/* Phone Contact */}
-            <button
-              onClick={handlePhoneClick}
-              className="flex items-center gap-3 w-full p-4 bg-primary-50 hover:bg-primary-100 rounded-lg transition-all duration-300 border border-primary-200"
-            >
-              <FaPhone className="text-primary-600 text-2xl" />
-              <div className="text-left">
-                <p className="font-medium text-gray-700">Phone</p>
-                <p className="text-primary-700">{phoneNumber}</p>
-                <p className="text-sm text-gray-500">Call us directly</p>
-              </div>
-            </button>
-
-            {/* Email Contact */}
-            <button
-              onClick={handleEmailClick}
-              className="flex items-center gap-3 w-full p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-all duration-300 border border-purple-200"
-            >
-              <FaEnvelope className="text-purple-500 text-2xl" />
-              <div className="text-left">
-                <p className="font-medium text-gray-700">Email</p>
-                <p className="text-purple-600">{email}</p>
-                <p className="text-sm text-gray-500">Send us an email</p>
-              </div>
-            </button>
-          </div>
-
-          {/* Quick Appointment Request */}
-          <div className="w-full mt-6">
-            <p className="font-semibold text-lg text-gray-600 mb-3">
-              QUICK APPOINTMENT REQUEST
-            </p>
-            <p className="text-gray-500 mb-4">
-              Get instant response for appointment booking via WhatsApp.
-            </p>
-            <button
-              onClick={handleWhatsAppClick}
-              className="w-full bg-primary hover:bg-primary-dark text-white py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300"
-            >
-              <FaWhatsapp className="text-xl" />
-              Request Appointment Now
-            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <p className="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <FaExclamationTriangle aria-hidden="true" className="mt-0.5 shrink-0" /> {t("contact.emergency")}
+      </p>
+    </Container>
   );
 };
 

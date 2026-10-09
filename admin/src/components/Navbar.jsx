@@ -112,11 +112,10 @@ const Navbar = ({ onMenuClick }) => {
           >
             <FaBars aria-hidden="true" />
           </button>
-          <img src={assets.logo_mark} alt="" className="h-8 w-8 sm:h-9 sm:w-9" />
-          <div className="min-w-0 leading-tight">
-            <p className="font-display text-base font-semibold text-slate-900">{PRODUCT_NAME}</p>
-            <p className="truncate text-xs text-slate-500">{HOSPITAL_NAME}</p>
-          </div>
+          <img src={assets.logo_mark} alt={PRODUCT_NAME} className="h-9 w-9 sm:hidden" />
+          <img src={assets.logo} alt={PRODUCT_NAME} className="hidden h-10 w-auto sm:block" />
+          <span aria-hidden="true" className="hidden h-8 w-px bg-slate-200 sm:block" />
+          <p className="min-w-0 truncate text-sm font-medium text-slate-700">{HOSPITAL_NAME}</p>
         </div>
 
         {/* Right: notifications and the user menu */}

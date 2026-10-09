@@ -138,6 +138,27 @@ buttons need `aria-label` and a tooltip (`title`).
 
 ---
 
+## 5a. Logo
+
+- Use the official Qlinic logo files as they are; never redraw or recolour them.
+  - `assets/qlinic-logo.png`: full logo (Q mark with queue dots, "Qlinic", tagline),
+    transparent background. Default everywhere there is room.
+  - `assets/qlinic-mark.png`: the Q mark alone, cut from the same file, for small
+    spaces (phone headers). `public/favicon.png` is the same mark at 64 px.
+- On teal or dark backgrounds, place the logo on a white rounded card.
+- Next to the logo, the hospital's own name in plain text, separated by a thin divider.
+
+## 5b. Patient website language
+
+- English | اردو switch, remembered on the phone (`frontend/src/i18n.jsx`). Urdu sets
+  `<html lang="ur" dir="rtl">`, the Nastaliq font and taller line heights.
+- Names, phone numbers, fees and times stay Latin inside Urdu text: wrap them in
+  `<Latin>` (`bdi dir="ltr" lang="en"`).
+- Use logical spacing (`ms-`/`me-`, `text-start/end`) and `rtl:rotate-180` on arrows.
+- The queue board and token page are bilingual on their own and stay left-to-right.
+
+---
+
 ## 6. Motion
 
 Transitions 150-200ms on colour/opacity only. No scroll animations, no layout-shifting
