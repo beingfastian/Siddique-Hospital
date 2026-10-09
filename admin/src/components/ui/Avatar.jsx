@@ -2,7 +2,7 @@ import { useState } from "react";
 
 // A person's photo, or their initials when there is no photo (or it fails to load).
 // Never shows a broken image. Tint is picked from the name so the same person
-// always gets the same colour. (design-system/qlinic/MASTER.md, Avatar)
+// always gets the same colour. (design-system/qclinics/MASTER.md, Avatar)
 const TINTS = [
   "bg-primary-100 text-primary-900",
   "bg-emerald-100 text-emerald-800",

@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
 import { FaBars, FaPhoneAlt, FaTimes, FaWhatsapp } from "react-icons/fa";
-import { HOSPITAL_NAME } from "../config";
+import { PRODUCT_NAME, STAFF_APP_URL } from "../config";
 import { useLanguage } from "../i18n";
 import { ButtonLink, Container, Logo, cx, telUrl, whatsappUrl } from "./site";
 
-const LINKS = [
-  { to: "/", key: "nav.home" },
-  { to: "/doctors", key: "nav.doctors" },
-  { to: "/about", key: "nav.about" },
-  { to: "/contact", key: "nav.contact" },
+export const SECTIONS = [
+  { id: "features", key: "nav.features" },
+  { id: "pakistan", key: "nav.pakistan" },
+  { id: "how", key: "nav.how" },
+  { id: "faq", key: "nav.faq" },
 ];
 
 // English <-> Urdu. The label is always in the other language, so it can be read.
@@ -32,11 +31,7 @@ export const LanguageSwitch = ({ className = "" }) => {
 const Navbar = () => {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const location = useLocation();
 
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname]);
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === "Escape" && setOpen(false);
@@ -44,35 +39,36 @@ const Navbar = () => {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const linkClass = ({ isActive }) =>
-    cx("rounded-lg px-3 py-2 text-sm font-medium transition-colors", isActive ? "bg-primary-50 text-primary-800" : "text-slate-700 hover:bg-slate-100");
+  const link = "rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100";
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
       <Container className="flex h-16 items-center justify-between gap-3">
-        <Link to="/" aria-label={`${HOSPITAL_NAME}: ${t("nav.home")}`} className="min-w-0">
-          <Logo subtitle={HOSPITAL_NAME} />
-        </Link>
+        <a href="#top" aria-label={PRODUCT_NAME}>
+          <Logo />
+        </a>
 
-        <nav aria-label="Main" className="hidden md:block">
+        <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-1">
-            {LINKS.map((link) => (
-              <li key={link.to}>
-                <NavLink to={link.to} end={link.to === "/"} className={linkClass}>
-                  {t(link.key)}
-                </NavLink>
+            {SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`} className={link}>
+                  {t(s.key)}
+                </a>
               </li>
             ))}
           </ul>
         </nav>
 
         <div className="flex items-center gap-2">
+          {STAFF_APP_URL && (
+            <a href={STAFF_APP_URL} className={cx(link, "hidden xl:inline-flex")}>
+              {t("nav.staff")}
+            </a>
+          )}
           <LanguageSwitch className="hidden sm:inline-flex" />
-          <ButtonLink href={telUrl} variant="secondary" icon={<FaPhoneAlt />} className="hidden lg:inline-flex h-10">
-            {t("action.callShort")}
-          </ButtonLink>
-          <ButtonLink href={whatsappUrl(t("wa.general"))} external variant="whatsapp" icon={<FaWhatsapp />} className="hidden md:inline-flex h-10">
-            {t("action.whatsapp")}
+          <ButtonLink href={whatsappUrl(t("wa.demo", { product: PRODUCT_NAME }))} external variant="primary" icon={<FaWhatsapp />} className="hidden md:inline-flex h-10">
+            {t("action.demoShort")}
           </ButtonLink>
           <button
             type="button"
@@ -80,7 +76,7 @@ const Navbar = () => {
             aria-expanded={open}
             aria-controls="site-menu"
             aria-label={open ? t("nav.close") : t("nav.menu")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 lg:hidden"
           >
             {open ? <FaTimes aria-hidden="true" /> : <FaBars aria-hidden="true" />}
           </button>
@@ -88,16 +84,23 @@ const Navbar = () => {
       </Container>
 
       {open && (
-        <div id="site-menu" className="border-t border-slate-200 bg-white md:hidden">
+        <div id="site-menu" className="border-t border-slate-200 bg-white lg:hidden">
           <Container className="py-3">
             <ul className="flex flex-col gap-1">
-              {LINKS.map((link) => (
-                <li key={link.to}>
-                  <NavLink to={link.to} end={link.to === "/"} className={({ isActive }) => cx(linkClass({ isActive }), "block px-4 py-3 text-base")}>
-                    {t(link.key)}
-                  </NavLink>
+              {SECTIONS.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} onClick={() => setOpen(false)} className={cx(link, "block px-4 py-3 text-base")}>
+                    {t(s.key)}
+                  </a>
                 </li>
               ))}
+              {STAFF_APP_URL && (
+                <li>
+                  <a href={STAFF_APP_URL} className={cx(link, "block px-4 py-3 text-base")}>
+                    {t("nav.staff")}
+                  </a>
+                </li>
+              )}
             </ul>
             <LanguageSwitch className="mt-3 w-full justify-center sm:hidden" />
           </Container>
@@ -107,7 +110,7 @@ const Navbar = () => {
   );
 };
 
-// Phones: Call and WhatsApp always one tap away at the bottom of the screen
+// Phones: Call and Book a demo always one tap away at the bottom of the screen
 export const MobileActionBar = () => {
   const { t } = useLanguage();
   return (
@@ -116,8 +119,8 @@ export const MobileActionBar = () => {
         <ButtonLink href={telUrl} variant="secondary" icon={<FaPhoneAlt />}>
           {t("action.callShort")}
         </ButtonLink>
-        <ButtonLink href={whatsappUrl(t("wa.general"))} external variant="whatsapp" icon={<FaWhatsapp />}>
-          {t("action.whatsappShort")}
+        <ButtonLink href={whatsappUrl(t("wa.demo", { product: PRODUCT_NAME }))} external variant="primary" icon={<FaWhatsapp />}>
+          {t("action.demoShort")}
         </ButtonLink>
       </div>
     </div>

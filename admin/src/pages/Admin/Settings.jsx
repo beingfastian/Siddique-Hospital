@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { FaWhatsapp, FaEnvelope, FaCheck, FaTimes, FaClock, FaFileAlt, FaHospital, FaSyncAlt } from "react-icons/fa";
 import { AdminContext } from "../../context/AdminContext";
-import { HOSPITAL_ADDRESS, HOSPITAL_NAME, HOSPITAL_NAME_URDU, HOSPITAL_PHONE } from "../../config";
+import { HOSPITAL_ADDRESS, HOSPITAL_NAME, HOSPITAL_NAME_URDU, HOSPITAL_PHONE, PRODUCT_NAME } from "../../config";
 import { Badge, Button, Card, Skeleton } from "../../components/ui";
 
 // Which services are connected for this hospital, in plain language.
@@ -126,7 +126,7 @@ const Settings = () => {
               <dd className="font-medium text-slate-900">{HOSPITAL_ADDRESS || <span className="font-normal text-slate-500">Not set</span>}</dd>
             </div>
           </dl>
-          <p className="mt-4 text-xs text-slate-500">To change these details, contact Qlinic support.</p>
+          <p className="mt-4 text-xs text-slate-500">To change these details, contact {PRODUCT_NAME} support.</p>
         </Section>
 
         {loadFailed && (
@@ -159,7 +159,7 @@ const Settings = () => {
                 </Button>
               ) : (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  WhatsApp isn&apos;t connected yet, so patients don&apos;t get confirmations or reminders. Contact Qlinic support to connect it. Booking and the
+                  WhatsApp isn&apos;t connected yet, so patients don&apos;t get confirmations or reminders. Contact {PRODUCT_NAME} support to connect it. Booking and the
                   queue work without it.
                 </p>
               )}
@@ -188,7 +188,7 @@ const Settings = () => {
                 ) : (
                   <p className="text-sm text-slate-700">Reminders are turned off for this hospital.</p>
                 )}
-                <p className="mt-3 text-xs text-slate-500">To change these times, contact Qlinic support.</p>
+                <p className="mt-3 text-xs text-slate-500">To change these times, contact {PRODUCT_NAME} support.</p>
               </Section>
             )}
 
@@ -235,7 +235,7 @@ const Settings = () => {
                 <p className="text-sm text-slate-700">Patients with an email address and doctors receive appointment confirmations by email.</p>
               ) : (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  Email isn&apos;t connected yet. Contact Qlinic support to connect it. Doctors need it to reset a forgotten password.
+                  Email isn&apos;t connected yet. Contact {PRODUCT_NAME} support to connect it. Doctors need it to reset a forgotten password.
                 </p>
               )}
             </Section>

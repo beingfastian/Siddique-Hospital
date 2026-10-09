@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-// Tokens from design-system/qlinic/MASTER.md
+// Tokens from design-system/qclinics/MASTER.md
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {

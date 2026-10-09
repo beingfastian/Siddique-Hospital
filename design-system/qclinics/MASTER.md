@@ -1,13 +1,13 @@
-# Qlinic Design System (Master)
+# Qclinics Design System (Master)
 
-> Source of truth for the staff panel (`admin/`) and the patient site (`frontend/`).
-> When building a page, first check `design-system/qlinic/pages/<page>.md`; if it exists,
+> Source of truth for the staff app (`admin/`) and the Qclinics website (`frontend/`).
+> When building a page, first check `design-system/qclinics/pages/<page>.md`; if it exists,
 > its rules override this file. Otherwise follow this file.
 >
 > Started from the UI/UX Pro Max skill ("healthcare SaaS admin dashboard clinic",
 > style **Minimalism & Swiss**, density 8/10, motion 2/10, variance 3/10), then adjusted
-> for Qlinic: a dense, all-day tool for reception, doctors and lab staff in Pakistan.
-> Adjustments are marked **(Qlinic)** with the reason.
+> for Qclinics: a dense, all-day tool for reception, doctors and lab staff in Pakistan.
+> Adjustments are marked **(Qclinics)** with the reason.
 
 ---
 
@@ -41,7 +41,7 @@ All text/background pairs below pass WCAG AA (4.5:1).
 | `primary-800` | `#155E75` | Button hover |
 | `primary-900` | `#164E63` | Headings on tinted panels |
 
-**(Qlinic)** The skill's primary `#0891B2` fails AA with white text (3.68:1) and it
+**(Qclinics)** The skill's primary `#0891B2` fails AA with white text (3.68:1) and it
 compensated with black text on teal buttons. We use `#0E7490` with white text instead.
 
 ### Neutrals (Tailwind `slate`)
@@ -55,7 +55,7 @@ compensated with black text on teal buttons. We use `#0E7490` with white text in
 | Secondary text | `slate-600` | `#475569` (7.6:1) |
 | Muted text (minimum for any text) | `slate-500` | `#64748B` (4.8:1) |
 
-**(Qlinic)** The skill tinted the whole app cyan (`#ECFEFF` background, `#A5F3FC` borders).
+**(Qclinics)** The skill tinted the whole app cyan (`#ECFEFF` background, `#A5F3FC` borders).
 For long tables over a full shift, neutral surfaces with a teal accent are calmer.
 Never use `gray-400`/`slate-400` for text (2.5:1).
 
@@ -69,7 +69,7 @@ Never use `gray-400`/`slate-400` for text (2.5:1).
 | Info / neutral | `slate-700` | `slate-100` | Walk-in, Left |
 | Follow-up | `violet-700` | `violet-50` | Follow-up visit |
 
-**(Qlinic)** The skill's accent `#059669` fails AA with white text (3.77:1); success uses
+**(Qclinics)** The skill's accent `#059669` fails AA with white text (3.77:1); success uses
 `emerald-700` text on a light background, not white-on-green buttons.
 
 ### Charts
@@ -88,7 +88,7 @@ dataviz palette; it passes colour-blind separation. Do not recolour charts to th
 | Urdu | **Noto Nastaliq Urdu** | Always with `dir="rtl"` and `lang="ur"` |
 
 Source: the skill's "Medical Clean" pairing (Healthcare, medical clinics, accessibility).
-**(Qlinic)** The skill's dashboard pairing (Fira Code mono headings) reads as a developer
+**(Qclinics)** The skill's dashboard pairing (Fira Code mono headings) reads as a developer
 tool; its first suggestion (Atkinson Hyperlegible) has no matching Urdu family.
 
 Scale (staff panel):
@@ -114,7 +114,7 @@ Scale (staff panel):
 - Radius: `rounded-lg` (8px) for controls and badges, `rounded-xl` (12px) for cards and
   dialogs, `rounded-full` only for avatars and pills.
 - Elevation: cards use a 1px `slate-200` border and no shadow; dropdowns and dialogs use
-  `shadow-lg`. **(Qlinic)** No hover lift on cards: cards are containers, not buttons.
+  `shadow-lg`. **(Qclinics)** No hover lift on cards: cards are containers, not buttons.
 
 ---
 
@@ -140,29 +140,31 @@ buttons need `aria-label` and a tooltip (`title`).
 
 ## 5a. Logo
 
-- Use the official Qlinic logo files as they are; never redraw or recolour them.
-  - `assets/qlinic-logo.png`: full logo (Q mark with queue dots, "Qlinic", tagline),
-    transparent background. Default everywhere there is room.
-  - `assets/qlinic-mark.png`: the Q mark alone, cut from the same file, for small
-    spaces (phone headers). `public/favicon.png` is the same mark at 64 px.
+- Name: **Qclinics**, tagline "Care without the wait."
+- Use official logo files as they are; never redraw or recolour them.
+  - `assets/qclinics-mark.png`: the Q mark with queue dots, cut from the official logo
+    file (transparent). `public/favicon.png` is the same mark at 64 px.
+  - Until the official Qclinics logo file (with the new name) is available, the name is
+    set as text beside the mark: Figtree ExtraBold, `slate-900`
+    (staff app: `components/ui/BrandLogo.jsx`; website: `Logo` in `components/site.jsx`).
+    Replace both with the official file when it arrives.
 - On teal or dark backgrounds, place the logo on a white rounded card.
-- Next to the logo, the hospital's own name in plain text, separated by a thin divider.
 
-## 5b. Patient website language
+## 5b. Website language
 
-- English | اردو switch, remembered on the phone (`frontend/src/i18n.jsx`). Urdu sets
+- English | اردو switch, remembered on the device (`frontend/src/i18n.jsx`). Urdu sets
   `<html lang="ur" dir="rtl">`, the Nastaliq font and taller line heights.
-- Names, phone numbers, fees and times stay Latin inside Urdu text: wrap them in
-  `<Latin>` (`bdi dir="ltr" lang="en"`).
+- Names, numbers and brand text stay Latin inside Urdu: wrap them in `<Latin>`.
 - Use logical spacing (`ms-`/`me-`, `text-start/end`) and `rtl:rotate-180` on arrows.
 - The queue board and token page are bilingual on their own and stay left-to-right.
+- Marketing copy only describes features the product has today.
 
 ---
 
 ## 6. Motion
 
 Transitions 150-200ms on colour/opacity only. No scroll animations, no layout-shifting
-hovers, respect `prefers-reduced-motion`. **(Qlinic)** The skill's GSAP scroll reveal is for
+hovers, respect `prefers-reduced-motion`. **(Qclinics)** The skill's GSAP scroll reveal is for
 marketing pages; not used in the staff panel.
 
 ---

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { FaExclamationTriangle, FaInfoCircle } from "react-icons/fa";
 
 // In-app replacement for window.confirm / window.prompt / window.alert.
-// (design-system/qlinic/MASTER.md: ConfirmDialog)
+// (design-system/qclinics/MASTER.md: ConfirmDialog)
 //
 //   const { confirm, prompt, alert } = useDialog();
 //   if (await confirm({ title, message, confirmLabel: "Cancel appointment", tone: "danger" })) ...

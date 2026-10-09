@@ -1,4 +1,4 @@
-import { createTransporter, getEmailTemplate } from "./emailService.js";
+import { createTransporter, escapeHtml, getEmailTemplate, noteBox, paragraph } from "./emailService.js";
 import { HOSPITAL_NAME } from "./hospital.js";
 
 // Function to send OTP email
@@ -10,39 +10,19 @@ export const sendOTPEmail = async (email, otp) => {
       return { success: false };
     }
 
-    const content = `
-      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: #333; margin-top: 0;">Password Reset Request</h3>
-        <p style="color: #666; line-height: 1.6;">
-          We received a request to reset your password. Use the OTP below to proceed:
-        </p>
-      </div>
-      
-      <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-        <h2 style="color: #1976d2; margin-top: 0; margin-bottom: 15px;">Your OTP Code</h2>
-        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1976d2; background-color: #f0f4ff; padding: 15px 25px; border-radius: 8px; display: inline-block;">
-          ${otp}
-        </div>
-        <p style="color: #666; margin-top: 15px;">
-          This OTP is valid for <strong>10 minutes</strong> only.
-        </p>
-      </div>
-      
-      <div style="background-color: #ffebee; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h4 style="color: #c62828; margin-top: 0;">🔒 Security Notice:</h4>
-        <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
-          <li>Never share your OTP with anyone</li>
-          <li>Our staff will never ask for your OTP</li>
-          <li>If you didn't request this, please ignore this email</li>
-        </ul>
-      </div>
-    `;
-    
+    const content =
+      paragraph("We received a request to reset your password. Enter this code to continue:") +
+      `<div style="text-align:center;margin:0 0 20px;">
+        <div style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:8px;color:#0F172A;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:10px;padding:14px 24px;">${escapeHtml(otp)}</div>
+        <p style="margin:12px 0 0;color:#475569;font-size:14px;">The code works for <strong>10 minutes</strong>.</p>
+      </div>` +
+      noteBox("Never share this code with anyone. Our staff will never ask for it.<br>If you didn't ask to reset your password, ignore this email; your password stays the same.", "warning");
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: `🔐 Password Reset OTP - ${HOSPITAL_NAME}`,
-      html: getEmailTemplate('Password Reset Request', content, 'warning')
+      subject: `Your password reset code - ${HOSPITAL_NAME}`,
+      html: getEmailTemplate('Reset your password', content, 'warning')
     };
     
     await transporter.sendMail(mailOptions);
