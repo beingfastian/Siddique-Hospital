@@ -189,6 +189,18 @@ const DoctorProfile = () => {
                   {profileData.fee} / session
                 </p>
               )}
+              {/* Set by the hospital admin; shown so the doctor knows what each visit pays them */}
+              <p className="text-sm text-gray-600 mt-3">
+                {profileData.hospitalSharePercent > 0 ? (
+                  <>
+                    Hospital share: {profileData.hospitalSharePercent}% · you receive{" "}
+                    {currency}
+                    {(Number(profileData.fee) || 0) - Math.round(((Number(profileData.fee) || 0) * profileData.hospitalSharePercent) / 100)} per visit
+                  </>
+                ) : (
+                  "Hospital share: not set by the admin yet"
+                )}
+              </p>
             </div>
 
             {/* Availability Section */}

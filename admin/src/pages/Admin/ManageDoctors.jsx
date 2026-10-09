@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import ShareField from "../../components/ShareField";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaToggleOn, FaToggleOff } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -56,7 +57,8 @@ const ManageDoctors = () => {
     setEditingDoctor({
       ...doctor,
       address1: doctor.address?.line1 || "",
-      address2: doctor.address?.line2 || ""
+      address2: doctor.address?.line2 || "",
+      hospitalSharePercent: doctor.hospitalSharePercent ?? 0
     });
     setShowEditModal(true);
   };
@@ -78,7 +80,8 @@ const ManageDoctors = () => {
           line1: editingDoctor.address1,
           line2: editingDoctor.address2
         },
-        available: editingDoctor.available
+        available: editingDoctor.available,
+        hospitalSharePercent: editingDoctor.hospitalSharePercent
       };
 
       const { data } = await axios.put(
@@ -191,6 +194,7 @@ const ManageDoctors = () => {
                   <th className="text-left py-4 px-6 font-medium text-gray-700">Speciality</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-700">Experience</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-700">Fee</th>
+                  <th className="text-left py-4 px-6 font-medium text-gray-700">Hospital share</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
                 </tr>
@@ -214,6 +218,9 @@ const ManageDoctors = () => {
                     <td className="py-4 px-6 text-gray-700">{doctor.speciality}</td>
                     <td className="py-4 px-6 text-gray-700">{doctor.experience}</td>
                     <td className="py-4 px-6 text-gray-700">Rs. {doctor.fee}</td>
+                    <td className="py-4 px-6 text-gray-700">
+                      {doctor.hospitalSharePercent ? `${doctor.hospitalSharePercent}%` : <span className="text-amber-700">Not set</span>}
+                    </td>
                     <td className="py-4 px-6">
                       <button
                         onClick={() => changeAvailability(doctor._id)}
@@ -289,6 +296,10 @@ const ManageDoctors = () => {
                   <div>
                     <p className="text-gray-500">Fee</p>
                     <p className="font-medium">Rs. {doctor.fee}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Hospital share</p>
+                    <p className="font-medium">{doctor.hospitalSharePercent ? `${doctor.hospitalSharePercent}%` : "Not set"}</p>
                   </div>
                 </div>
                 
@@ -391,6 +402,16 @@ const ManageDoctors = () => {
                   onChange={(e) => setEditingDoctor({...editingDoctor, fee: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+              </div>
+              <div>
+                <ShareField
+                  id="edit-share"
+                  value={String(editingDoctor.hospitalSharePercent ?? "")}
+                  onChange={(value) => setEditingDoctor({ ...editingDoctor, hospitalSharePercent: value })}
+                  fee={editingDoctor.fee}
+                  inputClassName="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">A new share applies to visits completed from now on. Past visits keep the share they had.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Education</label>

@@ -2,6 +2,7 @@ import doctorModel from "../model/doctorModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import appointmentModel from "../model/appointmentModel.js";
+import { profitReport, ProfitError, visitSplit } from "../services/profitService.js";
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
 import { formatSlotDate } from "../utils/slots.js";
@@ -37,7 +38,7 @@ const doctorList = async (req, res) => {
     // Public (patient website): no login details, personal WhatsApp numbers or booked slots
     const doctors = await doctorModel
       .find({})
-      .select(["-password", "-email", "-whatsappNumber", "-whatsappConsentAt", "-slots_booked"]);
+      .select(["-password", "-email", "-whatsappNumber", "-whatsappConsentAt", "-slots_booked", "-hospitalSharePercent", "-shareHistory"]);
     res.json({
       success: true,
       doctors,
@@ -196,14 +197,18 @@ const doctorDashboard = async (req, res) => {
   try {
     const { docId } = req.body;
     const appointments = await appointmentModel.find({ docId });
-    let earnings = 0;
+    const me = await doctorModel.findById(docId).select("hospitalSharePercent").lean();
 
-    // Calculate earnings from completed appointments
-    appointments.map((item) => {
-      if (item.isCompleted) {
-        earnings += item.amount;
-      }
-    });
+    // The doctor's own earnings: their part of each completed visit's fee (after the
+    // hospital's share). Fees = what patients paid in total.
+    let earnings = 0;
+    let fees = 0;
+    for (const item of appointments) {
+      if (!item.isCompleted) continue;
+      const split = visitSplit(item, me?.hospitalSharePercent);
+      earnings += split.doctor;
+      fees += split.hospital + split.doctor;
+    }
 
     let patients = [];
 
@@ -215,6 +220,8 @@ const doctorDashboard = async (req, res) => {
 
     const dashData = {
       earnings,
+      fees,
+      hospitalSharePercent: me?.hospitalSharePercent ?? 0,
       appointments: appointments.length,
       patients: patients.length,
       // Additive: how many patients never came (for the no-show pitch number)
@@ -400,7 +407,20 @@ const getDoctorProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// API: the doctor's own earnings by day/week/month (their share and the hospital's)
+const earningsReport = async (req, res) => {
+  try {
+    const { from, to, groupBy } = req.query;
+    const report = await profitReport({ from, to, groupBy, docId: req.doctorId });
+    res.json({ success: true, report });
+  } catch (error) {
+    if (!(error instanceof ProfitError)) console.error(error);
+    res.json({ success: false, message: error instanceof ProfitError ? error.message : "Could not load the report" });
+  }
+};
+
 export {
+  earningsReport,
   changeAvailabilities,
   doctorList,
   loginDoctor,

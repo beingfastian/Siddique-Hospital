@@ -5,9 +5,15 @@ import { AppContext } from "../../context/AppContext.jsx";
 import { FaWhatsapp, FaEnvelope, FaUserMd, FaCalendarCheck, FaUsers, FaChartLine, FaUserSlash } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
+import ProfitReport from "../../components/ProfitReport";
 
 const Dashboard = () => {
-  const { aToken, getDashData, dashData, cancelAppointment, backendUrl } = useContext(AdminContext);
+  const { aToken, getDashData, dashData, cancelAppointment, backendUrl, doctors, getAllDoctors } = useContext(AdminContext);
+  // Doctors for the profit report's filter
+  useEffect(() => {
+    if (aToken) getAllDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aToken]);
   const { slotDateFormat } = useContext(AppContext);
   const [whatsappStats, setWhatsappStats] = useState({
     enabledUsers: 0,
@@ -123,6 +129,11 @@ const Dashboard = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Hospital profit by day / week / month, per doctor or all */}
+      <div className="mb-8">
+        <ProfitReport mode="admin" headers={{ atoken: aToken }} doctors={doctors} />
       </div>
 
       {/* Latest Bookings */}
