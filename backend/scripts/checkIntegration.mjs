@@ -271,6 +271,80 @@ try {
   await svc.cancelAppointment(cxApt._id, admin, {});
   check("Cancelled appointment leaves the queue", (await QTM.findById(cxTok._id)).status === "left");
 
+  // --- Walk-ins are real patients and real visits ---
+  {
+    const { default: appointmentModelW } = await import("../model/appointmentModel.js");
+    const { queueTokenModel: QTW } = await import("../model/queueModel.js");
+    const usersBefore = await userModel.countDocuments();
+    const w = (await q.issueToken({ docId, patientName: "Ghulam Rasool", phone: "0321 7654321", age: "58", gender: "Male", fee: 800, actor: admin })).token;
+    const visit = await appointmentModelW.findById(w.appointmentId);
+    const person = await userModel.findById(w.userId);
+    check("Walk-in token creates a patient record", (await userModel.countDocuments()) === usersBefore + 1 && person?.name === "Ghulam Rasool" && person.gender === "Male" && person.dobEstimated === true);
+    check("Walk-in token creates a visit (today, now, fee, walk-in)", visit && visit.type === "walk_in" && visit.slotDate === today && visit.amount === 800 && visit.status === "booked" && visit.history.map((h) => h.action).join(",") === "booked,checked_in", JSON.stringify(visit?.toObject?.()).slice(0, 200));
+
+    // Seen by the doctor: the visit is completed and its fee counts as earnings
+    await q.callNext(docId, admin, String(w._id), (await q.staffView(docId)).current?._id ? String((await q.staffView(docId)).current._id) : "");
+    await q.tokenAction(docId, w._id, "done", admin);
+    const done = await appointmentModelW.findById(w.appointmentId);
+    check("Finishing the walk-in completes the visit", done.isCompleted && done.status === "completed");
+    const earnings = (await appointmentModelW.find({ docId, isCompleted: true })).reduce((sum, a) => sum + a.amount, 0);
+    check("Walk-in fee is in the doctor's earnings", earnings >= 800);
+
+    // Follow-up from a walk-in visit
+    const fuW = await svc.bookFollowUp({ parentAppointmentId: w.appointmentId, doctorId: docId, slotDate: hospitalSlotDate(new Date(), 5), slotTime: "11:00 AM" });
+    check("Doctor can book a follow-up from a walk-in visit", fuW.appointment.type === "follow_up" && fuW.appointment.userId === String(person._id));
+
+    // Same patient comes again: reception selects them, no duplicate record
+    const again = (await q.issueToken({ docId, userId: String(person._id), actor: admin })).token;
+    check("Returning patient reuses their record", again.userId === String(person._id) && (await userModel.countDocuments({ name: "Ghulam Rasool" })) === 1);
+    check("Each visit is its own record (same patient twice a day)", again.appointmentId && again.appointmentId !== w.appointmentId);
+
+    // A family sharing one phone
+    const wife = (await q.issueToken({ docId, patientName: "Zubaida Bibi", phone: "03217654321", gender: "Female", actor: admin })).token;
+    check("Family members can share a phone number", wife.userId && wife.userId !== String(person._id));
+    const found = await q.searchPatients("+92 321 7654321");
+    check("Search by phone (any format) finds the whole family", found.length === 2 && found.some((f) => f.name === "Zubaida Bibi"), JSON.stringify(found.map((f) => f.name)));
+    check("Search by name", (await q.searchPatients("rasool")).length === 1);
+    check("Search shows age from the estimated birth date", (await q.searchPatients("rasool"))[0].age === "58 y");
+
+    // CNIC is the identity: a second record with the same CNIC is refused
+    await q.issueToken({ docId, patientName: "Has CNIC", cnic: "35202-1234567-1", actor: admin });
+    let dupe = "";
+    try { await q.issueToken({ docId, patientName: "Someone Else", cnic: "3520212345671", actor: admin }); } catch (e) { dupe = e.message; }
+    check("Same CNIC can't be registered twice", /already registered to Has CNIC/.test(dupe), dupe);
+    check("Search by CNIC", (await q.searchPatients("3520212345671")).length === 1);
+
+    // WhatsApp updates need a phone
+    let noPhone = "";
+    try { await q.issueToken({ docId, patientName: "No Phone", notify: true, actor: admin }); } catch (e) { noPhone = e.message; }
+    check("WhatsApp updates without a phone are refused", /phone number/.test(noPhone), noPhone);
+
+    // Went home without being seen: the visit is cancelled, no message sent
+    sent.length = 0;
+    const leaver = (await q.issueToken({ docId, patientName: "Left Early", phone: "03335550000", actor: admin })).token;
+    await q.tokenAction(docId, leaver._id, "left", admin);
+    const left = await appointmentModelW.findById(leaver.appointmentId);
+    await wait(200);
+    check("A walk-in who leaves has the visit cancelled", left.cancelled && left.history.some((h) => /Left the queue/.test(h.reason || "")));
+    check("No WhatsApp for a walk-in leaving", !sent.some((x) => x.name === "appointment_cancelled"));
+
+    // Walk-in visits can't be moved like appointments
+    let moveErr = "";
+    try { await svc.moveAppointment(again.appointmentId, hospitalSlotDate(new Date(), 2), "10:00 AM", admin); } catch (e) { moveErr = e.message; }
+    check("A walk-in visit can't be rescheduled", /walk-in visit can't be moved/.test(moveErr), moveErr);
+
+    // Deleting a doctor with patients still in today's queue is blocked
+    const { deleteDoctor } = await import("../controllers/adminController.js").then((m) => ({ deleteDoctor: m.deleteDoctor })).catch(() => ({}));
+    if (deleteDoctor) {
+      const lonely = await doctorModel.create({ name: "Only Queue", email: "oq@x", password: "x", image: "i", speciality: "GP", degree: "d", experience: "1", about: "a", fee: 500, address: {}, date: Date.now() });
+      const lonelyToken = (await q.issueToken({ docId: String(lonely._id), patientName: "Waiting One", actor: admin })).token;
+      await appointmentModelW.deleteOne({ _id: lonelyToken.appointmentId }); // only the queue entry is left
+      let out;
+      await deleteDoctor({ params: { doctorId: String(lonely._id) } }, { json: (x) => (out = x) });
+      check("Can't delete a doctor with patients still in today's queue", out && !out.success && /still in today's queue/.test(out.message), JSON.stringify(out));
+    }
+  }
+
   // Bot: CANCEL picks the next upcoming visit, never a past no-show
   const { handleWhatsAppWebhook } = await import("../controllers/whatsappController.js");
   const ask = async (from, text) => {
@@ -296,6 +370,20 @@ try {
   check("Bot replies in English to an English patient", helpEn.includes("Available Commands"));
   const unknown = await ask("+923009999999", "status");
   check("Unknown number gets a bilingual reply", unknown.includes("couldn't find") && unknown.includes("ریکارڈ"));
+  // Migration: an existing database with a unique phone index is updated
+  {
+    const { runMigrations } = await import("../config/migrations.js");
+    await userModel.collection.dropIndex("phone_1").catch(() => {});
+    await userModel.collection.deleteMany({}); // last check: a clean collection like a real old database
+    await userModel.collection.createIndex({ phone: 1 }, { unique: true, name: "phone_1" });
+    await runMigrations();
+    const phoneIndex = (await userModel.collection.indexes()).find((i) => i.name === "phone_1");
+    check("Startup migration makes phone numbers shareable", phoneIndex && !phoneIndex.unique, JSON.stringify(phoneIndex));
+    await userModel.create({ name: "Family A", phone: "03009990001" });
+    await userModel.create({ name: "Family B", phone: "03009990001" });
+    check("Two patients on one phone after migration", (await userModel.countDocuments({ phone: "03009990001" })) === 2);
+  }
+
 } catch (error) {
   console.error("TEST CRASHED:", error);
   failures++;

@@ -23,12 +23,12 @@ import { queueTokenModel, queueDayModel } from "../model/queueModel.js";
 import appointmentModel from "../model/appointmentModel.js";
 import doctorModel from "../model/doctorModel.js";
 import userModel from "../model/userModel.js";
-import { hospitalSlotDate, slotToDate } from "../utils/slots.js";
+import { hospitalSlotDate, slotToDate, HOSPITAL_UTC_OFFSET_MINUTES } from "../utils/slots.js";
 import { normalizePhone, phoneVariants } from "../whatsapp/phone.js";
 import { LANGUAGES, patientLanguage } from "../whatsapp/templates.js";
 import { sendWhatsAppQueueToken, sendWhatsAppTurnNear } from "../config/whatsappService.js";
 import { queueNotification } from "./notificationQueue.js";
-import { completeAppointment, AppointmentError } from "./appointmentService.js";
+import { completeAppointment, cancelAppointment, AppointmentError } from "./appointmentService.js";
 
 // An error whose message is safe to show to staff
 export class QueueError extends Error {}
@@ -163,13 +163,68 @@ const notifyTurnNear = async (docId, day) => {
 const notifyTurnNearSafely = (docId, day) =>
   notifyTurnNear(docId, day).catch((error) => console.error("Queue turn-near check failed:", error.message));
 
+// "hh:mm AM" of a moment, in hospital time (how appointment times are stored)
+const slotTimeOf = (moment) => {
+  const local = new Date(moment.getTime() + HOSPITAL_UTC_OFFSET_MINUTES * 60000);
+  const h24 = local.getUTCHours();
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${String(h12).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`;
+};
+
+// Approximate date of birth ("yyyy-mm-dd") from an age told at reception: "45", "45 y", "6 months", "10 days"
+const dobFromAge = (ageText, now) => {
+  const match = /^(\d{1,3})\s*([a-z]*)/i.exec(ageText);
+  const value = Number(match?.[1] || 0);
+  const unit = (match?.[2] || "y").toLowerCase();
+  const date = new Date(now);
+  if (unit.startsWith("d")) date.setDate(date.getDate() - value);
+  else if (unit.startsWith("m")) date.setMonth(date.getMonth() - value);
+  else date.setFullYear(date.getFullYear() - value);
+  return date.toISOString().slice(0, 10);
+};
+
+// "45 y" from a date of birth
+const ageLabel = (dob, now) => {
+  const born = new Date(dob);
+  if (Number.isNaN(born.getTime())) return undefined;
+  let years = now.getFullYear() - born.getFullYear();
+  if (now < new Date(now.getFullYear(), born.getMonth(), born.getDate())) years--;
+  return years >= 0 && years < 130 ? `${years} y` : undefined;
+};
+
+// The visit record for a walk-in: like an appointment booked for right now. It
+// doesn't reserve a booking slot (the patient is already here, in the queue).
+const createWalkInVisit = ({ user, doctor, day, now, fee, actor }) => {
+  const userData = user.toObject ? user.toObject() : { ...user };
+  delete userData.password;
+  return appointmentModel.create({
+    userId: String(user._id),
+    docId: String(doctor._id),
+    slotDate: day,
+    slotTime: slotTimeOf(now),
+    startAt: now,
+    userData,
+    docData: doctor,
+    amount: fee,
+    finalFee: fee,
+    date: now.getTime(),
+    status: "booked",
+    type: "walk_in",
+    createdBy: actor,
+    history: [
+      { at: now, by: actor, action: "booked", to: { slotDate: day, slotTime: slotTimeOf(now) } },
+      { at: now, by: actor, action: "checked_in" },
+    ],
+  });
+};
+
 // Pakistani mobile numbers (WhatsApp needs a mobile), or any international number
 const isMobileNumber = (e164) => /^\+923\d{9}$/.test(e164) || (/^\+\d{10,15}$/.test(e164) && !e164.startsWith("+92"));
 
 // Give a token to a walk-in, or check in an appointment patient who has arrived.
 // Returns { token, existing } (existing: this appointment was already checked in today).
-export const issueToken = async ({ docId, appointmentId, patientName, phone, notify, language, fee, urgent, age, gender, actor }) => {
-  const doctor = await doctorModel.findById(docId).select("name fee").lean();
+export const issueToken = async ({ docId, appointmentId, userId, patientName, phone, cnic, notify, language, fee, urgent, age, gender, actor }) => {
+  const doctor = await doctorModel.findById(docId).select("-password -slots_booked").lean();
   if (!doctor) throw new QueueError("Doctor not found");
   docId = String(docId);
   const day = today();
@@ -202,33 +257,78 @@ export const issueToken = async ({ docId, appointmentId, patientName, phone, not
     };
 
   } else {
-    const name = String(patientName || "").trim().replace(/\s+/g, " ");
-    if (!name) throw new QueueError("Please enter the patient's name");
-    const normalized = String(phone || "").trim() ? normalizePhone(phone) : null;
-    if (normalized && !/^\+\d{10,15}$/.test(normalized)) throw new QueueError("Please enter a valid phone number");
-    const wantsWhatsApp = Boolean(notify && normalized);
-    if (wantsWhatsApp && !isMobileNumber(normalized)) {
-      throw new QueueError("WhatsApp updates need a mobile number (03xx xxxxxxx)");
-    }
-    const user = normalized
-      ? await userModel
-          .findOne({ $or: [{ phone: { $in: phoneVariants(normalized) } }, { whatsappNumber: { $in: phoneVariants(normalized) } }] })
-          .select("_id language")
-          .lean()
-      : null;
-    const feeValue = fee === undefined || fee === null || fee === "" ? Number(doctor.fee) || 0 : Number(fee);
-    if (!Number.isFinite(feeValue) || feeValue < 0) throw new QueueError("Please enter a valid fee");
+    // A walk-in: every patient seen is a real patient record and a real visit, so the
+    // doctor can complete it (earnings), book a follow-up, request lab tests, and the
+    // visit is in the patient's history.
     const ageText = String(age ?? "").trim().slice(0, 20);
     if (ageText && !/^\d{1,3}(\s*(y|yr|yrs|years?|m|mo|months?|d|days?))?$/i.test(ageText)) {
       throw new QueueError("Please enter the age as a number, e.g. 45 (or 6 months)");
     }
+    const genderValue = ["Male", "Female", "Other"].includes(gender) ? gender : undefined;
+    const feeValue = fee === undefined || fee === null || fee === "" ? Number(doctor.fee) || 0 : Number(fee);
+    if (!Number.isFinite(feeValue) || feeValue < 0) throw new QueueError("Please enter a valid fee");
+
+    let user;
+    if (userId) {
+      user = await userModel.findById(userId);
+      if (!user) throw new QueueError("Patient not found. Please search again.");
+      // Fill in what reception just learned, if the record didn't have it
+      const fill = {};
+      if (ageText && !user.dob) Object.assign(fill, { dob: dobFromAge(ageText, now), dobEstimated: true });
+      if (genderValue && !user.gender) fill.gender = genderValue;
+      if (Object.keys(fill).length) user = await userModel.findByIdAndUpdate(user._id, fill, { new: true });
+    } else {
+      const name = String(patientName || "").trim().replace(/\s+/g, " ").slice(0, 80);
+      if (!name) throw new QueueError("Please enter the patient's name");
+      const e164 = String(phone || "").trim() ? normalizePhone(phone) : null;
+      if (e164 && !/^\+\d{10,15}$/.test(e164)) throw new QueueError("Please enter a valid phone number");
+      // Stored the way receptions write numbers: 03xx xxxxxxx -> 03xxxxxxxxx
+      const phoneText = e164 ? (e164.startsWith("+92") ? "0" + e164.slice(3) : e164) : "";
+      const cnicText = String(cnic || "").replace(/\D/g, "");
+      if (cnicText && cnicText.length !== 13) throw new QueueError("CNIC must be 13 digits");
+      if (cnicText) {
+        const existing = await userModel.findOne({ cnic: cnicText }).select("name").lean();
+        if (existing) throw new QueueError(`This CNIC is already registered to ${existing.name}. Search for the patient and select them.`);
+      }
+      user = await userModel.create({
+        name,
+        ...(phoneText && { phone: phoneText, whatsappNumber: phoneText }),
+        ...(cnicText && { cnic: cnicText }),
+        gender: genderValue || "",
+        ...(ageText && { dob: dobFromAge(ageText, now), dobEstimated: true }),
+        ...(LANGUAGES.includes(language) && { language }),
+      });
+    }
+
+    // WhatsApp updates: only to a mobile number, and only with consent (recorded on the patient)
+    const contact = normalizePhone(user.whatsappNumber || user.phone);
+    const wantsWhatsApp = Boolean(notify && contact);
+    if (notify && !contact) throw new QueueError("Enter a phone number for WhatsApp updates, or turn them off");
+    if (wantsWhatsApp && !isMobileNumber(contact)) {
+      throw new QueueError("WhatsApp updates need a mobile number (03xx xxxxxxx)");
+    }
+    if (wantsWhatsApp && !user.whatsappEnabled) {
+      user = await userModel.findByIdAndUpdate(
+        user._id,
+        {
+          whatsappEnabled: true,
+          whatsappConsentAt: now,
+          ...(!user.whatsappNumber && { whatsappNumber: user.phone }),
+          ...(LANGUAGES.includes(language) && { language }),
+        },
+        { new: true }
+      );
+    }
+
+    const visit = await createWalkInVisit({ user, doctor, day, now, fee: Math.round(feeValue), actor });
     details = {
       kind: "walk_in",
-      ...(user && { userId: String(user._id) }),
-      patientName: name.slice(0, 80),
-      ...(ageText && { age: /^\d+$/.test(ageText) ? `${ageText} y` : ageText }),
-      ...(["Male", "Female", "Other"].includes(gender) && { gender }),
-      ...(normalized && { phone: normalized }),
+      appointmentId: String(visit._id),
+      userId: String(user._id),
+      patientName: user.name,
+      ...(contact && { phone: contact }),
+      ...(ageText ? { age: /^\d+$/.test(ageText) ? `${ageText} y` : ageText } : user.dob && { age: ageLabel(user.dob, now) }),
+      ...((genderValue || user.gender) && ["Male", "Female", "Other"].includes(genderValue || user.gender) && { gender: genderValue || user.gender }),
       notify: wantsWhatsApp,
       language: LANGUAGES.includes(language) ? language : patientLanguage(user),
       fee: Math.round(feeValue),
@@ -238,6 +338,7 @@ export const issueToken = async ({ docId, appointmentId, patientName, phone, not
 
   const number = await nextNumber(docId, day);
   let token;
+  try {
   for (let attempt = 0; ; attempt++) {
     try {
       token = await queueTokenModel.create({
@@ -260,8 +361,13 @@ export const issueToken = async ({ docId, appointmentId, patientName, phone, not
       if (error.code !== 11000 || attempt >= 1 || !/publicId/.test(error.message)) throw error;
     }
   }
+  } catch (error) {
+    // No token, so no visit either (the patient record stays: they did come)
+    if (details.kind === "walk_in") await appointmentModel.deleteOne({ _id: details.appointmentId }).catch(() => {});
+    throw error;
+  }
 
-  if (details.appointmentId) {
+  if (details.kind === "appointment") {
     // Record the arrival; a no-show mark (e.g. made while they were stuck in traffic) is undone
     await appointmentModel.updateOne(
       { _id: details.appointmentId },
@@ -424,6 +530,15 @@ export const tokenAction = async (docId, tokenId, action, actor) => {
         { $set: { status: "left" }, $push: { events: event("left", actor) } },
         { new: true }
       );
+      // A walk-in who went home without being seen: their visit is cancelled (no message).
+      // An appointment patient's booking is left as it is (reception may mark a no-show).
+      if (result?.kind === "walk_in" && result.appointmentId) {
+        try {
+          await cancelAppointment(result.appointmentId, actor, { reason: "Left the queue without being seen", notifyPatient: false });
+        } catch (error) {
+          if (!(error instanceof AppointmentError)) throw error;
+        }
+      }
       break;
 
     case "urgent":
@@ -464,7 +579,7 @@ export const staffView = async (docId) => {
     appointmentModel
       .find({ docId, slotDate: day, cancelled: { $ne: true }, isCompleted: { $ne: true } })
       .sort({ startAt: 1 })
-      .select("slotTime status userData.name userData.phone amount")
+      .select("slotTime status type userId userData.name userData.phone amount")
       .lean(),
   ]);
   const checkedIn = new Set(snapshot.tokens.filter((t) => t.appointmentId).map((t) => t.appointmentId));
@@ -483,9 +598,11 @@ export const staffView = async (docId) => {
     waiting: snapshot.waiting.map((w) => tokens.find((t) => String(t._id) === String(w._id))),
     tokens,
     appointmentsToCheckIn: appointments
-      .filter((a) => !checkedIn.has(String(a._id)))
+      // Walk-in visits already have their token
+      .filter((a) => !checkedIn.has(String(a._id)) && a.type !== "walk_in")
       .map((a) => ({
         _id: a._id,
+        userId: a.userId,
         slotTime: a.slotTime,
         patientName: a.userData?.name,
         phone: a.userData?.phone,
@@ -558,4 +675,33 @@ export const publicToken = async (publicId) => {
     started: snapshot?.started || false,
     serverTime: new Date(),
   };
+};
+
+// Find patients for reception: by phone (any format), CNIC, or name. Family members
+// sharing a phone all appear, so reception picks the right one.
+export const searchPatients = async (query) => {
+  const text = String(query || "").trim().slice(0, 60);
+  if (text.length < 2) return [];
+  const digits = text.replace(/\D/g, "");
+  let filter;
+  if (digits.length === 13 && digits === text.replace(/[-\s]/g, "")) filter = { cnic: digits };
+  else if (digits.length >= 4 && digits.length >= text.replace(/[\s+()-]/g, "").length - 1) {
+    // Match the number however it was typed or stored: 0300..., 92300..., +92300...
+    const core = digits.replace(/^(0092|92|0)/, "");
+    filter = { $or: [{ phone: { $regex: core } }, { whatsappNumber: { $regex: core } }] };
+  } else {
+    filter = { name: { $regex: text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } };
+  }
+  const now = new Date();
+  const users = await userModel.find(filter).select("name phone gender dob cnic whatsappEnabled whatsappNumber language").limit(10).lean();
+  return users.map((u) => ({
+    _id: u._id,
+    name: u.name,
+    phone: u.phone || "",
+    gender: u.gender || "",
+    age: u.dob ? ageLabel(u.dob, now) : undefined,
+    cnicLast4: u.cnic ? u.cnic.slice(-4) : undefined,
+    whatsappEnabled: Boolean(u.whatsappEnabled),
+    language: u.language,
+  }));
 };

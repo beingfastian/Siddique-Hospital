@@ -109,15 +109,15 @@ const statusLabel = (apt, labels, now = new Date()) => {
 };
 
 const buildBotReply = async (phoneNumber, userMessage) => {
-  // Find user by WhatsApp number
+  // Everyone registered on this WhatsApp number (a family often shares one phone)
   const variants = phoneVariants(phoneNumber);
-  const user = await userModel.findOne({
-    $or: [
-      { whatsappNumber: { $in: variants } },
-      { phone: { $in: variants } }
-    ]
-  });
-  if (!user) return unknownUserReply();
+  const users = await userModel
+    .find({ $or: [{ whatsappNumber: { $in: variants } }, { phone: { $in: variants } }] })
+    .sort({ whatsappEnabled: -1, _id: 1 });
+  if (!users.length) return unknownUserReply();
+  const user = users[0];
+  const userIds = users.map((u) => u._id.toString());
+  const family = users.length > 1;
 
   const lang = patientLanguage(user);
   const t = TEXT[lang];
@@ -126,16 +126,16 @@ const buildBotReply = async (phoneNumber, userMessage) => {
     case "status":
       try {
         const appointments = await appointmentModel
-          .find({ userId: user._id.toString() })
+          .find({ userId: { $in: userIds } })
           .sort({ date: -1 })
-          .limit(3);
+          .limit(family ? 5 : 3);
         if (!appointments.length) return t.noAppointments(user.name);
 
         let text = t.statusHeader(user.name);
         appointments.forEach((apt, index) => {
           const date = lang === "ur" ? formatSlotDateUrdu(apt.slotDate) : formatDisplayDate(apt.slotDate);
           const time = lang === "ur" ? formatSlotTimeUrdu(apt.slotTime) : apt.slotTime;
-          text += `${index + 1}. *${lang === "ur" ? "ڈاکٹر" : "Dr."} ${apt.docData.name}*\n`;
+          text += `${index + 1}. *${lang === "ur" ? "ڈاکٹر" : "Dr."} ${apt.docData.name}*${family ? ` (${apt.userData?.name})` : ""}\n`;
           text += `   📅 ${date}\n   🕐 ${time}\n   ${statusLabel(apt, t.labels)}\n\n`;
         });
         return (text + t.statusFooter()).trim();
@@ -149,7 +149,7 @@ const buildBotReply = async (phoneNumber, userMessage) => {
         // The patient's next upcoming visit (never one in the past or a no-show)
         const appointment = await appointmentModel
           .findOne({
-            userId: user._id.toString(),
+            userId: { $in: userIds },
             cancelled: false,
             isCompleted: false,
             status: { $ne: "no_show" },
@@ -159,7 +159,7 @@ const buildBotReply = async (phoneNumber, userMessage) => {
         if (!appointment) return t.nothingToCancel();
 
         // Cancel (frees the slot); this reply tells the patient
-        await cancelAppointment(appointment._id, { role: "patient", id: user._id.toString() }, {
+        await cancelAppointment(appointment._id, { role: "patient", id: appointment.userId }, {
           reason: "Cancelled by patient on WhatsApp",
           notifyPatient: false,
         });

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import {
   QueueError,
+  searchPatients,
   issueToken,
   callNext,
   tokenAction,
@@ -46,12 +47,17 @@ export const getQueue = async (req, res) => {
 
 export const issue = async (req, res) => {
   try {
-    const { appointmentId, patientName, phone, notify, language, fee, urgent, age, gender } = req.body;
+    const { appointmentId, userId, patientName, phone, cnic, notify, language, fee, urgent, age, gender } = req.body;
+    if ((appointmentId && !mongoose.isValidObjectId(appointmentId)) || (userId && !mongoose.isValidObjectId(userId))) {
+      return res.json({ success: false, message: "Patient not found. Please search again." });
+    }
     const { token, existing } = await issueToken({
       docId: req.queueDocId,
       appointmentId,
+      userId,
       patientName,
       phone,
+      cnic,
       notify,
       language,
       fee,
@@ -101,6 +107,18 @@ export const pause = async (req, res) => {
   try {
     await setPaused(req.queueDocId, req.body.paused, req.body.note);
     res.json({ success: true, message: req.body.paused ? "Queue paused" : "Queue resumed" });
+  } catch (error) {
+    fail(res, error);
+  }
+};
+
+// Reception / doctor: find an existing patient before giving a walk-in token
+export const patients = async (req, res) => {
+  if (req.recipientType !== "admin" && req.recipientType !== "doctor") {
+    return res.status(403).json({ success: false, message: "You don't have access to this" });
+  }
+  try {
+    res.json({ success: true, patients: await searchPatients(req.query.q) });
   } catch (error) {
     fail(res, error);
   }

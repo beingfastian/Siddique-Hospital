@@ -48,7 +48,11 @@ const AllAppointments = () => {
 
   // Follow-up visits booked by a doctor
   const getTypeBadge = (item) =>
-    item.type === "follow_up" && (
+    item.type === "walk_in" ? (
+      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium" title="Came without an appointment (live queue)">
+        Walk-in
+      </span>
+    ) : item.type === "follow_up" && (
       <span
         className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
         title={item.createdBy?.role === "doctor" ? "Scheduled by the doctor" : "Follow-up visit"}
@@ -82,6 +86,7 @@ const AllAppointments = () => {
         >
           <FaPrint className="w-4 h-4" />
         </button>
+        {item.type !== "walk_in" && (
         <button
           onClick={() => setRescheduleFor(item)}
           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -90,6 +95,7 @@ const AllAppointments = () => {
         >
           <FaExchangeAlt className="w-4 h-4" />
         </button>
+        )}
         <button
           onClick={() =>
             window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) &&

@@ -327,6 +327,9 @@ export const cancelAppointment = async (appointmentId, actor, { reason, cancelle
 export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, actor, { reason, notifyPatient = true } = {}) => {
   const appointment = await appointmentModel.findOne({ _id: appointmentId, ...ACTIVE });
   if (!appointment) throw new AppointmentError("This appointment can't be moved (already completed or cancelled)");
+  if (appointment.type === "walk_in") {
+    throw new AppointmentError("A walk-in visit can't be moved. Book an appointment (or a follow-up) instead.");
+  }
 
   const doctor = await doctorModel.findById(appointment.docId).select("-password");
   if (!doctor) throw new AppointmentError("Doctor not found");
@@ -394,8 +397,9 @@ export const moveAppointment = async (appointmentId, newSlotDate, newSlotTime, a
 
 // No-shows are left alone: moving or cancelling them would message patients
 // about a visit they already missed and erase the no-show from the counts
+// Walk-in visits are handled in the live queue (they have no booked time to move)
 const activeOnDay = (docId, slotDate) =>
-  appointmentModel.find({ docId, slotDate, ...EXPECTED }).sort({ startAt: 1 });
+  appointmentModel.find({ docId, slotDate, ...EXPECTED, type: { $ne: "walk_in" } }).sort({ startAt: 1 });
 
 // Move every active appointment of a doctor from one day to another.
 // Each keeps its time if free, otherwise gets the nearest free time on the new day

@@ -5,6 +5,8 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
 import connectDB from "./config/mongodb.js";
+import mongoose from "mongoose";
+import { runMigrations } from "./config/migrations.js";
 import connectCloudinary from "./config/cloudinary.js";
 import adminRouter from "./routes/adminRoute.js";
 import doctorRouter from "./routes/doctorRoute.js";
@@ -44,6 +46,7 @@ const io = new SocketIOServer(server, {
 });
 
 const port = process.env.PORT || 4000;
+mongoose.connection.once("connected", () => runMigrations());
 connectDB();
 connectCloudinary();
 testEmailConnection();
