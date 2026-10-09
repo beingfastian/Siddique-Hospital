@@ -15,9 +15,10 @@ export const HOSPITAL_HOURS_URDU = env.VITE_HOSPITAL_HOURS_URDU || "";
 // Optional: your Google Maps link; otherwise the address is searched on Google Maps
 export const HOSPITAL_MAP_URL = env.VITE_HOSPITAL_MAP_URL || "";
 
-// Contact for the product itself (demo requests, sales). Falls back to the
-// hospital's number/email so an existing setup keeps working.
-export const SALES_PHONE = env.VITE_SALES_PHONE || HOSPITAL_PHONE;
+// Contact for the product itself (demo requests, sales): WhatsApp and Call
+// buttons on the website. VITE_SALES_PHONE overrides it.
+export const SALES_PHONE = env.VITE_SALES_PHONE || "+923338082908";
+// Email falls back to the hospital's so an existing setup keeps working
 export const SALES_EMAIL = env.VITE_SALES_EMAIL || HOSPITAL_EMAIL;
 // Optional: where staff sign in (the admin app), shown as "Staff sign in"
 export const STAFF_APP_URL = env.VITE_STAFF_APP_URL || "";
