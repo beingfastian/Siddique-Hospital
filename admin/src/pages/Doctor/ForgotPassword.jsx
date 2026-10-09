@@ -40,16 +40,16 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-center">
           <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-  <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-8 w-8 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
   </svg>
 </div>
           <h2 className="text-2xl font-bold text-white">Forgot Password</h2>
-          <p className="text-blue-100 mt-2">Enter your email to reset your password</p>
+          <p className="text-primary-100 mt-2">Enter your email to reset your password</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
@@ -62,7 +62,7 @@ const ForgotPassword = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-primary-600 transition"
               placeholder="doctor@example.com"
             />
           </div>
@@ -70,7 +70,7 @@ const ForgotPassword = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition duration-300 flex items-center justify-center disabled:opacity-70"
+            className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition duration-300 flex items-center justify-center disabled:opacity-70"
           >
             {loading ? (
               <>
@@ -88,7 +88,7 @@ const ForgotPassword = () => {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Remember your password?{" "}
-              <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">
+              <Link to="/login" className="text-primary-700 hover:text-primary-900 font-medium">
                 Login
               </Link>
             </p>

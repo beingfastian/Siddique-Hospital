@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
 import { toast } from "react-toastify";
 import { FaUserPlus, FaUsersCog } from "react-icons/fa";
 import { labGet, labPost, labPut, errorText, when } from "../../lab/api";
@@ -8,6 +9,7 @@ import { labGet, labPost, labPut, errorText, when } from "../../lab/api";
 const emptyForm = { name: "", email: "", phone: "", password: "" };
 
 const LabStaff = () => {
+  const { confirm, prompt } = useDialog();
   const [staff, setStaff] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
@@ -46,8 +48,15 @@ const LabStaff = () => {
     if (await run(() => labPost("/staff", form))) setForm(emptyForm);
   };
 
-  const resetPassword = (s) => {
-    const password = window.prompt(`New password for ${s.name} (at least 8 characters):`, "");
+  const resetPassword = async (s) => {
+    const password = await prompt({
+      title: `New password for ${s.name}`,
+      message: "Give the new password to them in person. Their current password stops working.",
+      label: "New password",
+      inputType: "password",
+      confirmLabel: "Set password",
+      validate: (v) => (v.length < 8 ? "Use at least 8 characters" : ""),
+    });
     if (password === null) return;
     run(() => labPut(`/staff/${s._id}`, { password }));
   };
@@ -101,7 +110,11 @@ const LabStaff = () => {
               </span>
               <button onClick={() => resetPassword(s)} disabled={busy} className="text-sm text-primary">Reset password</button>
               <button
-                onClick={() => (s.active ? window.confirm(`Turn off ${s.name}'s login? They lose access straight away.`) : true) && run(() => labPut(`/staff/${s._id}`, { active: !s.active }))}
+                onClick={async () =>
+                  (s.active
+                    ? await confirm({ title: `Turn off ${s.name}'s login?`, message: "They lose access straight away. You can turn it on again later.", confirmLabel: "Turn off login", tone: "danger" })
+                    : true) && run(() => labPut(`/staff/${s._id}`, { active: !s.active }))
+                }
                 disabled={busy}
                 className={`text-sm ${s.active ? "text-gray-500 hover:text-red-600" : "text-green-700"}`}
               >

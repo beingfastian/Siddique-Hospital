@@ -107,7 +107,7 @@ const DayActionsDialog = ({
                   id="day-doctor"
                   value={docId}
                   onChange={(e) => setDocId(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 >
                   <option value="">Select a doctor</option>
                   {doctors.map((d) => (
@@ -125,7 +125,7 @@ const DayActionsDialog = ({
                 min={today}
                 value={fromIso}
                 onChange={(e) => setFromIso(e.target.value)}
-                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               />
               <p className={`mt-1 ${onDay.length ? "text-gray-700" : "text-gray-400"}`}>
                 {doctors && !docId ? "Choose a doctor" : `${onDay.length} booked appointment(s) on this day`}
@@ -155,7 +155,7 @@ const DayActionsDialog = ({
                   min={today}
                   value={toIso}
                   onChange={(e) => setToIso(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
                 <p className="mt-1 text-gray-500">Each patient keeps their time if it's free, otherwise gets the nearest free time.</p>
               </div>
@@ -171,7 +171,7 @@ const DayActionsDialog = ({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Doctor on leave, Emergency surgery"
-                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               />
             </div>
           </div>
@@ -191,7 +191,7 @@ const DayActionsDialog = ({
               onClick={submit}
               disabled={!canSubmit || saving}
               className={`px-4 py-2 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                action === "cancel" ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+                action === "cancel" ? "bg-red-600 hover:bg-red-700" : "bg-primary-700 hover:bg-primary-800"
               }`}
             >
               {saving ? "Working…" : action === "cancel" ? `Cancel ${onDay.length} appointment(s)` : `Move ${onDay.length} appointment(s)`}

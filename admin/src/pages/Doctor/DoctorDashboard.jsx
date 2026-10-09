@@ -1,4 +1,5 @@
 import React, { useContext, useEffect } from "react";
+import Avatar from "../../components/ui/Avatar";
 import { DoctorContext } from "../../context/DoctorContext";
 import { assets } from "../../assets/assets";
 import { AppContext } from "../../context/AppContext";
@@ -51,8 +52,8 @@ const DoctorDashboard = () => {
                   {dashData.appointments}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FaCalendarCheck className="text-blue-600 text-xl" />
+              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+                <FaCalendarCheck className="text-primary-700 text-xl" />
               </div>
             </div>
           </div>
@@ -65,8 +66,8 @@ const DoctorDashboard = () => {
                   {dashData.patients}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <FaUsers className="text-indigo-600 text-xl" />
+              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+                <FaUsers className="text-primary-700 text-xl" />
               </div>
             </div>
           </div>
@@ -102,7 +103,7 @@ const DoctorDashboard = () => {
                   <span>WhatsApp</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <FaEnvelope className="text-blue-500" />
+                  <FaEnvelope className="text-primary-600" />
                   <span>Email</span>
                 </div>
               </div>
@@ -117,11 +118,7 @@ const DoctorDashboard = () => {
                   className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0"
                 >
                   <div className="flex items-center gap-4">
-                    <img
-                      className="w-12 h-12 rounded-full object-cover"
-                      src={item.userData.image}
-                      alt={item.userData.name}
-                    />
+                    <Avatar src={item.userData.image} name={item.userData.name} className="w-12 h-12" textClass="text-base" />
                     <div>
                       <p className="font-semibold text-gray-900">{item.userData.name}</p>
                       <p className="text-sm text-gray-500">
@@ -135,7 +132,7 @@ const DoctorDashboard = () => {
                       {item.userData?.whatsappEnabled ? (
                         <FaWhatsapp className="text-green-500 w-4 h-4" title="WhatsApp enabled" />
                       ) : (
-                        <FaEnvelope className="text-blue-500 w-4 h-4" title="Email only" />
+                        <FaEnvelope className="text-primary-600 w-4 h-4" title="Email only" />
                       )}
                     </div>
                     

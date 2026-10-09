@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
+import Avatar from "../../components/ui/Avatar";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
@@ -11,6 +13,7 @@ import DayActionsDialog from "../../components/DayActionsDialog";
 import { hasStarted } from "../../utils/slots";
 
 const DoctorAppointments = () => {
+  const { confirm } = useDialog();
   const {
     dToken,
     appointments,
@@ -75,7 +78,7 @@ const DoctorAppointments = () => {
     !item.cancelled && !item.isCompleted && item.type !== "walk_in" && (
       <button
         onClick={() => setRescheduleFor(item)}
-        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
         title="Reschedule"
         aria-label="Reschedule"
       >
@@ -128,7 +131,7 @@ const DoctorAppointments = () => {
             onClick={() => setShowDayActions(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            <FaCalendarDay className="text-blue-600" />
+            <FaCalendarDay className="text-primary-700" />
             Manage a day
           </button>
         </div>
@@ -142,7 +145,7 @@ const DoctorAppointments = () => {
               placeholder="Search by patient name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
             />
           </div>
           
@@ -151,7 +154,7 @@ const DoctorAppointments = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
+              className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none appearance-none bg-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -178,18 +181,14 @@ const DoctorAppointments = () => {
         </div>
 
         {/* Appointments List */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="overflow-x-auto">
           {filteredAppointments.length > 0 ? (
             filteredAppointments.map((item, index) => (
               <div key={index} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors">
                 {/* Desktop Layout */}
                 <div className="hidden lg:grid grid-cols-12 gap-4 p-4 items-center">
                   <div className="col-span-3 flex items-center gap-3">
-                    <img
-                      className="w-10 h-10 rounded-full object-cover"
-                      src={item.userData.image}
-                      alt={item.userData.name}
-                    />
+                    <Avatar src={item.userData.image} name={item.userData.name} className="w-10 h-10" textClass="text-sm" />
                     <div>
                       <p className="font-semibold text-gray-900">{item.userData.name}</p>
                       {item.userData.whatsappEnabled && (
@@ -209,7 +208,7 @@ const DoctorAppointments = () => {
                   </div>
                   
                   <div className="col-span-1">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                    <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
                       {item.payment ? "Online" : "Cash"}
                     </span>
                   </div>
@@ -222,7 +221,7 @@ const DoctorAppointments = () => {
                     {item.userData?.whatsappEnabled ? (
                       <FaWhatsapp className="text-green-500 text-lg" title="WhatsApp" />
                     ) : (
-                      <FaEnvelope className="text-blue-500 text-lg" title="Email" />
+                      <FaEnvelope className="text-primary-600 text-lg" title="Email" />
                     )}
                   </div>
                   
@@ -236,7 +235,14 @@ const DoctorAppointments = () => {
                       {!item.cancelled && !item.isCompleted && (
                         <>
                           <button
-                            onClick={() => window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) && cancelAppointment(item._id)}
+                            onClick={async () =>
+                              (await confirm({
+                                title: `Cancel ${item.userData.name}'s appointment?`,
+                                message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
+                                confirmLabel: "Cancel appointment",
+                                tone: "danger",
+                              })) && cancelAppointment(item._id)
+                            }
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Cancel"
                           >
@@ -255,9 +261,12 @@ const DoctorAppointments = () => {
                           </button>
                           {item.status !== "no_show" && hasStarted(item) && (
                             <button
-                              onClick={() =>
-                                window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
-                                markNoShow(item._id)
+                              onClick={async () =>
+                                (await confirm({
+                            title: `Mark ${item.userData.name} as no-show?`,
+                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
+                            confirmLabel: "Mark no-show",
+                          })) && markNoShow(item._id)
                               }
                               className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                               title="Mark as no-show"
@@ -277,11 +286,7 @@ const DoctorAppointments = () => {
                 <div className="lg:hidden p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                        className="w-12 h-12 rounded-full object-cover"
-                        src={item.userData.image}
-                        alt={item.userData.name}
-                      />
+                      <Avatar src={item.userData.image} name={item.userData.name} className="w-12 h-12" textClass="text-base" />
                       <div>
                         <p className="font-semibold text-gray-900">{item.userData.name}</p>
                         <p className="text-sm text-gray-500">Age: {calculateAge(item.userData.dob)}</p>
@@ -304,7 +309,7 @@ const DoctorAppointments = () => {
                       <p className="text-gray-500">Fee</p>
                       <p className="font-semibold">{currency}{item.amount}</p>
                       <p className="text-xs">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                        <span className="px-2 py-1 bg-primary-100 text-primary-800 rounded-full">
                           {item.payment ? "Online" : "Cash"}
                         </span>
                       </p>
@@ -319,7 +324,7 @@ const DoctorAppointments = () => {
                           <span>WhatsApp</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 text-xs text-blue-600">
+                        <div className="flex items-center gap-1 text-xs text-primary-700">
                           <FaEnvelope />
                           <span>Email</span>
                         </div>
@@ -330,7 +335,14 @@ const DoctorAppointments = () => {
                       {!item.cancelled && !item.isCompleted && (
                         <>
                           <button
-                            onClick={() => window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) && cancelAppointment(item._id)}
+                            onClick={async () =>
+                              (await confirm({
+                                title: `Cancel ${item.userData.name}'s appointment?`,
+                                message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
+                                confirmLabel: "Cancel appointment",
+                                tone: "danger",
+                              })) && cancelAppointment(item._id)
+                            }
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Cancel"
                           >
@@ -349,9 +361,12 @@ const DoctorAppointments = () => {
                           </button>
                           {item.status !== "no_show" && hasStarted(item) && (
                             <button
-                              onClick={() =>
-                                window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
-                                markNoShow(item._id)
+                              onClick={async () =>
+                                (await confirm({
+                            title: `Mark ${item.userData.name} as no-show?`,
+                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
+                            confirmLabel: "Mark no-show",
+                          })) && markNoShow(item._id)
                               }
                               className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                               title="Mark as no-show"

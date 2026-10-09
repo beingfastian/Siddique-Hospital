@@ -65,12 +65,12 @@ const Contact = () => {
             {/* Phone Contact */}
             <button
               onClick={handlePhoneClick}
-              className="flex items-center gap-3 w-full p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-300 border border-blue-200"
+              className="flex items-center gap-3 w-full p-4 bg-primary-50 hover:bg-primary-100 rounded-lg transition-all duration-300 border border-primary-200"
             >
-              <FaPhone className="text-blue-500 text-2xl" />
+              <FaPhone className="text-primary-600 text-2xl" />
               <div className="text-left">
                 <p className="font-medium text-gray-700">Phone</p>
-                <p className="text-blue-600">{phoneNumber}</p>
+                <p className="text-primary-700">{phoneNumber}</p>
                 <p className="text-sm text-gray-500">Call us directly</p>
               </div>
             </button>

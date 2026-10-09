@@ -70,8 +70,8 @@ const Footer = () => {
             </li>
             
             {/* Phone Contact */}
-            <li className="flex items-center gap-2 hover:text-blue-500 cursor-pointer" onClick={() => window.open(`tel:${phoneNumber}`)}>
-              <FaPhone className="text-blue-500" />
+            <li className="flex items-center gap-2 hover:text-primary-600 cursor-pointer" onClick={() => window.open(`tel:${phoneNumber}`)}>
+              <FaPhone className="text-primary-600" />
               <span>{phoneNumber}</span>
             </li>
             

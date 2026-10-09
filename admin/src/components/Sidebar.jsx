@@ -175,7 +175,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                         isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2"
                       } ${
                         isActive
-                          ? "bg-blue-50 text-blue-700"
+                          ? "bg-primary-50 text-primary-800"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                       }`
                     }
@@ -183,7 +183,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                     {({ isActive }) => (
                       <>
                         {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-blue-600" />
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-primary-700" />
                         )}
                         <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-base">
                           {item.icon}

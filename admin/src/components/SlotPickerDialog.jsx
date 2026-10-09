@@ -65,8 +65,8 @@ const SlotPickerDialog = ({ title, subtitle, doctor, confirmVerb, showReason = f
                     onClick={() => { setDayIndex(index); setTime(""); }}
                     className={`flex-shrink-0 w-16 py-2 rounded-xl border text-center transition-colors ${
                       index === dayIndex
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-gray-200 text-gray-700 hover:border-blue-300"
+                        ? "bg-primary-700 border-primary-700 text-white"
+                        : "border-gray-200 text-gray-700 hover:border-primary-300"
                     }`}
                   >
                     <span className="block text-xs">{DAY_SHORT[day.date.getDay()]}</span>
@@ -85,8 +85,8 @@ const SlotPickerDialog = ({ title, subtitle, doctor, confirmVerb, showReason = f
                     onClick={() => setTime(slot.time)}
                     className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                       slot.time === time
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-gray-200 text-gray-700 hover:border-blue-300"
+                        ? "bg-primary-700 border-primary-700 text-white"
+                        : "border-gray-200 text-gray-700 hover:border-primary-300"
                     }`}
                   >
                     {slot.time}
@@ -105,7 +105,7 @@ const SlotPickerDialog = ({ title, subtitle, doctor, confirmVerb, showReason = f
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. Doctor in surgery, Patient requested"
-                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none text-sm"
                   />
                 </div>
               )}
@@ -125,7 +125,7 @@ const SlotPickerDialog = ({ title, subtitle, doctor, confirmVerb, showReason = f
             type="button"
             onClick={submit}
             disabled={!time || saving}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg bg-primary-700 text-white font-medium hover:bg-primary-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving…" : time && selectedDay ? `${confirmVerb} ${label(selectedDay)}, ${time}` : "Pick a date and time"}
           </button>

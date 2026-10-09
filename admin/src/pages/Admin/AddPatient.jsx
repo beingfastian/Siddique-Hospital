@@ -1,4 +1,5 @@
 import React, { useContext, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
 import LanguageSelect from "../../components/LanguageSelect";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { toast } from "react-toastify";
@@ -6,6 +7,7 @@ import axios from "axios";
 import { FaWhatsapp, FaUser, FaIdCard, FaPhone, FaCalendarAlt, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
 
 const AddPatient = () => {
+  const { confirm } = useDialog();
   const [patientImage, setPatientImage] = useState(false);
   const [name, setName] = useState("");
   const [cnic, setCnic] = useState("");
@@ -102,10 +104,10 @@ const AddPatient = () => {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           
           {/* Image Upload Section */}
-          <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+          <div className="p-6 bg-gradient-to-r from-primary-50 to-primary-50 border-b border-gray-100">
             <div className="flex items-center gap-6">
               <label htmlFor="patientImage" className="cursor-pointer">
-                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 hover:border-blue-500 bg-white flex items-center justify-center overflow-hidden transition-all">
+                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 hover:border-primary-600 bg-white flex items-center justify-center overflow-hidden transition-all">
                   {patientImage ? (
                     <img
                       src={URL.createObjectURL(patientImage)}
@@ -142,7 +144,7 @@ const AddPatient = () => {
               {/* Personal Information */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                  <FaUser className="text-blue-600" />
+                  <FaUser className="text-primary-700" />
                   <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
                 </div>
                 
@@ -154,7 +156,7 @@ const AddPatient = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Enter patient's full name"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -169,7 +171,7 @@ const AddPatient = () => {
                         onChange={handleCnicChange}
                         placeholder="1234567890123"
                         maxLength="13"
-                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                         required
                       />
                     </div>
@@ -193,7 +195,7 @@ const AddPatient = () => {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="03001234567"
-                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                         required
                       />
                     </div>
@@ -208,7 +210,7 @@ const AddPatient = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="patient@example.com"
-                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -221,7 +223,7 @@ const AddPatient = () => {
                         type="date"
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                         required
                       />
                     </div>
@@ -232,7 +234,7 @@ const AddPatient = () => {
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                     >
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
@@ -257,7 +259,7 @@ const AddPatient = () => {
                       value={address1}
                       onChange={(e) => setAddress1(e.target.value)}
                       placeholder="Street address, house number"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -269,7 +271,7 @@ const AddPatient = () => {
                       value={address2}
                       onChange={(e) => setAddress2(e.target.value)}
                       placeholder="Area, city, postal code"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                     />
                   </div>
 
@@ -322,7 +324,7 @@ const AddPatient = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading ? (
                   <>
@@ -335,8 +337,8 @@ const AddPatient = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm("Reset all fields? This cannot be undone.")) {
+                onClick={async () => {
+                  if (await confirm({ title: "Clear the form?", message: "Everything you typed on this page will be removed.", confirmLabel: "Clear form", tone: "danger" })) {
                     setName(""); setCnic(""); setPhone(""); setEmail(""); setDob(""); setGender("Male");
                     setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber(""); setLanguage("ur");
                     setPatientImage(false);

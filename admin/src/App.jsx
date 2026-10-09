@@ -42,7 +42,7 @@ const App = () => {
       <ToastContainer />
       {aToken || dToken || lToken ? (
         <NotificationProvider>
-          <div className="min-h-screen bg-[#F8F9FD]">
+          <div className="min-h-screen bg-slate-50">
             <Navbar onMenuClick={() => setNavOpen(true)} />
             <div className="flex">
               <Sidebar mobileOpen={navOpen} onClose={closeNav} />
