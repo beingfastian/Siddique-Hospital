@@ -22,6 +22,11 @@ const fail = (res, error) => {
 // Which doctor's queue: a doctor always gets their own; admin/reception chooses one.
 // Runs after authStaff, which sets req.recipientType / req.recipient.
 export const queueDoctor = (req, res, next) => {
+  // Only reception (admin login) and doctors run queues; lab staff pass authStaff
+  // for notifications but must not reach these routes
+  if (req.recipientType !== "admin" && req.recipientType !== "doctor") {
+    return res.status(403).json({ success: false, message: "You don't have access to this" });
+  }
   const docId = req.recipientType === "doctor" ? req.recipient : req.body?.docId || req.query?.docId;
   if (!docId || !mongoose.isValidObjectId(docId)) {
     return res.json({ success: false, message: "Please select a doctor" });
@@ -41,7 +46,7 @@ export const getQueue = async (req, res) => {
 
 export const issue = async (req, res) => {
   try {
-    const { appointmentId, patientName, phone, notify, language, fee, urgent } = req.body;
+    const { appointmentId, patientName, phone, notify, language, fee, urgent, age, gender } = req.body;
     const { token, existing } = await issueToken({
       docId: req.queueDocId,
       appointmentId,
@@ -51,6 +56,8 @@ export const issue = async (req, res) => {
       language,
       fee,
       urgent,
+      age,
+      gender,
       actor: req.actor,
     });
     res.json({

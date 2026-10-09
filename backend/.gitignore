@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 *.env
 .vercel
+
+# Lab reports when REPORT_STORAGE=local (never commit patient files)
+uploads/

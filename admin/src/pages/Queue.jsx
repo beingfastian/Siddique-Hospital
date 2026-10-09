@@ -17,12 +17,15 @@ import {
   FaSignInAlt,
   FaSyncAlt,
   FaWifi,
+  FaFlask,
 } from "react-icons/fa";
 import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext";
 import { AppContext } from "../context/AppContext";
 import LanguageSelect from "../components/LanguageSelect";
 import { openPrintWindow, printTokenSlip } from "../components/PrintSlip";
+import LabOrderModal from "../components/LabOrderModal";
+import { useLabEnabled } from "../lab/api";
 
 // Live OPD queue for reception (admin login, any doctor) and doctors (their own).
 // Polls every few seconds; keeps working through short internet drops and shows
@@ -53,7 +56,7 @@ const timeOf = (value) =>
 // cover the doctor selector or the pause button
 const TOAST = { autoClose: 2500, position: "bottom-right" };
 
-const emptyWalkIn = { patientName: "", phone: "", notify: false, language: "ur", fee: "", urgent: false };
+const emptyWalkIn = { patientName: "", age: "", gender: "", phone: "", notify: false, language: "ur", fee: "", urgent: false };
 
 const Badge = ({ className, children, title }) => (
   <span title={title} className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${className}`}>
@@ -77,6 +80,8 @@ const Queue = () => {
   const [walkIn, setWalkIn] = useState(emptyWalkIn);
   const [autoPrint, setAutoPrint] = useState(() => readStorage(AUTO_PRINT_KEY, "true") === "true");
   const [showFinished, setShowFinished] = useState(false);
+  const [labFor, setLabFor] = useState(null); // token the doctor is requesting tests for
+  const labEnabled = useLabEnabled();
   const nameInput = useRef(null);
 
   useEffect(() => {
@@ -202,6 +207,8 @@ const Queue = () => {
     const data = await issue(
       {
         patientName: walkIn.patientName,
+        age: walkIn.age,
+        gender: walkIn.gender,
         phone: walkIn.phone,
         notify: walkIn.notify,
         language: walkIn.language,
@@ -374,6 +381,15 @@ const Queue = () => {
                     </button>
                   </div>
                 )}
+                {current && !isAdmin && labEnabled && (
+                  <button
+                    onClick={() => setLabFor(current)}
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-teal-200 text-sm font-medium text-teal-700 hover:bg-teal-50"
+                    title="Send test requests to the lab for this patient"
+                  >
+                    <FaFlask /> Request lab tests
+                  </button>
+                )}
               </div>
             </div>
 
@@ -418,6 +434,34 @@ const Queue = () => {
                     autoComplete="off"
                     maxLength={80}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="q-age">Age (optional)</label>
+                    <input
+                      id="q-age"
+                      inputMode="numeric"
+                      value={walkIn.age}
+                      onChange={(e) => setWalkIn({ ...walkIn, age: e.target.value })}
+                      placeholder="e.g. 45"
+                      maxLength={20}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="q-gender">Gender (optional)</label>
+                    <select
+                      id="q-gender"
+                      value={walkIn.gender}
+                      onChange={(e) => setWalkIn({ ...walkIn, gender: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                    >
+                      <option value="">—</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -653,6 +697,14 @@ const Queue = () => {
             </div>
           </div>
         </>
+      )}
+      {labFor && (
+        <LabOrderModal
+          source={{ queueTokenId: labFor._id }}
+          patientName={labFor.patientName}
+          doctorName={doctorName}
+          onClose={() => setLabFor(null)}
+        />
       )}
     </div>
   );

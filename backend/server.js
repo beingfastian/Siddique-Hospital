@@ -12,6 +12,8 @@ import whatsappRouter from "./routes/whatsappRoute.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import queueRouter from "./routes/queueRoute.js";
+import labRouter from "./routes/labRoute.js";
+import { labStaffModel } from "./model/labModel.js";
 import { testEmailConnection } from "./config/emailService.js";
 import { getWhatsAppProvider } from "./config/whatsappService.js";
 import { startReminderScheduler } from "./jobs/reminders.js";
@@ -56,14 +58,18 @@ app.use(express.urlencoded({ extended: true }));
 app.set("io", io);
 
 // Socket.IO: the client sends its token, and the server decides the room.
-// Admins join "admin"; doctors join "doctor_<id>".
-io.use((socket, next) => {
+// Admins join "admin"; doctors join "doctor_<id>"; lab staff join "lab".
+io.use(async (socket, next) => {
   try {
     const decoded = jwt.verify(socket.handshake.auth?.token || "", process.env.JWT_SECRET);
     if (decoded.role === "admin") {
       socket.data.room = "admin";
     } else if (decoded.role === "doctor" && decoded.id) {
       socket.data.room = `doctor_${decoded.id}`;
+    } else if (decoded.role === "lab" && decoded.id) {
+      // Turned-off lab accounts get no live alerts
+      if (!(await labStaffModel.exists({ _id: decoded.id, active: true }))) return next(new Error("Unauthorized"));
+      socket.data.room = "lab";
     } else {
       return next(new Error("Unauthorized"));
     }
@@ -84,6 +90,7 @@ app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/queue", queueRouter);
+app.use("/api/lab", labRouter);
 
 app.get("/", (req, res) => {
   res.status(200).send("API Working");

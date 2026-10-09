@@ -7,12 +7,14 @@ const NotificationContext = createContext();
 
 export const useNotifications = () => useContext(NotificationContext);
 
-// Header for whichever user is logged in (admin or doctor)
+// Header for whichever user is logged in (admin, doctor or lab)
 const getAuthHeaders = () => {
   const aToken = localStorage.getItem("aToken");
   if (aToken) return { atoken: aToken };
   const dToken = localStorage.getItem("dToken");
-  return dToken ? { dtoken: dToken } : {};
+  if (dToken) return { dtoken: dToken };
+  const lToken = localStorage.getItem("lToken");
+  return lToken ? { ltoken: lToken } : {};
 };
 
 export const NotificationProvider = ({ children }) => {
@@ -38,7 +40,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Connect with the token; the server puts us in the right room
   useEffect(() => {
-    const token = localStorage.getItem("aToken") || localStorage.getItem("dToken");
+    const token = localStorage.getItem("aToken") || localStorage.getItem("dToken") || localStorage.getItem("lToken");
     if (!token) return;
 
     fetchNotifications();

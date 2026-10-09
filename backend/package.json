@@ -10,7 +10,7 @@
     "server": "nodemon server.js",
     "templates:sync": "node scripts/syncTemplates.js",
     "migrate:appointments": "node scripts/migrateAppointments.js",
-    "check:integration": "node scripts/checkIntegration.mjs"
+    "check:integration": "node scripts/checkIntegration.mjs && node scripts/checkLab.mjs"
   },
   "author": "",
   "license": "ISC",
