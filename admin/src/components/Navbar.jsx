@@ -22,6 +22,7 @@ import { DoctorContext } from "../context/DoctorContext";
 import { LabContext } from "../context/LabContext";
 import { useNotifications } from "../context/NotificationContext";
 import { Avatar, Menu } from "./ui";
+import BrandLogo from "./ui/BrandLogo";
 
 // Icon per notification type (same icon set as the rest of the app)
 const NOTIFICATION_ICONS = {
@@ -112,8 +113,9 @@ const Navbar = ({ onMenuClick }) => {
           >
             <FaBars aria-hidden="true" />
           </button>
-          <img src={assets.logo_mark} alt={PRODUCT_NAME} className="h-9 w-9 sm:hidden" />
-          <img src={assets.logo} alt={PRODUCT_NAME} className="hidden h-10 w-auto sm:block" />
+          <span className="sr-only">{PRODUCT_NAME}</span>
+          <img src={assets.logo_mark} alt="" className="h-9 w-9 sm:hidden" />
+          <BrandLogo size="sm" className="hidden sm:inline-flex" />
           <span aria-hidden="true" className="hidden h-8 w-px bg-slate-200 sm:block" />
           <p className="min-w-0 truncate text-sm font-medium text-slate-700">{HOSPITAL_NAME}</p>
         </div>

@@ -2,7 +2,7 @@
 // frontend/.env (VITE_HOSPITAL_*); the defaults are demo placeholders.
 const env = import.meta.env;
 
-export const HOSPITAL_NAME = env.VITE_HOSPITAL_NAME || "Qlinic Demo Hospital";
+export const HOSPITAL_NAME = env.VITE_HOSPITAL_NAME || "Demo Hospital";
 // Optional: shown under the English name on the queue screens
 export const HOSPITAL_NAME_URDU = env.VITE_HOSPITAL_NAME_URDU || "";
 // Contact number used for WhatsApp buttons, calls and contact info.
@@ -15,6 +15,13 @@ export const HOSPITAL_HOURS_URDU = env.VITE_HOSPITAL_HOURS_URDU || "";
 // Optional: your Google Maps link; otherwise the address is searched on Google Maps
 export const HOSPITAL_MAP_URL = env.VITE_HOSPITAL_MAP_URL || "";
 
+// Contact for the product itself (demo requests, sales). Falls back to the
+// hospital's number/email so an existing setup keeps working.
+export const SALES_PHONE = env.VITE_SALES_PHONE || HOSPITAL_PHONE;
+export const SALES_EMAIL = env.VITE_SALES_EMAIL || HOSPITAL_EMAIL;
+// Optional: where staff sign in (the admin app), shown as "Staff sign in"
+export const STAFF_APP_URL = env.VITE_STAFF_APP_URL || "";
+
 // The product itself
-export const PRODUCT_NAME = "Qlinic";
+export const PRODUCT_NAME = "Qclinics";
 export const PRODUCT_TAGLINE = "Care without the wait.";

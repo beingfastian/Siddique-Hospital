@@ -37,44 +37,73 @@ const createTransporter = () => {
   }
   return transporter;
 };
-// Email template with the hospital's details
-const getEmailTemplate = (title, content, type = 'info') => {
-  const colors = {
-    info: '#4CAF50',
-    warning: '#FF9800',
-    success: '#2196F3'
-  };
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: ${colors[type]}; margin-bottom: 10px;">🏥 ${HOSPITAL_NAME}</h1>
-        <h2 style="color: #333; margin-top: 0;">${title}</h2>
-      </div>
-      
-      ${content}
-      
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
-        <h3 style="color: #333; margin-top: 0;">📍 Hospital Information</h3>
-        ${HOSPITAL_ADDRESS ? `<p style="color: #666; margin: 5px 0;"><strong>Address:</strong> ${HOSPITAL_ADDRESS}</p>` : ''}
-        <p style="color: #666; margin: 5px 0;"><strong>Phone:</strong> ${HOSPITAL_PHONE}</p>
-        <p style="color: #666; margin: 5px 0;"><strong>WhatsApp:</strong> ${HOSPITAL_PHONE}</p>
-        ${HOSPITAL_EMAIL ? `<p style="color: #666; margin: 5px 0;"><strong>Email:</strong> ${HOSPITAL_EMAIL}</p>` : ''}
-      </div>
-      
-      <div style="text-align: center; margin-top: 30px;">
-        <p style="color: #666; font-size: 14px;">
-          Thank you for choosing ${HOSPITAL_NAME} for your healthcare needs!
-        </p>
-        <p style="color: #999; font-size: 12px; margin-top: 20px;">
-          This is an automated email. Please do not reply to this email.
-        </p>
-        <p style="color: #999; font-size: 12px; margin-top: 8px;">
-          Powered by <strong style="color: #5F6FFF;">${PRODUCT_NAME}</strong> · ${PRODUCT_TAGLINE}
-        </p>
-      </div>
-    </div>
-  `;
+// --- Email layout (design-system/qclinics/MASTER.md: brand teal, slate text) ---
+// Inline styles and a system font stack: email apps ignore web fonts and <style>.
+const BRAND = "#0E7490";
+const TEXT = "#0F172A";
+const MUTED = "#475569";
+const LINE = "#E2E8F0";
+const FONT = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+// Names and notes are typed by staff: never put them into the HTML unescaped
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+export const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+
+// Label / value rows (values are escaped here)
+export const detailsTable = (rows) => `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px;">
+    ${rows
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(
+        ([label, value]) => `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid ${LINE};color:${MUTED};font-size:14px;width:40%;">${escapeHtml(label)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LINE};color:${TEXT};font-size:14px;font-weight:600;">${escapeHtml(value)}</td>
+      </tr>`
+      )
+      .join("")}
+  </table>`;
+
+export const paragraph = (html) => `<p style="margin:0 0 16px;color:${TEXT};font-size:15px;line-height:1.6;">${html}</p>`;
+
+// Light box for notes; tone "warning" for security notices
+export const noteBox = (html, tone = "info") => {
+  const [bg, border] = tone === "warning" ? ["#FFFBEB", "#FDE68A"] : ["#F8FAFC", LINE];
+  return `<div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:14px 16px;margin:0 0 20px;color:${MUTED};font-size:14px;line-height:1.6;">${html}</div>`;
 };
+
+// The frame every email uses: hospital name on top, contact details and
+// "Powered by" at the bottom. `type` is kept for older callers (no longer used).
+// eslint-disable-next-line no-unused-vars
+const getEmailTemplate = (title, content, type = "info") => `
+<!doctype html>
+<html><body style="margin:0;padding:0;background:#F1F5F9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:24px 12px;font-family:${FONT};">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
+        <tr><td style="background:${BRAND};padding:18px 24px;">
+          <div style="color:#FFFFFF;font-size:18px;font-weight:700;">${escapeHtml(HOSPITAL_NAME)}</div>
+        </td></tr>
+        <tr><td style="padding:24px;">
+          <h1 style="margin:0 0 16px;color:${TEXT};font-size:20px;line-height:1.3;">${escapeHtml(title)}</h1>
+          ${content}
+        </td></tr>
+        <tr><td style="padding:16px 24px;border-top:1px solid ${LINE};background:#F8FAFC;color:${MUTED};font-size:13px;line-height:1.6;">
+          <strong style="color:${TEXT};">${escapeHtml(HOSPITAL_NAME)}</strong><br>
+          ${HOSPITAL_ADDRESS ? `${escapeHtml(HOSPITAL_ADDRESS)}<br>` : ""}
+          Phone / WhatsApp: ${escapeHtml(HOSPITAL_PHONE)}${HOSPITAL_EMAIL ? ` · ${escapeHtml(HOSPITAL_EMAIL)}` : ""}
+        </td></tr>
+      </table>
+      <p style="margin:14px 0 0;color:#64748B;font-size:12px;font-family:${FONT};">
+        This is an automated email, please don't reply.<br>
+        Powered by <strong style="color:${BRAND};">${PRODUCT_NAME}</strong> · ${PRODUCT_TAGLINE}
+      </p>
+    </td></tr>
+  </table>
+</body></html>`;
+
+const feeText = (fee) => `Rs. ${Number(fee || 0).toLocaleString("en-PK")}`;
+
 // Send appointment confirmation to user
 export const sendUserAppointmentConfirmation = async (userEmail, userName, doctorName, doctorSpeciality, appointmentDate, appointmentTime, fee) => {
   try {
@@ -82,58 +111,28 @@ export const sendUserAppointmentConfirmation = async (userEmail, userName, docto
       return { success: false, error: 'Email not configured' };
     }
     const transporter = createTransporter();
-    const content = `
-      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: #333; margin-top: 0;">Dear ${userName},</h3>
-        <p style="color: #666; line-height: 1.6;">
-          Your appointment has been successfully booked. Here are the details:
-        </p>
-      </div>
-      
-      <div style="background-color: #fff; border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h3 style="color: #4CAF50; margin-top: 0; margin-bottom: 15px;">📋 Appointment Details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Doctor:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">Dr. ${doctorName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Speciality:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${doctorSpeciality}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${formatDate(appointmentDate)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${appointmentTime}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;"><strong>Fee:</strong></td>
-            <td style="padding: 10px 0;">Rs. ${fee}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h4 style="color: #2e7d32; margin-top: 0;">📝 Important Notes:</h4>
-        <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
-          <li>Please arrive 10 minutes before your scheduled appointment</li>
-          <li>Bring a valid ID and any relevant medical documents</li>
-          <li>You can cancel or reschedule up to 24 hours before your appointment</li>
-          <li>For WhatsApp updates, reply with STATUS to check appointment status</li>
-        </ul>
-      </div>
-    `;
-    
+    const content =
+      paragraph(`Dear ${escapeHtml(userName)}, your appointment is booked.`) +
+      detailsTable([
+        ["Doctor", `Dr. ${doctorName}`],
+        ["Speciality", doctorSpeciality],
+        ["Date", formatDate(appointmentDate)],
+        ["Time", appointmentTime],
+        ["Fee", feeText(fee)],
+      ]) +
+      noteBox(
+        `Please arrive 10 minutes early and bring your CNIC and any previous reports.<br>` +
+          `On the day, reception gives you a token and you can follow your turn on your phone.<br>` +
+          `To change or cancel, call or WhatsApp us on ${escapeHtml(HOSPITAL_PHONE)}.`
+      );
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: userEmail,
-      subject: `🏥 Appointment Confirmed - ${HOSPITAL_NAME}`,
-      html: getEmailTemplate('Appointment Confirmed! ✅', content, 'success')
+      subject: `Appointment confirmed: Dr. ${doctorName}, ${formatDate(appointmentDate)} at ${appointmentTime}`,
+      html: getEmailTemplate('Appointment confirmed', content, 'success')
     };
-    
+
     const info = await transporter.sendMail(mailOptions);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -147,54 +146,24 @@ export const sendDoctorAppointmentNotification = async (doctorEmail, doctorName,
       return { success: false, error: 'Email not configured' };
     }
     const transporter = createTransporter();
-    const content = `
-      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: #333; margin-top: 0;">Dear Dr. ${doctorName},</h3>
-        <p style="color: #666; line-height: 1.6;">
-          You have a new appointment booking. Please review the details below:
-        </p>
-      </div>
-      
-      <div style="background-color: #fff; border: 2px solid #2196F3; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h3 style="color: #2196F3; margin-top: 0; margin-bottom: 15px;">👤 Patient Details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Patient Name:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${userName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Patient Email:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${userEmail}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Appointment Date:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${formatDate(appointmentDate)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Appointment Time:</strong></td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${appointmentTime}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;"><strong>Consultation Fee:</strong></td>
-            <td style="padding: 10px 0;">Rs. ${fee}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="color: #1976d2; margin: 0; font-weight: 500;">
-          💡 Please log in to your doctor dashboard to manage this appointment.
-        </p>
-      </div>
-    `;
-    
+    const content =
+      paragraph(`Dear Dr. ${escapeHtml(doctorName)}, a new appointment has been booked with you.`) +
+      detailsTable([
+        ["Patient", userName],
+        ["Patient email", userEmail],
+        ["Date", formatDate(appointmentDate)],
+        ["Time", appointmentTime],
+        ["Fee", feeText(fee)],
+      ]) +
+      noteBox(`Sign in to ${PRODUCT_NAME} to see your day, the queue and the patient's history.`);
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: doctorEmail,
-      subject: `📅 New Appointment Booked - ${HOSPITAL_NAME}`,
-      html: getEmailTemplate('New Appointment Booked! 📅', content, 'info')
+      subject: `New appointment: ${userName}, ${formatDate(appointmentDate)} at ${appointmentTime}`,
+      html: getEmailTemplate('New appointment', content, 'info')
     };
-    
+
     const info = await transporter.sendMail(mailOptions);
     return { success: true, messageId: info.messageId };
   } catch (error) {

@@ -1,9 +1,6 @@
 import { useEffect } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
-import About from "./pages/About.jsx";
-import Doctors from "./pages/Doctors.jsx";
-import Contact from "./pages/Contact.jsx";
 import Navbar, { MobileActionBar } from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import { ToastContainer } from "react-toastify";
@@ -48,10 +45,8 @@ const App = () => {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/doctors" element={<Doctors />} />
-          <Route path="/doctors/:speciality" element={<Doctors />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
+          {/* The old patient-site pages (doctors, about, contact) were removed: send old links home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <Footer />

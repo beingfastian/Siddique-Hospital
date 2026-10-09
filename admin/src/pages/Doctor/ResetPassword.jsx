@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import {assets}from "../../assets/assets";
+import BrandLogo from "../../components/ui/BrandLogo";
 
 const ResetPassword = () => {
   const resetToken = sessionStorage.getItem("resetToken") || "";
@@ -67,7 +67,7 @@ const ResetPassword = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="bg-primary p-6 text-center">
-          <div className="mx-auto mb-3 inline-block rounded-xl bg-white px-4 py-2"><img src={assets.logo} alt="Qlinic" className="h-10 w-auto" /></div>
+          <div className="mx-auto mb-3 inline-block rounded-xl bg-white px-4 py-2"><BrandLogo size="sm" /></div>
           <h2 className="text-2xl font-bold text-white">Reset Password</h2>
           <p className="text-primary-100 mt-2">Create a new password for your account</p>
         </div>

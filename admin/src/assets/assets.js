@@ -1,7 +1,7 @@
-import logo from "./qlinic-logo.png"; // full logo: mark, Qlinic, tagline
-import logo_mark from "./qlinic-mark.png"; // the Q mark alone, for small spaces
+// The Q mark from the official logo file. Until the Qclinics logo file arrives, the
+// name is set as text next to it (components: BrandLogo / Logo).
+import logo_mark from "./qclinics-mark.png";
 
 export const assets = {
-  logo,
   logo_mark,
 };

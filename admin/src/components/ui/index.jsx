@@ -1,4 +1,4 @@
-// Shared building blocks for the staff panel (design-system/qlinic/MASTER.md, section 5).
+// Shared building blocks for the staff panel (design-system/qclinics/MASTER.md, section 5).
 // Every screen should use these instead of hand-styled buttons, cards and badges,
 // so the whole product looks like one product.
 import { forwardRef, useEffect, useId, useRef, useState } from "react";
