@@ -15,6 +15,7 @@ import { LANGUAGES } from "../whatsapp/templates.js";
 import { parsePercent, profitReport, ProfitError, visitSplit } from "../services/profitService.js";
 import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES, hospitalSlotDate } from "../utils/slots.js";
 import { queueTokenModel } from "../model/queueModel.js";
+import { todaySummary } from "../services/todayService.js";
 import {
   AppointmentError,
   validateSlot,
@@ -937,7 +938,7 @@ const appointmentStats = async ([startMs, endMs]) => {
 // API to get dashboard data for admin panel
 const adminDashboard = async (req, res) => {
   try {
-    const [doctors, patients, appointments, latestAppointments, today, last30Days] = await Promise.all([
+    const [doctors, patients, appointments, latestAppointments, today, last30Days, todayDoctors, pendingLeave] = await Promise.all([
       doctorModel.countDocuments({}),
       userModel.countDocuments({}),
       appointmentModel.countDocuments({}),
@@ -951,10 +952,12 @@ const adminDashboard = async (req, res) => {
         })()
       ),
       appointmentStats([Date.now() - 30 * 86400000, Date.now()]),
+      todaySummary(),
+      leaveRequestModel.countDocuments({ status: "pending" }),
     ]);
 
     // Additive fields only: existing screens keep reading doctors/patients/appointments/latestAppointments
-    const dashData = { doctors, patients, appointments, latestAppointments, today, last30Days };
+    const dashData = { doctors, patients, appointments, latestAppointments, today, last30Days, todayDoctors, pendingLeave };
     res.json({ success: true, dashData });
   } catch (error) {
     console.error(error);

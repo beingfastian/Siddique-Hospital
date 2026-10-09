@@ -2,7 +2,8 @@
 // Every screen should use these instead of hand-styled buttons, cards and badges,
 // so the whole product looks like one product.
 import { forwardRef, useEffect, useId, useRef, useState } from "react";
-import { FaEllipsisV, FaSpinner } from "react-icons/fa";
+import { Link } from "react-router-dom";
+import { FaChevronRight, FaEllipsisV, FaSpinner } from "react-icons/fa";
 
 export { default as Avatar } from "./Avatar";
 export { DialogProvider, useDialog } from "./Dialog";
@@ -131,30 +132,46 @@ export const AppointmentStatus = ({ item }) => {
   if (item.cancelled) return <Badge tone="danger">Cancelled</Badge>;
   if (item.isCompleted) return <Badge tone="success">Completed</Badge>;
   if (item.status === "no_show") return <Badge tone="warning">No-show</Badge>;
-  return <Badge tone="info">Booked</Badge>;
+  // Arrived and given a queue token (walk-ins always are)
+  if (item.type === "walk_in" || (item.history || []).some((h) => h.action === "checked_in")) return <Badge tone="info">In queue</Badge>;
+  return <Badge tone="neutral">Booked</Badge>;
 };
 
 // --- Numbers ---
 
 // Label, large value, one line of context. Neutral icon (no rainbow tiles).
-export const StatTile = ({ label, value, hint, icon, loading = false, tone }) => (
-  <Card className="min-w-0">
-    <div className="flex items-start justify-between gap-3">
-      <p className="text-sm font-medium text-slate-600">{label}</p>
-      {icon && (
-        <span aria-hidden="true" className="text-slate-400 text-lg">
-          {icon}
-        </span>
+// `to` makes the whole tile a link to the page behind the number.
+export const StatTile = ({ label, value, hint, icon, loading = false, tone, to }) => {
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium text-slate-600">{label}</p>
+        {icon && (
+          <span aria-hidden="true" className="text-slate-400 text-lg">
+            {icon}
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <div className="mt-2 h-8 w-24 rounded bg-slate-100 animate-pulse" />
+      ) : (
+        <p className={cx("mt-1 font-display text-3xl font-semibold tabular-nums", tone === "danger" ? "text-red-700" : tone === "warning" ? "text-amber-800" : "text-slate-900")}>{value}</p>
       )}
-    </div>
-    {loading ? (
-      <div className="mt-2 h-8 w-24 rounded bg-slate-100 animate-pulse" />
-    ) : (
-      <p className={cx("mt-1 font-display text-3xl font-semibold tabular-nums", tone === "danger" ? "text-red-700" : "text-slate-900")}>{value}</p>
-    )}
-    {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-  </Card>
-);
+      {(hint || to) && (
+        <p className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
+          <span>{hint}</span>
+          {to && <FaChevronRight aria-hidden="true" className="shrink-0 text-slate-400" />}
+        </p>
+      )}
+    </>
+  );
+  if (!to) return <Card className="min-w-0">{body}</Card>;
+  return (
+    <Link to={to} className="block min-w-0 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-primary-300 hover:bg-primary-50/30">
+      {body}
+    </Link>
+  );
+};
 
 // --- Empty / loading ---
 

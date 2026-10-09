@@ -6,6 +6,7 @@ import { profitReport, ProfitError, visitSplit } from "../services/profitService
 import leaveRequestModel from "../model/leaveRequestModel.js";
 import { createNotification } from "./notificationController.js";
 import { formatSlotDate } from "../utils/slots.js";
+import { todaySummary } from "../services/todayService.js";
 import {
   AppointmentError,
   completeAppointment,
@@ -227,6 +228,8 @@ const doctorDashboard = async (req, res) => {
       // Additive: how many patients never came (for the no-show pitch number)
       noShow: appointments.filter((item) => item.status === "no_show").length,
       latestAppointments: appointments.reverse().slice(0, 5),
+      // Additive: today's numbers for this doctor (to see, seen, queue)
+      today: (await todaySummary({ docId })).doctors[0] || null,
     };
 
     res.json({ success: true, dashData });

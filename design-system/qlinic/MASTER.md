@@ -129,7 +129,9 @@ Scale (staff panel):
 | `Card` | White, `rounded-xl`, `border-slate-200`. |
 | `Badge` | Status colours from section 2 only. |
 | `EmptyState` | Icon, one sentence, the next action. |
-| Tables | Page scrolls (no fixed-height inner boxes); header row sticky; actions = one labelled primary action + "More" menu; destructive actions in the menu and confirmed. |
+| Tables | Page scrolls (no fixed-height inner boxes); header row sticky; actions = one labelled primary action + "More" menu; destructive actions in the menu and confirmed. Lists open on **Today** (Today / Upcoming / Past / All). Cards holding a `Menu` must not use `overflow-hidden`. |
+| `StatTile` | Label, number, one-line hint. Pass `to` when the number has a page behind it (the whole tile becomes the link). |
+| `AppointmentStatus` | The one place appointment status is worded: Booked, In queue, Completed, No-show, Cancelled. |
 
 Icons: one set, `react-icons/fa` (already used). Decorative icons `aria-hidden`; icon-only
 buttons need `aria-label` and a tooltip (`title`).
