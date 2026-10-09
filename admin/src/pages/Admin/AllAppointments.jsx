@@ -1,68 +1,96 @@
-import React, { useContext, useEffect, useState } from "react";
-import { useDialog } from "../../components/ui/Dialog";
-import Avatar from "../../components/ui/Avatar";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash, FaPrint, FaSignInAlt, FaListOl, FaCalendarPlus } from "react-icons/fa";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
-import { assets } from "../../assets/assets.js";
-import { FaWhatsapp, FaEnvelope, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash, FaPrint } from "react-icons/fa";
 import { printAppointmentSlip } from "../../components/PrintSlip";
-import { hasStarted } from "../../utils/slots";
+import { appointmentTime, compareSlotDates, hasStarted, hospitalSlotDate } from "../../utils/slots";
 import { AdminRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
+import { AppointmentStatus, Avatar, Badge, Button, Card, EmptyState, Input, Menu, Segmented, Select, useDialog } from "../../components/ui";
+
+const PAGE_SIZE = 50;
+
+const isOpen = (item) => !item.cancelled && !item.isCompleted && item.status !== "no_show";
+const checkedIn = (item) => item.type === "walk_in" || (item.history || []).some((h) => h.action === "checked_in");
+
+const TypeBadge = ({ item }) =>
+  item.type === "walk_in" ? (
+    <Badge tone="neutral" title="Came without an appointment (live queue)">Walk-in</Badge>
+  ) : item.type === "follow_up" ? (
+    <Badge tone="followup" title={item.createdBy?.role === "doctor" ? "Scheduled by the doctor" : "Follow-up visit"}>
+      Follow-up
+    </Badge>
+  ) : null;
 
 const AllAppointments = () => {
   const { confirm, alert } = useDialog();
+  const navigate = useNavigate();
   const { aToken, appointments, getAllAppointments, doctors, getAllDoctors, cancelAppointment, rescheduleDay, cancelDay, markNoShow } =
     useContext(AdminContext);
+  const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
   const [rescheduleFor, setRescheduleFor] = useState(null);
   const [showDayActions, setShowDayActions] = useState(false);
-  const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
+  const [range, setRange] = useState("today");
+  const [filterDoctor, setFilterDoctor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterNotification, setFilterNotification] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [shown, setShown] = useState(PAGE_SIZE);
 
   useEffect(() => {
     if (aToken) {
       getAllAppointments();
       getAllDoctors();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aToken]);
 
-  const filteredAppointments = appointments.filter(item => {
-    const matchesSearch = item.userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.docData.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (!matchesSearch) return false;
-    
-    if (filterStatus !== "all") {
-      if (filterStatus === "cancelled" && !item.cancelled) return false;
-      if (filterStatus === "completed" && item.isCompleted === false) return false;
-      if (filterStatus === "no_show" && item.status !== "no_show") return false;
-      if (filterStatus === "pending" && (item.cancelled || item.isCompleted || item.status === "no_show")) return false;
+  useEffect(() => setShown(PAGE_SIZE), [range, filterDoctor, filterStatus, filterNotification, searchTerm]);
+
+  const today = hospitalSlotDate();
+  const inRange = useMemo(() => {
+    const groups = { today: [], upcoming: [], past: [], all: appointments };
+    for (const item of appointments) {
+      const order = compareSlotDates(item.slotDate, today);
+      if (order === 0) groups.today.push(item);
+      else if (order > 0) groups.upcoming.push(item);
+      else groups.past.push(item);
     }
-    
-    if (filterNotification !== "all") {
+    return groups;
+  }, [appointments, today]);
+
+  const filteredAppointments = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const list = inRange[range].filter((item) => {
+      if (term) {
+        const haystack = [item.userData?.name, item.docData?.name, item.userData?.phone, item.userData?.whatsappNumber].join(" ").toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      if (filterDoctor !== "all" && item.docId !== filterDoctor) return false;
+      if (filterStatus === "cancelled" && !item.cancelled) return false;
+      if (filterStatus === "completed" && !item.isCompleted) return false;
+      if (filterStatus === "no_show" && item.status !== "no_show") return false;
+      if (filterStatus === "pending" && !isOpen(item)) return false;
       if (filterNotification === "whatsapp" && !item.userData?.whatsappEnabled) return false;
       if (filterNotification === "email" && item.userData?.whatsappEnabled) return false;
-    }
-    
-    return true;
-  });
+      return true;
+    });
+    // Today and upcoming: soonest first. Past and all: newest first.
+    const direction = range === "today" || range === "upcoming" ? 1 : -1;
+    return list.sort((a, b) => direction * (appointmentTime(a) - appointmentTime(b)));
+  }, [inRange, range, searchTerm, filterDoctor, filterStatus, filterNotification]);
 
-  // Follow-up visits booked by a doctor
-  const getTypeBadge = (item) =>
-    item.type === "walk_in" ? (
-      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium" title="Came without an appointment (live queue)">
-        Walk-in
-      </span>
-    ) : item.type === "follow_up" && (
-      <span
-        className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
-        title={item.createdBy?.role === "doctor" ? "Scheduled by the doctor" : "Follow-up visit"}
-      >
-        Follow-up
-      </span>
-    );
+  const summary = useMemo(() => {
+    const s = { open: 0, completed: 0, noShow: 0, cancelled: 0 };
+    for (const a of filteredAppointments) {
+      if (a.cancelled) s.cancelled++;
+      else if (a.isCompleted) s.completed++;
+      else if (a.status === "no_show") s.noShow++;
+      else s.open++;
+    }
+    return s;
+  }, [filteredAppointments]);
 
   // The patient's slip again (lost slip, or booked by phone and collected at the counter)
   const printSlip = (item) => {
@@ -77,332 +105,251 @@ const AllAppointments = () => {
     if (!ok) alert({ title: "Couldn't open the print window", message: "The browser blocked it. Allow pop-ups for this site, then try again." });
   };
 
-  // Reschedule / cancel for appointments that haven't happened yet
-  const actionButtons = (item) =>
-    !item.cancelled && !item.isCompleted && (
-      <>
-        <button
-          onClick={() => printSlip(item)}
-          className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-          title="Print slip"
-          aria-label="Print slip"
-        >
-          <FaPrint className="w-4 h-4" />
-        </button>
-        {item.type !== "walk_in" && (
-        <button
-          onClick={() => setRescheduleFor(item)}
-          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
-          title="Reschedule"
-          aria-label="Reschedule"
-        >
-          <FaExchangeAlt className="w-4 h-4" />
-        </button>
-        )}
-        <button
-          onClick={async () =>
-            (await confirm({
-              title: `Cancel ${item.userData.name}'s appointment?`,
-              message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
-              confirmLabel: "Cancel appointment",
-              tone: "danger",
-            })) && cancelAppointment(item._id)
-          }
-          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          title="Cancel"
-          aria-label="Cancel appointment"
-        >
-          <FaTimes className="w-4 h-4" />
-        </button>
-      </>
-    );
+  const askNoShow = async (item) =>
+    (await confirm({
+      title: `Mark ${item.userData.name} as no-show?`,
+      message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
+      confirmLabel: "Mark no-show",
+    })) && markNoShow(item._id);
 
-  const getStatusBadge = (item) => {
-    if (item.cancelled) {
-      return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">Cancelled</span>;
-    } else if (item.isCompleted) {
-      return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">Completed</span>;
-    } else if (item.status === "no_show") {
-      return <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">No-show</span>;
-    } else {
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">Pending</span>;
-    }
+  const askCancel = async (item) =>
+    (await confirm({
+      title: `Cancel ${item.userData.name}'s appointment?`,
+      message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
+      confirmLabel: "Cancel appointment",
+      tone: "danger",
+    })) && cancelAppointment(item._id);
+
+  const openQueue = (item) => navigate(`/queue?doc=${item.docId}`);
+
+  // One labelled action for what reception does next with this row
+  const primaryAction = (item) => {
+    if (!isOpen(item)) return null;
+    const isToday = item.slotDate === today;
+    if (isToday && !checkedIn(item)) return { key: "checkin", label: "Check in", icon: <FaSignInAlt />, onClick: () => openQueue(item), title: `Opens Dr. ${item.docData.name}'s queue to give a token` };
+    if (isToday) return { key: "queue", label: "Open queue", icon: <FaListOl />, onClick: () => openQueue(item) };
+    if (hasStarted(item)) return { key: "noshow", label: "Mark no-show", icon: <FaUserSlash />, onClick: () => askNoShow(item) };
+    if (item.type !== "walk_in") return { key: "reschedule", label: "Reschedule", icon: <FaExchangeAlt />, onClick: () => setRescheduleFor(item) };
+    return null;
   };
+
+  const rowActions = (item) => {
+    const primary = primaryAction(item);
+    const active = !item.cancelled && !item.isCompleted;
+    const items = [
+      { label: "Print slip", icon: <FaPrint />, onClick: () => printSlip(item), hidden: !active },
+      { label: "Reschedule", icon: <FaExchangeAlt />, onClick: () => setRescheduleFor(item), hidden: !active || item.type === "walk_in" || primary?.key === "reschedule" },
+      { label: "Mark no-show", icon: <FaUserSlash />, onClick: () => askNoShow(item), hidden: !isOpen(item) || !hasStarted(item) || primary?.key === "noshow" },
+      { divider: true, hidden: !active },
+      { label: "Cancel appointment", icon: <FaTimes />, onClick: () => askCancel(item), tone: "danger", hidden: !active },
+    ];
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {primary && (
+          <Button size="sm" variant={primary.key === "checkin" ? "primary" : "secondary"} icon={primary.icon} onClick={primary.onClick} title={primary.title}>
+            {primary.label}
+          </Button>
+        )}
+        <Menu label={`More actions for ${item.userData.name}`} items={items} />
+      </div>
+    );
+  };
+
+  const filtersOn = searchTerm || filterDoctor !== "all" || filterStatus !== "all" || filterNotification !== "all";
+  const rangeTitle = { today: "today", upcoming: "coming up", past: "in the past", all: "yet" }[range];
+  const visible = filteredAppointments.slice(0, shown);
 
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-slate-900">All Appointments</h1>
-            <p className="text-gray-600 mt-1">Overview of all appointments in the system</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowDayActions(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <FaCalendarDay className="text-primary-700" />
-              Manage a day
-            </button>
-          </div>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold text-slate-900">Appointments</h1>
+          <p className="mt-1 text-sm text-slate-600">Check patients in, reschedule or cancel. Today first.</p>
         </div>
-        
-        {/* Search and Filters */}
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by patient or doctor name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-              />
-            </div>
-            
-            <div className="flex gap-3">
-              <select 
-                value={filterStatus} 
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="no_show">No-show</option>
-              </select>
-              
-              <select 
-                value={filterNotification} 
-                onChange={(e) => setFilterNotification(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
-              >
-                <option value="all">All Notifications</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="email">Email Only</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <FaWhatsapp className="text-green-500" />
-                {appointments.filter(a => a.userData?.whatsappEnabled).length} WhatsApp enabled
-              </span>
-              <span className="text-gray-400">|</span>
-              <span>Total: {appointments.length} appointments</span>
-            </div>
-            <span>Showing: {filteredAppointments.length} results</span>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <Button icon={<FaCalendarDay />} onClick={() => setShowDayActions(true)}>
+            Manage a day
+          </Button>
+          <Button variant="primary" icon={<FaCalendarPlus />} onClick={() => navigate("/book-appointment")}>
+            Book appointment
+          </Button>
         </div>
       </div>
 
-      {/* Appointments Table */}
-      <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        {/* Desktop Header */}
-        <div className="hidden lg:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-700">
-          <div className="col-span-2">Patient</div>
-          <div className="col-span-1">Age</div>
-          <div className="col-span-2">Date & Time</div>
+      {/* Range, search and filters */}
+      <Card className="mb-4 space-y-3">
+        <Segmented
+          label="Which appointments"
+          value={range}
+          onChange={setRange}
+          options={[
+            { value: "today", label: "Today", count: inRange.today.length },
+            { value: "upcoming", label: "Upcoming", count: inRange.upcoming.length },
+            { value: "past", label: "Past", count: inRange.past.length },
+            { value: "all", label: "All", count: appointments.length },
+          ]}
+        />
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="relative flex-1">
+            <FaSearch aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type="search"
+              aria-label="Search appointments"
+              placeholder="Search by patient, phone or doctor"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:flex">
+            <Select aria-label="Doctor" value={filterDoctor} onChange={(e) => setFilterDoctor(e.target.value)} className="lg:w-48">
+              <option value="all">All doctors</option>
+              {doctors.map((d) => (
+                <option key={d._id} value={d._id}>
+                  Dr. {d.name}
+                </option>
+              ))}
+            </Select>
+            <Select aria-label="Status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="lg:w-40">
+              <option value="all">Any status</option>
+              <option value="pending">Booked / in queue</option>
+              <option value="completed">Completed</option>
+              <option value="no_show">No-show</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+            <Select aria-label="Messages" value={filterNotification} onChange={(e) => setFilterNotification(e.target.value)} className="lg:w-40">
+              <option value="all">Any messages</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email only</option>
+            </Select>
+          </div>
+        </div>
+        <p className="text-sm text-slate-600 tabular-nums">
+          {filteredAppointments.length} shown · {summary.open} booked or in queue · {summary.completed} completed · {summary.noShow} no-show ·{" "}
+          {summary.cancelled} cancelled
+        </p>
+      </Card>
+
+      {/* Appointments (no overflow-hidden: the "More" menus must not be clipped) */}
+      <Card padded={false}>
+        <div className="hidden lg:grid grid-cols-12 gap-4 rounded-t-xl border-b border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700">
+          <div className="col-span-2">{range === "today" ? "Time" : "Date & time"}</div>
+          <div className="col-span-3">Patient</div>
           <div className="col-span-2">Doctor</div>
           <div className="col-span-1">Fee</div>
-          <div className="col-span-1">Contact</div>
           <div className="col-span-2">Status</div>
-          <div className="col-span-1">Actions</div>
+          <div className="col-span-2 text-right">Actions</div>
         </div>
 
-        {/* Appointments List */}
-        <div className="overflow-x-auto">
-          {filteredAppointments.length > 0 ? (
-            filteredAppointments.map((item, index) => (
-              <div key={index} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors">
-                {/* Desktop Layout */}
-                <div className="hidden lg:grid grid-cols-12 gap-4 p-4 items-center">
-                  <div className="col-span-2 flex items-center gap-3 min-w-0">
-                    <Avatar src={item.userData.image} name={item.userData.name} className="w-10 h-10" textClass="text-sm" />
-                    <div>
-                      <p className="font-semibold text-gray-900">{item.userData.name}</p>
-                      {item.userData.whatsappEnabled && (
-                        <p className="text-xs text-green-600">{item.userData.whatsappNumber}</p>
-                      )}
+        {visible.length > 0 ? (
+          <ul className="divide-y divide-slate-100">
+            {visible.map((item) => (
+              <li key={item._id} className="px-5 py-3">
+                {/* Desktop */}
+                <div className="hidden lg:grid grid-cols-12 items-center gap-4">
+                  <div className="col-span-2 text-sm">
+                    {range !== "today" && <p className="font-medium text-slate-900">{slotDateFormat(item.slotDate)}</p>}
+                    <p className={range === "today" ? "font-medium tabular-nums text-slate-900" : "tabular-nums text-slate-600"}>{item.slotTime}</p>
+                  </div>
+                  <div className="col-span-3 flex min-w-0 items-center gap-3">
+                    <Avatar src={item.userData.image} name={item.userData.name} className="h-9 w-9 shrink-0" textClass="text-sm" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{item.userData.name}</p>
+                      <p className="flex items-center gap-1.5 truncate text-sm text-slate-600">
+                        {item.userData.whatsappEnabled ? (
+                          <FaWhatsapp className="shrink-0 text-emerald-700" title="WhatsApp messages on" aria-label="WhatsApp messages on" />
+                        ) : (
+                          <FaEnvelope className="shrink-0 text-slate-500" title="Email only" aria-label="Email only" />
+                        )}
+                        <span className="truncate">
+                          {item.userData.whatsappNumber || item.userData.phone || ""}
+                          {calculateAge(item.userData.dob) !== "—" ? ` · ${calculateAge(item.userData.dob)} yrs` : ""}
+                        </span>
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="col-span-1 text-gray-600">
-                    {calculateAge(item.userData.dob)}
-                  </div>
-                  
-                  <div className="col-span-2 text-gray-600">
-                    <p className="font-medium">{slotDateFormat(item.slotDate)}</p>
-                    <p className="text-sm text-gray-500">{item.slotTime}</p>
-                  </div>
-                  
-                  <div className="col-span-2 flex items-center gap-2">
-                    <Avatar src={item.docData.image} name={item.docData.name} className="w-8 h-8" textClass="text-xs" />
-                    <span className="font-medium text-gray-900">{item.docData.name}</span>
-                  </div>
-                  
-                  <div className="col-span-1 font-semibold text-gray-900">
+                  <div className="col-span-2 truncate text-sm text-slate-900">Dr. {item.docData.name}</div>
+                  <div className="col-span-1 text-sm tabular-nums text-slate-900">
                     {currency} {item.amount ?? item.docData.fee}
                   </div>
-                  
-                  <div className="col-span-1">
-                    {item.userData?.whatsappEnabled ? (
-                      <FaWhatsapp className="text-green-500 text-lg" title="WhatsApp" />
-                    ) : (
-                      <FaEnvelope className="text-primary-600 text-lg" title="Email" />
-                    )}
-                  </div>
-                  
                   <div className="col-span-2 flex flex-wrap items-center gap-1">
-                    {getStatusBadge(item)}
-                    {getTypeBadge(item)}
-                    {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
-                      <button
-                        onClick={async () =>
-                          (await confirm({
-                            title: `Mark ${item.userData.name} as no-show?`,
-                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
-                            confirmLabel: "Mark no-show",
-                          })) && markNoShow(item._id)
-                        }
-                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Mark as no-show"
-                      >
-                        <FaUserSlash className="w-4 h-4" />
-                      </button>
-                    )}
+                    <AppointmentStatus item={item} />
+                    <TypeBadge item={item} />
                   </div>
-
-                  <div className="col-span-1 flex gap-1">{actionButtons(item)}</div>
+                  <div className="col-span-2">{rowActions(item)}</div>
                 </div>
 
-                {/* Mobile Layout */}
-                <div className="lg:hidden p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar src={item.userData.image} name={item.userData.name} className="w-12 h-12" textClass="text-base" />
-                      <div>
-                        <p className="font-semibold text-gray-900">{item.userData.name}</p>
-                        <p className="text-sm text-gray-500">Age: {calculateAge(item.userData.dob)}</p>
+                {/* Phone and tablet */}
+                <div className="space-y-2 lg:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar src={item.userData.image} name={item.userData.name} className="h-10 w-10 shrink-0" textClass="text-sm" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-900">{item.userData.name}</p>
+                        <p className="text-sm text-slate-600">
+                          {range !== "today" && `${slotDateFormat(item.slotDate)}, `}
+                          {item.slotTime} · Dr. {item.docData.name}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      {getStatusBadge(item)}
-                      {getTypeBadge(item)}
-                      {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
-                        <button
-                          onClick={async () =>
-                            (await confirm({
-                            title: `Mark ${item.userData.name} as no-show?`,
-                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
-                            confirmLabel: "Mark no-show",
-                          })) && markNoShow(item._id)
-                          }
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                          title="Mark as no-show"
-                        >
-                          <FaUserSlash className="w-4 h-4" />
-                        </button>
-                      )}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <AppointmentStatus item={item} />
+                      <TypeBadge item={item} />
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Date & Time</p>
-                      <p className="font-medium">{slotDateFormat(item.slotDate)}</p>
-                      <p className="text-gray-600">{item.slotTime}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Doctor</p>
-                      <p className="font-medium">{item.docData.name}</p>
-                      <p className="text-gray-600">{currency} {item.amount ?? item.docData.fee}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {item.userData?.whatsappEnabled ? (
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <FaWhatsapp />
-                          <span>WhatsApp</span>
-                        </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                      {item.userData.whatsappEnabled ? (
+                        <FaWhatsapp className="text-emerald-700" aria-label="WhatsApp messages on" />
                       ) : (
-                        <div className="flex items-center gap-1 text-xs text-primary-700">
-                          <FaEnvelope />
-                          <span>Email</span>
-                        </div>
+                        <FaEnvelope className="text-slate-500" aria-label="Email only" />
                       )}
-                    </div>
-                    <div className="flex gap-1">{actionButtons(item)}</div>
+                      <span className="tabular-nums">
+                        {currency} {item.amount ?? item.docData.fee}
+                      </span>
+                    </span>
+                    {rowActions(item)}
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FaSearch className="text-gray-400 text-xl" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm || filterStatus !== "all" || filterNotification !== "all" 
-                  ? "No matching appointments found" 
-                  : "No appointments yet"
-                }
-              </h3>
-              <p className="text-gray-500">
-                {searchTerm || filterStatus !== "all" || filterNotification !== "all"
-                  ? "Try adjusting your search or filter criteria"
-                  : "Appointments will appear here once patients book with doctors"
-                }
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={<FaSearch />}
+            title={filtersOn ? "No matching appointments" : `No appointments ${rangeTitle}`}
+            description={filtersOn ? "Try a different name, doctor or status." : "Booked visits and walk-ins will appear here."}
+            action={
+              filtersOn ? (
+                <Button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterDoctor("all");
+                    setFilterStatus("all");
+                    setFilterNotification("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : (
+                <Button variant="primary" icon={<FaCalendarPlus />} onClick={() => navigate("/book-appointment")}>
+                  Book appointment
+                </Button>
+              )
+            }
+          />
+        )}
 
-      {/* Summary Stats */}
-      {appointments.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
-            <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
-            <div className="text-sm text-gray-500">Total</div>
+        {filteredAppointments.length > shown && (
+          <div className="border-t border-slate-100 p-4 text-center">
+            <Button onClick={() => setShown(shown + PAGE_SIZE)}>
+              Show {Math.min(PAGE_SIZE, filteredAppointments.length - shown)} more ({filteredAppointments.length - shown} left)
+            </Button>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {appointments.filter(a => !a.isCompleted && !a.cancelled && a.status !== "no_show").length}
-            </div>
-            <div className="text-sm text-gray-500">Pending</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {appointments.filter(a => a.isCompleted).length}
-            </div>
-            <div className="text-sm text-gray-500">Completed</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
-            <div className="text-2xl font-bold text-red-600">
-              {appointments.filter(a => a.cancelled).length}
-            </div>
-            <div className="text-sm text-gray-500">Cancelled</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-100 text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {appointments.filter(a => a.status === "no_show").length}
-            </div>
-            <div className="text-sm text-gray-500">No-show</div>
-          </div>
-        </div>
-      )}
+        )}
+      </Card>
 
-      {rescheduleFor && (
-        <AdminRescheduleModal appointment={rescheduleFor} onClose={() => setRescheduleFor(null)} />
-      )}
+      {rescheduleFor && <AdminRescheduleModal appointment={rescheduleFor} onClose={() => setRescheduleFor(null)} />}
       {showDayActions && (
         <DayActionsDialog
           doctors={doctors}

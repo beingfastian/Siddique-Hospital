@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useDialog } from "../components/ui/Dialog";
 import axios from "axios";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   FaBullhorn,
@@ -229,7 +230,9 @@ const Queue = () => {
   const isAdmin = Boolean(aToken);
   const headers = useMemo(() => (aToken ? { atoken: aToken } : { dtoken: dToken }), [aToken, dToken]);
 
-  const [docId, setDocId] = useState(() => (isAdmin ? readStorage(DOCTOR_KEY, "") : ""));
+  // Admin: a doctor picked on the dashboard (?doc=) wins over the remembered one
+  const [searchParams] = useSearchParams();
+  const [docId, setDocId] = useState(() => (isAdmin ? searchParams.get("doc") || readStorage(DOCTOR_KEY, "") : ""));
   const [queue, setQueue] = useState(null);
   const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState(""); // which action is running, to disable double clicks

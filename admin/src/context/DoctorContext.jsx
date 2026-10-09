@@ -152,7 +152,8 @@ const DoctorContextProvider = (props) => {
     return data;
   };
 
-  const getDashData = async () => {
+  // silent: background refresh, no error pop-ups on a weak connection
+  const getDashData = async ({ silent = false } = {}) => {
     try {
       const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", {
         headers: { dToken },
@@ -160,11 +161,11 @@ const DoctorContextProvider = (props) => {
       if (data.success) {
         setDashData(data.dashData);
       } else {
-        toast.error(data.message);
+        if (!silent) toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      if (!silent) toast.error(error.message);
     }
   };
 

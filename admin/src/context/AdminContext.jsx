@@ -177,7 +177,8 @@ const markNoShow = async (appointmentId) => {
 };
 
 // Dashboard
-const getDashData = async () => {
+// silent: background refresh, no error pop-ups on a weak connection
+const getDashData = async ({ silent = false } = {}) => {
   try {
     const { data } = await axios.get(
       backendUrl + "/api/admin/dashboard",
@@ -186,10 +187,10 @@ const getDashData = async () => {
     if (data.success) {
       setDashData(data.dashData);
     } else {
-      toast.error(data.message);
+      if (!silent) toast.error(data.message);
     }
   } catch (error) {
-    toast.error(error.message);
+    if (!silent) toast.error(error.message);
   }
 };
 

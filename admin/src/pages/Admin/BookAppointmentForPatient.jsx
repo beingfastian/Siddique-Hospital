@@ -1,224 +1,223 @@
-import React, { useContext, useEffect, useState } from "react";
-import Avatar from "../../components/ui/Avatar";
-import { getDaySlots } from "../../utils/slots";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaChevronLeft, FaChevronRight, FaUserPlus, FaCheck } from "react-icons/fa";
+import { getDaySlots, toSlotDate } from "../../utils/slots";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
-import { toast } from "react-toastify";
-import { FaWhatsapp, FaEnvelope, FaUser, FaCalendarAlt, FaSpinner, FaPlus, FaSearch, FaClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import axios from "axios";
 import PrintSlipDialog from "../../components/PrintSlip";
 import LanguageSelect from "../../components/LanguageSelect";
+import { Avatar, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select, Skeleton } from "../../components/ui";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+const emptyNewPatient = {
+  name: "",
+  email: "",
+  phone: "",
+  cnic: "",
+  dob: "",
+  gender: "Male",
+  address: { line1: "", line2: "" },
+  whatsappEnabled: false,
+  whatsappNumber: "",
+  language: "ur",
+};
+
+// What is still missing on the new-patient form (shown under each field)
+const newPatientErrors = (p) => {
+  const errors = {};
+  if (!p.name.trim()) errors.name = "Enter the patient's name";
+  if (!p.phone.trim()) errors.phone = "Enter a phone number";
+  if (!/^\d{13}$/.test(p.cnic)) errors.cnic = "CNIC must be exactly 13 digits";
+  if (!p.dob) errors.dob = "Enter the date of birth";
+  if (!p.address.line1.trim()) errors.line1 = "Enter the address";
+  if (p.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email.trim())) errors.email = "This email doesn't look right";
+  if (p.whatsappEnabled && !p.whatsappNumber.trim()) errors.whatsappNumber = "Enter the WhatsApp number";
+  return errors;
+};
+
+// Search as you type, the same lookup the live queue uses (phone, name or CNIC)
+const usePatientSearch = (query, backendUrl, aToken) => {
+  const [results, setResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const latest = useRef(0);
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < 2) {
+      setResults(null);
+      setSearching(false);
+      return undefined;
+    }
+    const request = ++latest.current;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await axios.get(`${backendUrl}/api/queue/patients`, { headers: { atoken: aToken }, params: { q: text }, timeout: 15000 });
+        if (request === latest.current) setResults(data.success ? data.patients : []);
+      } catch {
+        if (request === latest.current) setResults([]);
+      } finally {
+        if (request === latest.current) setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, backendUrl, aToken]);
+  return { results, searching };
+};
+
+// Start the new-patient form with what was typed in the search box
+const prefillFrom = (query) => {
+  const text = query.trim();
+  const digits = text.replace(/\D/g, "");
+  if (digits.length === 13 && digits === text.replace(/[-\s]/g, "")) return { ...emptyNewPatient, cnic: digits };
+  if (digits.length >= 4 && digits.length >= text.replace(/[\s+()-]/g, "").length - 1) return { ...emptyNewPatient, phone: text };
+  return { ...emptyNewPatient, name: text };
+};
+
+const SummaryRow = ({ label, children }) => (
+  <div className="flex justify-between gap-3 py-2 text-sm">
+    <dt className="text-slate-600">{label}</dt>
+    <dd className="text-right font-medium text-slate-900">{children}</dd>
+  </div>
+);
 
 const BookAppointmentForPatient = () => {
-  const { aToken, doctors, getAllDoctors, backendUrl, patients, getAllPatients } = useContext(AdminContext);
-  const { calculateAge, slotDateFormat, currency } = useContext(AppContext);
-  
-  // Patient selection state
+  const { aToken, doctors, getAllDoctors, backendUrl } = useContext(AdminContext);
+  const { slotDateFormat, currency } = useContext(AppContext);
+
+  // Patient: "existing" (picked from search) or "new" (registered with this booking)
   const [patientSelectionMode, setPatientSelectionMode] = useState("existing");
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [patientSearchTerm, setPatientSearchTerm] = useState("");
-  const [filteredPatients, setFilteredPatients] = useState([]);
-  // New patient form state
-  const [newPatientData, setNewPatientData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    cnic: "",
-    dob: "",
-    gender: "Male",
-    address: { line1: "", line2: "" },
-    whatsappEnabled: false,
-    whatsappNumber: "",
-    language: "ur"
-  });
-  // Appointment booking state
+  const [query, setQuery] = useState("");
+  const [newPatientData, setNewPatientData] = useState(emptyNewPatient);
+  const [showPatientErrors, setShowPatientErrors] = useState(false);
+  const { results, searching } = usePatientSearch(query, backendUrl, aToken);
+
+  // Doctor and time
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [docSlots, setDocSlots] = useState([]);
+  const [month, setMonth] = useState(() => ({ m: new Date().getMonth(), y: new Date().getFullYear() }));
   const [slotIndex, setSlotIndex] = useState(0);
   const [slotTime, setSlotTime] = useState("");
-  const [isBooking, setIsBooking] = useState(false);
-  const [step, setStep] = useState(1);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
   // Set after a booking succeeds: printable slip details
   const [slip, setSlip] = useState(null);
-  const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
 
   useEffect(() => {
-    if (aToken) {
-      getAllDoctors();
-      getAllPatients();
-    }
+    if (aToken) getAllDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aToken]);
 
-  useEffect(() => {
-    if (patientSearchTerm) {
-      const filtered = patients.filter(patient => 
-        patient.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        (patient.email || "").toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        (patient.phone || "").toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        (patient.cnic && patient.cnic.includes(patientSearchTerm))
-      );
-      setFilteredPatients(filtered);
-    } else {
-      setFilteredPatients(patients);
+  // Days in the shown month (from today) with at least one free slot
+  const docSlots = useMemo(() => {
+    if (!selectedDoctor) return [];
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const first = new Date(month.y, month.m, 1);
+    const last = new Date(month.y, month.m + 1, 0);
+    const days = [];
+    for (let date = new Date(first < startOfToday ? startOfToday : first); date <= last; date.setDate(date.getDate() + 1)) {
+      const slots = getDaySlots(selectedDoctor, date, now);
+      if (slots.length) days.push(slots);
     }
-  }, [patients, patientSearchTerm]);
+    return days;
+  }, [selectedDoctor, month]);
 
-  const getAvailableSlots = (doctor, month, year) => {
-    setSlotsLoading(true);
-    setDocSlots([]);
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0);
-    const today = new Date();
-    
-    // Never offer days before today
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    let currentDate = startDate < startOfToday ? startOfToday : startDate;
-    const slots = [];
-    
-    for (let date = new Date(currentDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      const timeSlots = getDaySlots(doctor, date, today);
-      if (timeSlots.length > 0) {
-        slots.push(timeSlots);
-      }
-    }
-
-    setDocSlots(slots);
-    setSlotsLoading(false);
+  const now = new Date();
+  const isCurrentMonth = month.y === now.getFullYear() && month.m === now.getMonth();
+  const changeMonth = (delta) => {
+    setMonth(({ m, y }) => {
+      const d = new Date(y, m + delta, 1);
+      return { m: d.getMonth(), y: d.getFullYear() };
+    });
+    setSlotIndex(0);
+    setSlotTime("");
   };
 
-  const validateCNIC = (cnic) => {
-    const cleanCNIC = cnic.replace(/[-\s]/g, '');
-    return /^\d{13}$/.test(cleanCNIC);
+  const chooseDoctor = (doctor) => {
+    setSelectedDoctor(doctor);
+    setMonth({ m: now.getMonth(), y: now.getFullYear() });
+    setSlotIndex(0);
+    setSlotTime("");
   };
 
   const handleNewPatientDataChange = (field, value) => {
-    if (field === 'cnic') {
-      const cleanValue = value.replace(/[-\s]/g, '').replace(/\D/g, '');
-      if (cleanValue.length <= 13) {
-        setNewPatientData(prev => ({ ...prev, [field]: cleanValue }));
-      }
+    if (field === "cnic") {
+      const clean = value.replace(/\D/g, "");
+      if (clean.length <= 13) setNewPatientData((prev) => ({ ...prev, cnic: clean }));
       return;
     }
-    
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setNewPatientData(prev => ({
-        ...prev,
-        [parent]: { ...prev[parent], [child]: value }
-      }));
+    if (field.includes(".")) {
+      const [parent, child] = field.split(".");
+      setNewPatientData((prev) => ({ ...prev, [parent]: { ...prev[parent], [child]: value } }));
     } else {
-      setNewPatientData(prev => ({ ...prev, [field]: value }));
+      setNewPatientData((prev) => ({ ...prev, [field]: value }));
     }
   };
 
-  const validatePatientSelection = () => {
-    if (patientSelectionMode === "existing") {
-      if (!selectedPatient) {
-        toast.error("Please select a patient");
-        return false;
-      }
-    } else {
-      const { name, email, phone, cnic, dob, address } = newPatientData;
-      if (!name || !email || !phone || !cnic || !dob || !address.line1) {
-        toast.error("Please fill all required patient fields");
-        return false;
-      }
-      
-      if (!validateCNIC(cnic)) {
-        toast.error("CNIC must be exactly 13 digits without dashes");
-        return false;
-      }
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        toast.error("Please enter a valid email address");
-        return false;
-      }
-      
-      if (newPatientData.whatsappEnabled && !newPatientData.whatsappNumber) {
-        toast.error("Please enter WhatsApp number when WhatsApp is enabled");
-        return false;
-      }
-    }
-    return true;
+  const startNewPatient = () => {
+    setPatientSelectionMode("new");
+    setSelectedPatient(null);
+    setNewPatientData(prefillFrom(query));
+    setShowPatientErrors(false);
   };
 
-  const handleDoctorSelection = (doctor) => {
-    setSelectedDoctor(doctor);
-    getAvailableSlots(doctor, selectedMonth, selectedYear);
-    setStep(3);
-    setSlotIndex(0);
-    setSlotTime("");
-  };
-
-  const handleMonthChange = (monthIndex) => {
-    setSelectedMonth(monthIndex);
-    if (selectedDoctor) {
-      getAvailableSlots(selectedDoctor, monthIndex, selectedYear);
-    }
-    setSlotIndex(0);
-    setSlotTime("");
-  };
+  const patientErrors = patientSelectionMode === "new" ? newPatientErrors(newPatientData) : {};
+  const patientReady = patientSelectionMode === "existing" ? Boolean(selectedPatient) : Object.keys(patientErrors).length === 0;
+  const patientData = patientSelectionMode === "existing" ? selectedPatient : newPatientData;
 
   const calculateDiscountedFee = () => {
     if (!selectedDoctor || !discountPercent) return selectedDoctor?.fee || 0;
-    const discount = (selectedDoctor.fee * discountPercent) / 100;
-    return selectedDoctor.fee - discount;
+    return selectedDoctor.fee - (selectedDoctor.fee * discountPercent) / 100;
+  };
+
+  const chosenDate = docSlots[slotIndex]?.[0]?.datetime;
+  const missing = !patientReady ? "the patient" : !selectedDoctor ? "a doctor" : !slotTime ? "a time" : null;
+
+  const resetForm = () => {
+    setSelectedPatient(null);
+    setNewPatientData(emptyNewPatient);
+    setPatientSelectionMode("existing");
+    setQuery("");
+    setShowPatientErrors(false);
+    setSelectedDoctor(null);
+    setSlotIndex(0);
+    setSlotTime("");
+    setDiscountPercent(0);
   };
 
   const bookAppointment = async () => {
+    if (!patientReady) {
+      setShowPatientErrors(true);
+      toast.error(patientSelectionMode === "existing" ? "Please select a patient" : "Please complete the patient's details");
+      return;
+    }
+    if (!selectedDoctor || !slotTime || !chosenDate) {
+      toast.error("Please select a doctor and time slot");
+      return;
+    }
+    setIsBooking(true);
     try {
-      if (!selectedDoctor || !slotTime) {
-        toast.error("Please select a doctor and time slot");
-        return;
-      }
-      
-      setIsBooking(true);
-      const date = docSlots[slotIndex][0].datetime;
-      const slotDate = `${date.getDate()}_${date.getMonth() + 1}_${date.getFullYear()}`;
+      const slotDate = toSlotDate(chosenDate);
       const finalFee = calculateDiscountedFee();
-      
       const bookingData = {
         patientSelectionMode,
-        selectedPatientId: selectedPatient?._id || null,
-        newPatientData: patientSelectionMode === "new" ? newPatientData : null,
+        selectedPatientId: patientSelectionMode === "existing" ? selectedPatient?._id || null : null,
+        newPatientData: patientSelectionMode === "new" ? { ...newPatientData, email: newPatientData.email.trim() } : null,
         docId: selectedDoctor._id,
         slotDate,
         slotTime,
         discountPercent: discountPercent || 0,
-        finalFee: finalFee
+        finalFee,
       };
-      
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/book-appointment-for-patient",
-        bookingData,
-        { headers: { aToken } }
-      );
-      
+      const { data } = await axios.post(backendUrl + "/api/admin/book-appointment-for-patient", bookingData, { headers: { aToken } });
+
       if (data.success) {
         toast.success(data.message);
-
-        // The patient that was actually booked (a patient picked earlier may still be
-        // selected after switching to "Add New Patient")
-        const patientData = patientSelectionMode === "new" ? newPatientData : selectedPatient;
-        if (patientData.whatsappEnabled) {
-          toast.info("WhatsApp confirmation will be sent to patient!");
-        } else {
-          toast.info("Email confirmation will be sent to patient!");
-        }
-
-        // Offer a printable slip while the details are still at hand — the
-        // walk-in patient leaves with the date/time on paper
-        // The server's values, so the slip matches what was saved
+        toast.info(patientData.whatsappEnabled ? "WhatsApp confirmation will be sent to patient!" : "Email confirmation will be sent to patient!");
+        // The server's values, so the slip matches what was saved; the patient
+        // leaves with the date and time on paper
         setSlip({
           patientName: data.appointment?.patientName || patientData.name,
           doctorName: selectedDoctor.name,
@@ -227,20 +226,8 @@ const BookAppointmentForPatient = () => {
           time: data.appointment?.slotTime || slotTime,
           fee: typeof data.appointment?.amount === "number" ? data.appointment.amount : finalFee,
         });
-
-        // Reset form
-        setSelectedPatient(null);
-        setNewPatientData({
-          name: "", email: "", phone: "", cnic: "", dob: "", gender: "Male",
-          address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: "", language: "ur"
-        });
-        setSelectedDoctor(null);
-        setStep(1);
-        setSlotTime("");
-        setDiscountPercent(0);
-        setPatientSelectionMode("existing");
-        getAllDoctors();
-        getAllPatients();
+        resetForm();
+        getAllDoctors(); // fresh booked slots
       } else {
         toast.error(data.message);
       }
@@ -252,635 +239,347 @@ const BookAppointmentForPatient = () => {
     }
   };
 
-  const resetForm = () => {
-    setSelectedPatient(null);
-    setNewPatientData({
-      name: "", email: "", phone: "", cnic: "", dob: "", gender: "Male",
-      address: { line1: "", line2: "" }, whatsappEnabled: false, whatsappNumber: "", language: "ur"
-    });
-    setSelectedDoctor(null);
-    setStep(1);
-    setSlotTime("");
-    setDiscountPercent(0);
-    setPatientSelectionMode("existing");
-  };
-
-  const getSelectedPatientData = () => {
-    return patientSelectionMode === "existing" ? selectedPatient : newPatientData;
-  };
+  const errorFor = (key) => (showPatientErrors ? patientErrors[key] : undefined);
+  const availableDoctors = doctors.filter((d) => d.available);
 
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Book Appointment for Patient</h1>
-            <p className="text-gray-600 mt-1">Schedule appointments for patients with available doctors</p>
-          </div>
-          {step > 1 && (
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Start Over
-            </button>
-          )}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Book appointment</h1>
+          <p className="mt-1 text-sm text-slate-600">Find the patient, pick a doctor and a time.</p>
         </div>
-        
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-8">
-            <div className={`flex items-center ${step >= 1 ? 'text-primary-700' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
-                <FaUser />
-              </div>
-              <span className="ml-3 font-medium">Select Patient</span>
-            </div>
-            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-primary-700' : 'bg-gray-200'} transition-all`}></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-primary-700' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
-                <FaUser />
-              </div>
-              <span className="ml-3 font-medium">Select Doctor</span>
-            </div>
-            <div className={`w-16 h-0.5 ${step >= 3 ? 'bg-primary-700' : 'bg-gray-200'} transition-all`}></div>
-            <div className={`flex items-center ${step >= 3 ? 'text-primary-700' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
-                <FaCalendarAlt />
-              </div>
-              <span className="ml-3 font-medium">Select Time</span>
-            </div>
-          </div>
-        </div>
+        <Button onClick={resetForm}>Start over</Button>
       </div>
-      
-      {/* Step 1: Patient Selection */}
-      {step === 1 && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">1. Select Patient</h2>
-          
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={() => setPatientSelectionMode("existing")}
-              className={`px-6 py-3 rounded-xl border transition-all ${
-                patientSelectionMode === "existing" 
-                  ? "bg-primary-700 text-white border-primary-700" 
-                  : "border-gray-300 hover:border-gray-400 text-gray-700"
-              }`}
-            >
-              Select Existing Patient
-            </button>
-            <button
-              onClick={() => setPatientSelectionMode("new")}
-              className={`px-6 py-3 rounded-xl border transition-all flex items-center gap-2 ${
-                patientSelectionMode === "new" 
-                  ? "bg-primary-700 text-white border-primary-700" 
-                  : "border-gray-300 hover:border-gray-400 text-gray-700"
-              }`}
-            >
-              <FaPlus className="text-sm" /> Add New Patient
-            </button>
-          </div>
-          
-          {patientSelectionMode === "existing" && (
-            <div>
-              <div className="relative mb-4">
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search patients by name, email, phone, or CNIC..."
-                  value={patientSearchTerm}
-                  onChange={(e) => setPatientSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto">
-                {filteredPatients.map((patient) => (
-                  <div
-                    key={patient._id}
-                    onClick={() => setSelectedPatient(patient)}
-                    className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
-                      selectedPatient?._id === patient._id 
-                        ? "border-primary-700 bg-primary-50 shadow-md" 
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar src={patient.image} name={patient.name} className="w-12 h-12" textClass="text-base" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{patient.name}</h3>
-                        <p className="text-sm text-gray-600">{patient.email}</p>
-                        <p className="text-sm text-gray-500">{patient.phone}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
-                            {calculateAge(patient.dob)} years, {patient.gender}
-                          </span>
-                          {patient.whatsappEnabled && (
-                            <FaWhatsapp className="text-green-500 text-sm" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* 1. Patient */}
+          <Card>
+            <CardHeader title="1. Patient" description="Search first, so the same patient isn't registered twice." />
+
+            {patientSelectionMode === "existing" && selectedPatient && (
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 p-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={selectedPatient.name} className="h-10 w-10 shrink-0" textClass="text-sm" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900">{selectedPatient.name}</p>
+                    <p className="text-sm text-slate-600">
+                      {[selectedPatient.age, selectedPatient.gender, selectedPatient.phone, selectedPatient.cnicLast4 && `CNIC ••••${selectedPatient.cnicLast4}`]
+                        .filter(Boolean)
+                        .join(" · ") || "No other details on record"}
+                    </p>
                   </div>
-                ))}
-              </div>
-              
-              {filteredPatients.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  {patientSearchTerm ? "No patients found matching your search." : "No patients available."}
                 </div>
-              )}
-            </div>
-          )}
-          
-          {patientSelectionMode === "new" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                <input
-                  type="text"
-                  value={newPatientData.name}
-                  onChange={(e) => handleNewPatientDataChange('name', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  required
-                />
+                <Button size="sm" variant="ghost" onClick={() => setSelectedPatient(null)}>
+                  Change
+                </Button>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                <input
-                  type="email"
-                  value={newPatientData.email}
-                  onChange={(e) => handleNewPatientDataChange('email', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                <input
-                  type="tel"
-                  value={newPatientData.phone}
-                  onChange={(e) => handleNewPatientDataChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">CNIC (13 digits) *</label>
-                <input
-                  type="text"
-                  value={newPatientData.cnic}
-                  onChange={(e) => handleNewPatientDataChange('cnic', e.target.value)}
-                  placeholder="1234567890123"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  maxLength="13"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter 13 digits without dashes ({newPatientData.cnic.length}/13)
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
-                <input
-                  type="date"
-                  value={newPatientData.dob}
-                  onChange={(e) => handleNewPatientDataChange('dob', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                <select
-                  value={newPatientData.gender}
-                  onChange={(e) => handleNewPatientDataChange('gender', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 1 *</label>
-                <input
-                  type="text"
-                  value={newPatientData.address.line1}
-                  onChange={(e) => handleNewPatientDataChange('address.line1', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
-                <input
-                  type="text"
-                  value={newPatientData.address.line2}
-                  onChange={(e) => handleNewPatientDataChange('address.line2', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
-                />
-              </div>
-              
-              {/* WhatsApp Settings for New Patient */}
-              <div className="md:col-span-2 mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <FaWhatsapp className="text-green-500 text-xl" />
-                    <div>
-                      <p className="font-medium text-gray-700">WhatsApp Notifications</p>
-                      <p className="text-sm text-gray-500">Only turn on if the patient agreed to receive confirmations and reminders on WhatsApp</p>
-                    </div>
+            )}
+
+            {patientSelectionMode === "existing" && !selectedPatient && (
+              <div className="space-y-3">
+                <Field label="Find the patient" htmlFor="book-search">
+                  <div className="relative">
+                    <FaSearch aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="book-search"
+                      type="search"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Phone number, name or CNIC"
+                      autoComplete="off"
+                      className="pl-9"
+                      autoFocus
+                    />
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                </Field>
+
+                {searching && <Skeleton className="h-12 w-full" />}
+                {!searching && results && results.length > 0 && (
+                  <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200" aria-label="Matching patients">
+                    {results.map((p) => (
+                      <li key={p._id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPatient(p)}
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-50"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            <Avatar name={p.name} className="h-9 w-9 shrink-0" textClass="text-sm" />
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium text-slate-900">{p.name}</span>
+                              <span className="block truncate text-sm text-slate-600">
+                                {[p.age, p.gender, p.phone, p.cnicLast4 && `CNIC ••••${p.cnicLast4}`].filter(Boolean).join(" · ")}
+                              </span>
+                            </span>
+                          </span>
+                          {p.whatsappEnabled && <FaWhatsapp className="shrink-0 text-emerald-700" aria-label="WhatsApp messages on" />}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!searching && results && results.length === 0 && (
+                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">No patient found for “{query.trim()}”.</p>
+                )}
+                {!results && query.trim().length < 2 && <p className="text-sm text-slate-500">Type at least 2 letters or digits.</p>}
+
+                <Button icon={<FaUserPlus />} onClick={startNewPatient} variant={results && results.length === 0 ? "primary" : "secondary"}>
+                  Register new patient
+                </Button>
+              </div>
+            )}
+
+            {patientSelectionMode === "new" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Badge tone="info" icon={<FaUserPlus />}>
+                    New patient, registered with this booking
+                  </Badge>
+                  <Button size="sm" variant="ghost" onClick={() => setPatientSelectionMode("existing")}>
+                    Search instead
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Full name" htmlFor="np-name" required error={errorFor("name")}>
+                    <Input id="np-name" value={newPatientData.name} onChange={(e) => handleNewPatientDataChange("name", e.target.value)} invalid={Boolean(errorFor("name"))} autoComplete="off" />
+                  </Field>
+                  <Field label="Phone" htmlFor="np-phone" required error={errorFor("phone")} hint="A family can share one number.">
+                    <Input id="np-phone" type="tel" inputMode="tel" value={newPatientData.phone} onChange={(e) => handleNewPatientDataChange("phone", e.target.value)} placeholder="03xx xxxxxxx" invalid={Boolean(errorFor("phone"))} />
+                  </Field>
+                  <Field label="CNIC" htmlFor="np-cnic" required error={errorFor("cnic")} hint={`13 digits, no dashes (${newPatientData.cnic.length}/13)`}>
+                    <Input id="np-cnic" inputMode="numeric" value={newPatientData.cnic} onChange={(e) => handleNewPatientDataChange("cnic", e.target.value)} placeholder="3520212345671" invalid={Boolean(errorFor("cnic"))} />
+                  </Field>
+                  <Field label="Date of birth" htmlFor="np-dob" required error={errorFor("dob")}>
+                    <Input id="np-dob" type="date" value={newPatientData.dob} onChange={(e) => handleNewPatientDataChange("dob", e.target.value)} invalid={Boolean(errorFor("dob"))} />
+                  </Field>
+                  <Field label="Gender" htmlFor="np-gender">
+                    <Select id="np-gender" value={newPatientData.gender} onChange={(e) => handleNewPatientDataChange("gender", e.target.value)}>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </Select>
+                  </Field>
+                  <Field label="Email (optional)" htmlFor="np-email" error={errorFor("email")}>
+                    <Input id="np-email" type="email" value={newPatientData.email} onChange={(e) => handleNewPatientDataChange("email", e.target.value)} invalid={Boolean(errorFor("email"))} />
+                  </Field>
+                  <Field label="Address" htmlFor="np-line1" required error={errorFor("line1")} className="md:col-span-2">
+                    <Input id="np-line1" value={newPatientData.address.line1} onChange={(e) => handleNewPatientDataChange("address.line1", e.target.value)} placeholder="House, street, village or area" invalid={Boolean(errorFor("line1"))} />
+                  </Field>
+                  <Field label="Address line 2" htmlFor="np-line2" className="md:col-span-2">
+                    <Input id="np-line2" value={newPatientData.address.line2} onChange={(e) => handleNewPatientDataChange("address.line2", e.target.value)} placeholder="City / district" />
+                  </Field>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={newPatientData.whatsappEnabled}
-                      onChange={(e) => handleNewPatientDataChange('whatsappEnabled', e.target.checked)}
-                      className="sr-only peer"
+                      onChange={(e) => handleNewPatientDataChange("whatsappEnabled", e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-primary-700"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    <span>
+                      <span className="flex items-center gap-2 font-medium text-slate-900">
+                        <FaWhatsapp aria-hidden="true" className="text-emerald-700" /> Send confirmations and reminders on WhatsApp
+                      </span>
+                      <span className="block text-sm text-slate-600">Only if the patient agreed to receive messages.</span>
+                    </span>
                   </label>
-                </div>
-                
-                {newPatientData.whatsappEnabled && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      WhatsApp Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={newPatientData.whatsappNumber}
-                      onChange={(e) => handleNewPatientDataChange('whatsappNumber', e.target.value)}
-                      placeholder="e.g., +923001234567"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md outline-primary"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +92 for Pakistan)</p>
-                    <div className="mt-3">
-                      <LanguageSelect
-                        value={newPatientData.language}
-                        onChange={(value) => handleNewPatientDataChange('language', value)}
-                      />
+                  {newPatientData.whatsappEnabled && (
+                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <Field label="WhatsApp number" htmlFor="np-wa" required error={errorFor("whatsappNumber")} hint="With country code, e.g. +923001234567">
+                        <Input id="np-wa" type="tel" value={newPatientData.whatsappNumber} onChange={(e) => handleNewPatientDataChange("whatsappNumber", e.target.value)} placeholder="+923001234567" invalid={Boolean(errorFor("whatsappNumber"))} />
+                      </Field>
+                      <LanguageSelect value={newPatientData.language} onChange={(value) => handleNewPatientDataChange("language", value)} />
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* 2. Doctor */}
+          <Card>
+            <CardHeader title="2. Doctor" description="Only doctors marked available are shown." />
+            {availableDoctors.length ? (
+              <div role="radiogroup" aria-label="Doctor" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {availableDoctors.map((doctor) => {
+                  const chosen = selectedDoctor?._id === doctor._id;
+                  return (
+                    <button
+                      key={doctor._id}
+                      type="button"
+                      role="radio"
+                      aria-checked={chosen}
+                      onClick={() => chooseDoctor(doctor)}
+                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
+                        chosen ? "border-primary bg-primary-50" : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <Avatar src={doctor.image} name={doctor.name} className="h-11 w-11 shrink-0" textClass="text-sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium text-slate-900">Dr. {doctor.name}</span>
+                        <span className="block truncate text-sm text-slate-600">
+                          {doctor.speciality}
+                          {doctor.timings && ` · ${doctor.timings.start}–${doctor.timings.end}`}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-sm font-medium tabular-nums text-slate-900">
+                        {currency} {doctor.fee}
+                      </span>
+                      {chosen && <FaCheck aria-hidden="true" className="shrink-0 text-primary-700" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState title="No doctors available" description="Mark a doctor available in Manage Doctors to book with them." />
+            )}
+          </Card>
+
+          {/* 3. Date and time */}
+          <Card>
+            <CardHeader title="3. Date and time" description={selectedDoctor ? `Free times for Dr. ${selectedDoctor.name}` : "Pick a doctor first."} />
+            {selectedDoctor && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between gap-3">
+                  <Button size="sm" variant="ghost" icon={<FaChevronLeft />} onClick={() => changeMonth(-1)} disabled={isCurrentMonth}>
+                    Previous
+                  </Button>
+                  <p className="font-medium text-slate-900">
+                    {MONTHS[month.m]} {month.y}
+                  </p>
+                  <Button size="sm" variant="ghost" onClick={() => changeMonth(1)}>
+                    Next <FaChevronRight aria-hidden="true" className="ml-1 inline" />
+                  </Button>
+                </div>
+
+                {docSlots.length ? (
+                  <>
+                    <div role="radiogroup" aria-label="Day" className="flex gap-2 overflow-x-auto pb-1">
+                      {docSlots.map((day, index) => {
+                        const date = day[0].datetime;
+                        const chosen = slotIndex === index;
+                        return (
+                          <button
+                            key={toSlotDate(date)}
+                            type="button"
+                            role="radio"
+                            aria-checked={chosen}
+                            aria-label={date.toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })}
+                            onClick={() => {
+                              setSlotIndex(index);
+                              setSlotTime("");
+                            }}
+                            className={`flex min-w-[64px] flex-col items-center rounded-lg border px-3 py-2 transition-colors ${
+                              chosen ? "border-primary bg-primary text-white" : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className="text-xs font-medium uppercase">{date.toLocaleDateString("en-PK", { weekday: "short" })}</span>
+                            <span className="font-display text-xl font-semibold tabular-nums">{date.getDate()}</span>
+                            <span className={`text-xs ${chosen ? "text-primary-100" : "text-slate-500"}`}>{day.length} free</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div role="radiogroup" aria-label="Time" className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                      {docSlots[slotIndex]?.map((item) => (
+                        <button
+                          key={item.time}
+                          type="button"
+                          role="radio"
+                          aria-checked={item.time === slotTime}
+                          onClick={() => setSlotTime(item.time)}
+                          className={`rounded-lg border px-2 py-2 text-sm tabular-nums transition-colors ${
+                            item.time === slotTime ? "border-primary bg-primary text-white" : "border-slate-200 hover:border-primary-300 hover:bg-primary-50"
+                          }`}
+                        >
+                          {item.time.toLowerCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    No free times in {MONTHS[month.m]}.{" "}
+                    <button type="button" onClick={() => changeMonth(1)} className="font-medium underline">
+                      Try next month
+                    </button>
                   </div>
                 )}
               </div>
-            </div>
-          )}
-          
-          <div className="mt-8">
-            <button
-              onClick={() => {
-                if (validatePatientSelection()) {
-                  setStep(2);
-                }
-              }}
-              className="bg-primary-700 text-white px-8 py-3 rounded-lg hover:bg-primary-800 transition-colors font-semibold"
-            >
-              Select Doctor
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Step 2: Doctor Selection */}
-      {step === 2 && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">2. Select Doctor</h2>
-          
-          {getSelectedPatientData() && (
-            <div className="mb-6 p-4 bg-primary-50 rounded-xl border border-primary-200">
-              <h4 className="font-semibold text-primary-900 mb-2">Selected Patient: {getSelectedPatientData().name}</h4>
-              <div className="text-sm text-primary-800 grid grid-cols-2 gap-2">
-                <span>Email: {getSelectedPatientData().email}</span>
-                <span>Phone: {getSelectedPatientData().phone}</span>
-                <span>Age: {calculateAge(getSelectedPatientData().dob)} years</span>
-                <span className="flex items-center gap-1">
-                  {getSelectedPatientData().whatsappEnabled ? (
-                    <>
-                      <FaWhatsapp className="text-green-500" />
-                      WhatsApp Enabled
-                    </>
-                  ) : (
-                    <>
-                      <FaEnvelope className="text-primary-600" />
-                      Email Only
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {doctors.filter(doc => doc.available).map((doctor) => (
-              <div
-                key={doctor._id}
-                onClick={() => handleDoctorSelection(doctor)}
-                className="border border-gray-200 rounded-2xl p-6 cursor-pointer hover:shadow-lg hover:border-primary-300 transition-all duration-300"
-              >
-                <img
-                  className="w-full h-48 object-cover rounded-xl bg-gray-50 mb-4"
-                  src={doctor.image}
-                  alt={doctor.name}
-                />
-                <div className="flex items-center gap-2 text-sm text-green-600 mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Available</span>
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{doctor.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{doctor.speciality}</p>
-                <p className="text-sm text-primary-700 font-semibold">Rs. {doctor.fee}</p>
-                {doctor.timings && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    {doctor.timings.start} - {doctor.timings.end}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-8 flex gap-4">
-            <button
-              onClick={() => setStep(1)}
-              className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Back
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Step 3: Time Slot Selection */}
-      {step === 3 && selectedDoctor && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">3. Select Appointment Time</h2>
-            <button
-              onClick={() => setStep(2)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Back
-            </button>
-          </div>
-          
-          {/* Selected Doctor Info */}
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl mb-6">
-            <img
-              className="w-16 h-16 rounded-xl object-cover border-2 border-primary-700"
-              src={selectedDoctor.image}
-              alt={selectedDoctor.name}
-            />
-            <div>
-              <h3 className="font-semibold text-gray-900">{selectedDoctor.name}</h3>
-              <p className="text-sm text-gray-600">{selectedDoctor.speciality}</p>
-              <p className="text-sm text-primary-700 font-semibold">Fee: Rs. {selectedDoctor.fee}</p>
-            </div>
-          </div>
-          
-          {/* Patient Summary */}
-          <div className="p-4 bg-primary-50 rounded-xl mb-6 border border-primary-200">
-            <h4 className="font-semibold text-primary-900 mb-2">Patient: {getSelectedPatientData().name}</h4>
-            <div className="text-sm text-primary-800 grid grid-cols-2 gap-2">
-              <span>Age: {calculateAge(getSelectedPatientData().dob)} years</span>
-              <span>Gender: {getSelectedPatientData().gender}</span>
-              <span>Phone: {getSelectedPatientData().phone}</span>
-              <span className="flex items-center gap-1">
-                {getSelectedPatientData().whatsappEnabled ? (
-                  <>
-                    <FaWhatsapp className="text-green-500" />
-                    WhatsApp Enabled
-                  </>
-                ) : (
-                  <>
-                    <FaEnvelope className="text-primary-600" />
-                    Email Only
-                  </>
-                )}
-              </span>
-            </div>
-          </div>
-          
-          {/* Month Selection */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Select Month</h4>
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={() => {
-                  const newYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
-                  const newMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
-                  setSelectedYear(newYear);
-                  handleMonthChange(newMonth);
-                }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <FaChevronLeft />
-              </button>
-              
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3 flex-1">
-                {months.map((month, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleMonthChange(index)}
-                    className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
-                      selectedMonth === index
-                        ? "bg-primary-700 text-white shadow-lg"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {month}
-                  </button>
-                ))}
-              </div>
-              
-              <button
-                onClick={() => {
-                  const newYear = selectedMonth === 11 ? selectedYear + 1 : selectedYear;
-                  const newMonth = selectedMonth === 11 ? 0 : selectedMonth + 1;
-                  setSelectedYear(newYear);
-                  handleMonthChange(newMonth);
-                }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <FaChevronRight />
-              </button>
-            </div>
-            <p className="text-center text-gray-600 font-semibold">{months[selectedMonth]} {selectedYear}</p>
-          </div>
-          
-          {/* Date Selection */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Select Date</h4>
-            {slotsLoading ? (
-              <div className="flex items-center gap-2 text-primary-700">
-                <FaSpinner className="animate-spin" /> Loading available dates...
-              </div>
-            ) : docSlots.length > 0 ? (
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {docSlots.map((item, index) => (
-                  <button
-                    key={index}
-                    className={`flex flex-col items-center justify-center min-w-[90px] px-6 py-5 rounded-xl border-2 transition-all duration-200 shadow-md
-                      ${slotIndex === index
-                        ? "bg-primary-700 text-white border-primary-700 scale-105 font-bold"
-                        : "bg-white text-gray-800 border-gray-200 hover:border-primary-600 hover:bg-primary-50"
-                      }`}
-                    onClick={() => {
-                      setSlotIndex(index);
-                      setSlotTime("");
-                    }}
-                  >
-                    {item.length > 0 && (
-                      <>
-                        <span className="uppercase text-sm font-semibold tracking-wide mb-2">
-                          {daysOfWeek[item[0].datetime.getDay()]}
-                        </span>
-                        <span className="text-3xl font-extrabold leading-none mb-1">
-                          {item[0].datetime.getDate()}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {item[0].datetime.toLocaleDateString('en-US', { month: 'short' })}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-red-500 py-4">No available dates for this doctor.</div>
             )}
-          </div>
-          
-          {/* Time Selection */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Select Time</h4>
-            {slotsLoading ? (
-              <div className="flex items-center gap-2 text-primary-700">
-                <FaSpinner className="animate-spin" /> Loading time slots...
-              </div>
-            ) : docSlots.length > 0 && docSlots[slotIndex]?.length > 0 ? (
-              <div className="flex flex-wrap gap-3">
-                {docSlots[slotIndex].map((item, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSlotTime(item.time)}
-                    className={`px-4 py-2 rounded-lg border transition-all shadow-sm ${
-                      item.time === slotTime
-                        ? "bg-primary-700 text-white border-primary-700 scale-105"
-                        : "border-gray-300 hover:border-primary-600 hover:bg-primary-50"
-                    }`}
-                  >
-                    {item.time.toLowerCase()}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-red-500 py-4">No available time slots for this date.</div>
-            )}
-          </div>
-          
-          {/* Discount Section */}
-          <div className="p-4 bg-yellow-50 rounded-xl mb-6 border border-yellow-200">
-            <h4 className="font-medium text-gray-900 mb-3">Apply Discount (Optional)</h4>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Discount Percentage
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md outline-primary"
-                  placeholder="Enter discount %"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Final Fee
-                </label>
-                <div className="px-3 py-2 bg-white border border-gray-300 rounded-md">
-                  <span className="text-lg font-medium text-green-600">
-                    Rs. {calculateDiscountedFee()}
-                  </span>
-                  {discountPercent > 0 && (
-                    <span className="text-sm text-gray-500 ml-2">
-                      (Rs. {(selectedDoctor.fee * discountPercent / 100).toFixed(0)} off)
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Booking Summary & Confirm Button */}
-          {slotTime && (
-            <div className="border-t pt-6">
-              <div className="bg-yellow-50 p-4 rounded-xl mb-4 border border-yellow-200">
-                <h4 className="font-medium text-gray-900 mb-2">Booking Summary</h4>
-                <div className="text-sm space-y-1">
-                  <p><strong>Patient:</strong> {getSelectedPatientData().name}</p>
-                  <p><strong>Doctor:</strong> {selectedDoctor.name}</p>
-                  <p><strong>Date & Time:</strong> {docSlots[slotIndex][0] && slotDateFormat(
-                    `${docSlots[slotIndex][0].datetime.getDate()}_${docSlots[slotIndex][0].datetime.getMonth() + 1}_${docSlots[slotIndex][0].datetime.getFullYear()}`
-                  )} at {slotTime}</p>
-                  <p><strong>Original Fee:</strong> Rs. {selectedDoctor.fee}</p>
-                  {discountPercent > 0 && (
-                    <p><strong>Discount:</strong> {discountPercent}% (Rs. {(selectedDoctor.fee * discountPercent / 100).toFixed(0)})</p>
-                  )}
-                  <p><strong>Final Fee:</strong> Rs. {calculateDiscountedFee()}</p>
-                  <p className="flex items-center gap-1">
-                    <strong>Notification:</strong>
-                    {getSelectedPatientData().whatsappEnabled ? (
-                      <>
-                        <FaWhatsapp className="text-green-500" />
-                        WhatsApp & Email
-                      </>
-                    ) : (
-                      <>
-                        <FaEnvelope className="text-primary-600" />
-                        Email Only
-                      </>
-                    )}
-                  </p>
-                  {patientSelectionMode === "new" && (
-                    <p className="text-primary-700"><strong>Note:</strong> New patient account will be created</p>
-                  )}
-                </div>
-              </div>
-              
-              <button
-                onClick={bookAppointment}
-                disabled={isBooking}
-                className="w-full bg-primary-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg"
-              >
-                {isBooking ? (
-                  <>
-                    <FaSpinner className="w-5 h-5 animate-spin" />
-                    Booking Appointment...
-                  </>
-                ) : (
-                  "Confirm Booking"
-                )}
-              </button>
-            </div>
-          )}
+          </Card>
         </div>
-      )}
 
-      {slip && (
-        <PrintSlipDialog title="Appointment booked" details={slip} onClose={() => setSlip(null)} />
-      )}
+        {/* Summary and confirm */}
+        <div className="lg:col-span-1">
+          <Card className="lg:sticky lg:top-20">
+            <CardHeader title="Booking summary" />
+            <dl className="divide-y divide-slate-100">
+              <SummaryRow label="Patient">
+                {patientSelectionMode === "new" ? newPatientData.name || <span className="text-slate-500">New patient</span> : selectedPatient?.name || <span className="text-slate-500">Not chosen</span>}
+              </SummaryRow>
+              <SummaryRow label="Doctor">{selectedDoctor ? `Dr. ${selectedDoctor.name}` : <span className="text-slate-500">Not chosen</span>}</SummaryRow>
+              <SummaryRow label="Date & time">
+                {slotTime && chosenDate ? `${slotDateFormat(toSlotDate(chosenDate))}, ${slotTime}` : <span className="text-slate-500">Not chosen</span>}
+              </SummaryRow>
+              <SummaryRow label="Messages">
+                {patientData?.whatsappEnabled ? (
+                  <span className="inline-flex items-center gap-1">
+                    <FaWhatsapp aria-hidden="true" className="text-emerald-700" /> WhatsApp & email
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <FaEnvelope aria-hidden="true" className="text-slate-500" /> Email only
+                  </span>
+                )}
+              </SummaryRow>
+            </dl>
+
+            {selectedDoctor && (
+              <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+                <Field label="Discount %" htmlFor="book-discount">
+                  <Input
+                    id="book-discount"
+                    type="number"
+                    min="0"
+                    max="100"
+                    inputMode="numeric"
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                  />
+                </Field>
+                <div>
+                  <p className="mb-1 text-sm font-medium text-slate-700">Fee</p>
+                  <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                    {currency} {calculateDiscountedFee()}
+                  </p>
+                  {discountPercent > 0 && (
+                    <p className="text-xs text-slate-500">
+                      {currency} {((selectedDoctor.fee * discountPercent) / 100).toFixed(0)} off {currency} {selectedDoctor.fee}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Button variant="primary" size="lg" className="mt-4 w-full" loading={isBooking} onClick={bookAppointment} disabled={Boolean(missing && missing !== "the patient") || isBooking}>
+              {isBooking ? "Booking" : "Confirm booking"}
+            </Button>
+            {missing && (
+              <p className="mt-2 text-center text-sm text-slate-600">
+                {missing === "the patient" && patientSelectionMode === "new" ? "Complete the patient's details to continue." : `Choose ${missing} to continue.`}
+              </p>
+            )}
+            {patientSelectionMode === "new" && <p className="mt-2 text-center text-xs text-slate-500">A new patient record will be created.</p>}
+          </Card>
+        </div>
+      </div>
+
+      {slip && <PrintSlipDialog title="Appointment booked" details={slip} onClose={() => setSlip(null)} />}
     </div>
   );
 };

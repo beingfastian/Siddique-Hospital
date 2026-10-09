@@ -77,3 +77,32 @@ export const hasStarted = (appointment, now = new Date()) => {
   if (match[3].toUpperCase() === "PM") hours += 12;
   return new Date(year, month - 1, day, hours, Number(match[2])) <= now;
 };
+
+// Today in the hospital's time zone as "d_m_yyyy" (the computer's clock may be set
+// to another zone), and that day moved by `offsetDays`
+const HOSPITAL_TZ = "Asia/Karachi";
+export const hospitalSlotDate = (offsetDays = 0, now = new Date()) => {
+  const [d, m, y] = now.toLocaleDateString("en-GB", { timeZone: HOSPITAL_TZ }).split("/").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d + offsetDays));
+  return `${day.getUTCDate()}_${day.getUTCMonth() + 1}_${day.getUTCFullYear()}`;
+};
+
+// Sort key for an appointment's date and time (oldest first)
+export const appointmentTime = (appointment) => {
+  if (appointment.startAt) return new Date(appointment.startAt).getTime();
+  const [day, month, year] = String(appointment.slotDate || "").split("_").map(Number);
+  const match = /^(\d{1,2}):(\d{2})\s*([AP]M)$/i.exec(String(appointment.slotTime || "").trim());
+  if (!day || !month || !year) return 0;
+  let hours = match ? Number(match[1]) % 12 : 0;
+  if (match && match[3].toUpperCase() === "PM") hours += 12;
+  return Date.UTC(year, month - 1, day, hours, match ? Number(match[2]) : 0) - 5 * 3600000;
+};
+
+// Compare "d_m_yyyy" dates: negative if a is before b
+export const compareSlotDates = (a, b) => {
+  const key = (s) => {
+    const [d, m, y] = String(s || "").split("_").map(Number);
+    return (y || 0) * 10000 + (m || 0) * 100 + (d || 0);
+  };
+  return key(a) - key(b);
+};
