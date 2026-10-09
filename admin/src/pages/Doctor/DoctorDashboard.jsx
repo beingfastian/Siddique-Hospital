@@ -2,6 +2,7 @@ import React, { useContext, useEffect } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { assets } from "../../assets/assets";
 import { AppContext } from "../../context/AppContext";
+import ProfitReport from "../../components/ProfitReport";
 import { FaWhatsapp, FaEnvelope, FaDollarSign, FaCalendarCheck, FaUsers, FaUserSlash } from "react-icons/fa";
 
 const DoctorDashboard = () => {
@@ -28,10 +29,13 @@ const DoctorDashboard = () => {
           <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 mb-1">Total Earnings</p>
+                <p className="text-sm text-gray-500 mb-1">My Earnings (all time)</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {currency}{dashData.earnings}
+                  {currency}{Number(dashData.earnings || 0).toLocaleString("en-PK")}
                 </p>
+                {dashData.hospitalSharePercent > 0 && (
+                  <p className="text-xs text-gray-500 mt-0.5">After the hospital&apos;s {dashData.hospitalSharePercent}% share</p>
+                )}
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                 <FaDollarSign className="text-green-600 text-xl" />
@@ -80,6 +84,11 @@ const DoctorDashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* The doctor's earnings by day / week / month */}
+        <div className="mb-8">
+          <ProfitReport mode="doctor" headers={{ dtoken: dToken }} />
         </div>
 
         {/* Latest Bookings */}

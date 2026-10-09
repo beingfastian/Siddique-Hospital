@@ -25,6 +25,16 @@ const doctorSchema = new mongoose.Schema(
     },
     sittingDays: { type: [String], default: [] }, // e.g. ["monday", "tuesday"]
     holidays: { type: String, default: "" },
+    // Hospital's share of each consultation fee, in percent (e.g. 25: fee 1000 ->
+    // hospital 250, doctor 750), as agreed between the hospital and the doctor
+    hospitalSharePercent: { type: Number, min: 0, max: 100, default: 0 },
+    // Every change to the share, for the record (past visits keep the share they had)
+    shareHistory: {
+      type: [
+        new mongoose.Schema({ percent: Number, from: { type: Date, default: Date.now }, by: String }, { _id: false }),
+      ],
+      default: [],
+    },
   },
   { minimize: false }
 );

@@ -21,6 +21,7 @@ import {
   rejectLeaveRequest,
   getLeaveStats,
   getSystemStatus,
+  profit,
 } from "../controllers/adminController.js";
 import upload from "../middleware/multer.js";
 import authAdmin from "../middleware/authAdmin.js";
@@ -64,5 +65,6 @@ adminRouter.get("/leave-stats", authAdmin, getLeaveStats);
 adminRouter.get("/dashboard", authAdmin, adminDashboard);
 adminRouter.get("/whatsapp-stats", authAdmin, getWhatsAppStats);
 adminRouter.get("/system-status", authAdmin, getSystemStatus);
+adminRouter.get("/profit", authAdmin, profit);
 
 export default adminRouter;

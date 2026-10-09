@@ -1,4 +1,5 @@
 import validator from "validator";
+import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../model/doctorModel.js";
@@ -11,6 +12,7 @@ import { isEmailConfigured } from "../config/emailService.js";
 import { isWhatsAppConfigured, getWhatsAppProvider } from "../config/whatsappService.js";
 import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
 import { LANGUAGES } from "../whatsapp/templates.js";
+import { parsePercent, profitReport, ProfitError, visitSplit } from "../services/profitService.js";
 import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES, hospitalSlotDate } from "../utils/slots.js";
 import { queueTokenModel } from "../model/queueModel.js";
 import {
@@ -41,10 +43,17 @@ const addDoctor = async (req, res) => {
       whatsappNumber,
       timings,
       sittingDays,
-      holidays
+      holidays,
+      hospitalSharePercent
     } = req.body;
 
     const imageFile = req.file;
+    let sharePercent;
+    try {
+      sharePercent = parsePercent(hospitalSharePercent ?? 0);
+    } catch (error) {
+      return res.json({ success: false, message: error.message });
+    }
 
     // Check for all data to add doctor
     if (
@@ -111,7 +120,9 @@ const addDoctor = async (req, res) => {
       ...((whatsappEnabled === 'true' || whatsappEnabled === true) && { whatsappConsentAt: new Date() }),
       timings: timings ? JSON.parse(timings) : { start: "09:00", end: "17:00" },
       sittingDays: sittingDays ? JSON.parse(sittingDays) : [],
-      holidays: holidays || ""
+      holidays: holidays || "",
+      hospitalSharePercent: sharePercent,
+      shareHistory: [{ percent: sharePercent, from: new Date(), by: "admin" }]
     };
 
     const newDoctor = new doctorModel(doctorData);
@@ -137,8 +148,18 @@ const updateDoctor = async (req, res) => {
       speciality,
       degree,
       address,
-      available
+      available,
+      hospitalSharePercent
     } = req.body;
+
+    let sharePercent;
+    if (hospitalSharePercent !== undefined && hospitalSharePercent !== "") {
+      try {
+        sharePercent = parsePercent(hospitalSharePercent);
+      } catch (error) {
+        return res.json({ success: false, message: error.message });
+      }
+    }
 
     // Validate input
     if (!name || !email || !experience || !fee || !about || !speciality || !degree || !address) {
@@ -174,7 +195,12 @@ const updateDoctor = async (req, res) => {
       speciality,
       degree,
       address,
-      available: available !== undefined ? available : doctor.available
+      available: available !== undefined ? available : doctor.available,
+      // A new share applies to visits completed from now on; past visits keep theirs
+      ...(sharePercent !== undefined && sharePercent !== (doctor.hospitalSharePercent ?? 0) && {
+        hospitalSharePercent: sharePercent,
+        $push: { shareHistory: { percent: sharePercent, from: new Date(), by: "admin" } },
+      }),
     });
 
     res.json({ success: true, message: "Doctor updated successfully" });
@@ -936,7 +962,20 @@ const adminDashboard = async (req, res) => {
   }
 };
 
+// API: hospital profit by day/week/month, for one doctor or all
+const profit = async (req, res) => {
+  try {
+    const { from, to, docId, groupBy } = req.query;
+    if (docId && !mongoose.isValidObjectId(docId)) return res.json({ success: false, message: "Doctor not found" });
+    res.json({ success: true, report: await profitReport({ from, to, docId, groupBy }) });
+  } catch (error) {
+    if (!(error instanceof ProfitError)) console.error(error);
+    res.json({ success: false, message: error instanceof ProfitError ? error.message : "Could not load the report" });
+  }
+};
+
 export {
+  profit,
   addDoctor,
   updateDoctor,
   deleteDoctor,

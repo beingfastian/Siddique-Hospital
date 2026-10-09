@@ -1,4 +1,5 @@
 import React, { useContext, useState } from "react";
+import ShareField, { isValidPercent } from "../../components/ShareField";
 import { assets } from "../../assets/assets.js";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { toast } from "react-toastify";
@@ -13,6 +14,7 @@ const AddDoctor = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [experience, setExperience] = useState("1 Year");
   const [fee, setFee] = useState("");
+  const [sharePercent, setSharePercent] = useState("");
   const [about, setAbout] = useState("");
   const [speciality, setSpeciality] = useState("General physician");
   const [degree, setDegree] = useState("");
@@ -107,6 +109,9 @@ const AddDoctor = () => {
       if (isNaN(fee) || parseFloat(fee) <= 0) {
         return toast.error("Please enter a valid fee amount");
       }
+      if (sharePercent === "" || !isValidPercent(sharePercent)) {
+        return toast.error("Please enter the hospital's share (0 to 100%)");
+      }
 
       if (!validateTimings()) {
         return;
@@ -133,6 +138,7 @@ const AddDoctor = () => {
       formData.append("password", password);
       formData.append("experience", experience);
       formData.append("fee", Number(fee));
+      formData.append("hospitalSharePercent", sharePercent);
       formData.append("about", about);
       formData.append("speciality", speciality);
       formData.append("degree", degree);
@@ -153,7 +159,7 @@ const AddDoctor = () => {
         toast.success(data.message);
         // Reset form
         setName(""); setEmail(""); setAbout(""); setPassword(""); setAddress1(""); setAddress2("");
-        setDegree(""); setFee(""); setDocImg(false); setWhatsappEnabled(false); setWhatsappNumber("");
+        setDegree(""); setFee(""); setSharePercent(""); setDocImg(false); setWhatsappEnabled(false); setWhatsappNumber("");
         setStartTime("09:00"); setEndTime("17:00"); setSittingDays([]); setHolidays(""); setShowPassword(false);
       } else {
         toast.error(data.message);
@@ -366,6 +372,8 @@ const AddDoctor = () => {
                     />
                   </div>
 
+                  <ShareField value={sharePercent} onChange={setSharePercent} fee={fee} required inputClassName="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">About Doctor *</label>
                     <textarea
@@ -514,7 +522,7 @@ const AddDoctor = () => {
                 onClick={() => {
                   if (window.confirm("Reset all fields? This cannot be undone.")) {
                     // Reset form logic here
-                    setName(""); setEmail(""); setPassword(""); setFee(""); setAbout(""); setDegree("");
+                    setName(""); setEmail(""); setPassword(""); setFee(""); setSharePercent(""); setAbout(""); setDegree("");
                     setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");
                     setStartTime("09:00"); setEndTime("17:00"); setSittingDays([]); setHolidays("");
                     setDocImg(false); setShowPassword(false);

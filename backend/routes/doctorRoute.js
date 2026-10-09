@@ -15,6 +15,7 @@ import {
   cancelLeaveRequest,
   getDoctorProfile,
   scheduleFollowUp,
+  earningsReport,
 } from "../controllers/doctorController.js";
 import authDoctor from "../middleware/authDoctor.js";
 import { rescheduleOne, rescheduleWholeDay, cancelWholeDay } from "../controllers/rescheduleController.js";
@@ -35,6 +36,7 @@ doctorRouter.post("/reschedule-appointment", authDoctor, rescheduleOne("doctor")
 doctorRouter.post("/reschedule-day", authDoctor, rescheduleWholeDay("doctor"));
 doctorRouter.post("/cancel-day", authDoctor, cancelWholeDay("doctor"));
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
+doctorRouter.get("/earnings", authDoctor, earningsReport);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, updateDoctorProfile);
 doctorRouter.get("/get-profile", authDoctor, getDoctorProfile);

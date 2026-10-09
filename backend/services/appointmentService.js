@@ -28,6 +28,7 @@ import {
 import { queueNotification } from "./notificationQueue.js";
 import { patientLanguage } from "../whatsapp/templates.js";
 import { queueTokenModel } from "../model/queueModel.js";
+import { shareForCompletion } from "./profitService.js";
 
 // An error whose message is safe to show to staff
 export class AppointmentError extends Error {}
@@ -222,11 +223,15 @@ export const queueBookingNotifications = (appointment, patient, doctor, { notify
 };
 
 // Mark as completed. Only an active appointment can be completed.
+// The fee is split between hospital and doctor now, with the doctor's current share.
 export const completeAppointment = async (appointmentId, actor) => {
+  const appointment = await appointmentModel.findOne({ _id: appointmentId, ...ACTIVE }).select("docId amount").lean();
+  if (!appointment) throw new AppointmentError("This appointment can't be completed (already completed or cancelled)");
+  const share = await shareForCompletion(appointment);
   const updated = await appointmentModel.findOneAndUpdate(
     { _id: appointmentId, ...ACTIVE },
     {
-      $set: { status: "completed", isCompleted: true },
+      $set: { status: "completed", isCompleted: true, completedAt: new Date(), share },
       $push: { history: historyEntry("completed", actor) },
     },
     { new: true }

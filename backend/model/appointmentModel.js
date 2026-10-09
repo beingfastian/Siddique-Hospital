@@ -49,6 +49,15 @@ const appointmentSchema = new mongoose.Schema({
   },
   cancelled: { type: Boolean, default: false },
   isCompleted: { type: Boolean, default: false },
+  completedAt: { type: Date },
+  // How the fee was split when the visit was completed (services/profitService.js),
+  // so a later change to the doctor's share never rewrites past profit.
+  // hospital + doctor = amount.
+  share: {
+    percent: { type: Number }, // hospital's share, in percent
+    hospital: { type: Number },
+    doctor: { type: Number },
+  },
 
   // "new" booked visit, a "follow_up" scheduled from an earlier visit, or a "walk_in"
   // created when reception gives a queue token to a patient without an appointment
