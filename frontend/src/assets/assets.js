@@ -1,6 +1,5 @@
-import logo from "./qlinic-logo.svg";
-import logo_mark from "./qlinic-mark.svg";
-import logo_mark_light from "./qlinic-mark-light.svg"; // on dark backgrounds
+import logo from "./qlinic-logo.png"; // full logo: mark, Qlinic, tagline
+import logo_mark from "./qlinic-mark.png"; // the Q mark alone, for small spaces
 import Dermatologist from "./Dermatologist.svg";
 import Gastroenterologist from "./Gastroenterologist.svg";
 import General_physician from "./General_physician.svg";
@@ -11,7 +10,6 @@ import Pediatricians from "./Pediatricians.svg";
 export const assets = {
   logo,
   logo_mark,
-  logo_mark_light,
 };
 
 export const specialityData = [

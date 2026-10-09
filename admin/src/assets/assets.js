@@ -1,9 +1,7 @@
-import logo from "./qlinic-logo.svg";
-import logo_mark from "./qlinic-mark.svg";
-import logo_mark_light from "./qlinic-mark-light.svg"; // on dark backgrounds
+import logo from "./qlinic-logo.png"; // full logo: mark, Qlinic, tagline
+import logo_mark from "./qlinic-mark.png"; // the Q mark alone, for small spaces
 
 export const assets = {
   logo,
   logo_mark,
-  logo_mark_light,
 };

@@ -2,7 +2,7 @@
 // logo, buttons, contact links, doctor photo and availability.
 import { useState } from "react";
 import { assets } from "../assets/assets";
-import { HOSPITAL_ADDRESS, HOSPITAL_MAP_URL, HOSPITAL_PHONE, PRODUCT_NAME, PRODUCT_TAGLINE } from "../config";
+import { HOSPITAL_ADDRESS, HOSPITAL_MAP_URL, HOSPITAL_PHONE, PRODUCT_NAME } from "../config";
 
 export const cx = (...parts) => parts.filter(Boolean).join(" ");
 
@@ -13,19 +13,21 @@ export const whatsappUrl = (message) => `https://wa.me/${phoneDigits.replace("+"
 export const telUrl = `tel:${phoneDigits}`;
 export const mapUrl = HOSPITAL_MAP_URL || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(HOSPITAL_ADDRESS)}`;
 
-// --- Logo: mark + wordmark (Figtree), see assets/qlinic-mark.svg ---
+// --- Logo: the Qlinic logo image (assets/qlinic-logo.png), hospital name beside it ---
 
-export const Logo = ({ subtitle, tagline = false, light = false, size = "md" }) => (
-  <span className="inline-flex items-center gap-2.5 font-sans leading-normal" dir="ltr" lang="en">
-    <img src={light ? assets.logo_mark_light : assets.logo_mark} alt="" className={size === "lg" ? "h-12 w-12" : "h-9 w-9"} />
-    <span className="leading-tight">
-      <span className={cx("block font-display font-extrabold tracking-tight", size === "lg" ? "text-3xl" : "text-xl", light ? "text-white" : "text-slate-900")}>
-        {PRODUCT_NAME}
-      </span>
-      {(subtitle || tagline) && (
-        <span className={cx("block text-xs font-medium", light ? "text-primary-100" : "text-slate-600")}>{subtitle || PRODUCT_TAGLINE}</span>
-      )}
-    </span>
+export const Logo = ({ subtitle, compact = false }) => (
+  <span className="inline-flex min-w-0 items-center gap-3 font-sans leading-tight" dir="ltr" lang="en">
+    {compact ? (
+      <img src={assets.logo_mark} alt={PRODUCT_NAME} className="h-9 w-9 shrink-0" />
+    ) : (
+      <img src={assets.logo} alt={PRODUCT_NAME} className="h-10 w-auto shrink-0" />
+    )}
+    {subtitle && (
+      <>
+        <span aria-hidden="true" className="hidden h-8 w-px shrink-0 bg-slate-200 sm:block" />
+        <span className="hidden min-w-0 truncate text-sm font-medium text-slate-700 sm:block">{subtitle}</span>
+      </>
+    )}
   </span>
 );
 
