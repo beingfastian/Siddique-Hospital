@@ -4,11 +4,13 @@ import { HOSPITAL_NAME, PRODUCT_NAME } from "../config";
 import { useNavigate } from "react-router-dom";
 import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext";
+import { LabContext } from "../context/LabContext";
 import { useNotifications } from "../context/NotificationContext";
 
 const Navbar = ({ onMenuClick }) => {
   const { aToken, setAToken } = useContext(AdminContext);
   const { dToken, setDToken, doctorData } = useContext(DoctorContext);
+  const { lToken, setLToken, labName } = useContext(LabContext);
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -45,6 +47,10 @@ const Navbar = ({ onMenuClick }) => {
     setDToken("");
     localStorage.removeItem("dToken");
   }
+  if (lToken) {
+    setLToken("");
+    localStorage.removeItem("lToken");
+  }
 
   setShowLogoutConfirm(false);
 
@@ -74,8 +80,12 @@ const Navbar = ({ onMenuClick }) => {
     }
   };
 
-  const userType = aToken ? "Admin" : "Doctor";
-  const userName = aToken ? "Administrator" : (doctorData ? doctorData.name : "Dr. User");
+  const userType = aToken ? "Admin" : lToken && !dToken ? "Lab" : "Doctor";
+  const userName = aToken
+    ? "Administrator"
+    : lToken && !dToken
+      ? labName || "Lab staff"
+      : doctorData ? doctorData.name : "Dr. User";
 
   return (
     <>
@@ -137,7 +147,7 @@ const Navbar = ({ onMenuClick }) => {
             <div className="flex items-center space-x-4">
 
               {/* Notifications - Show for both Admin and Doctor */}
-              {(aToken || dToken) && (
+              {(aToken || dToken || lToken) && (
                 <div className="relative notification-dropdown">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
@@ -278,7 +288,7 @@ const Navbar = ({ onMenuClick }) => {
                       ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-200'
                       : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-200'
                   }`}>
-                    {aToken ? 'A' : 'D'}
+                    {aToken ? 'A' : userType === 'Lab' ? 'L' : 'D'}
                   </div>
                 )}
                 {/* Online indicator */}

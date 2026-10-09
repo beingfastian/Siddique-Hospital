@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext.jsx";
+import { LabContext } from "../context/LabContext.jsx";
+import { useLabEnabled, useLabCounts } from "../lab/api";
 import {
   FaCog,
   FaUserPlus,
@@ -16,6 +18,9 @@ import {
   FaAngleDoubleRight,
   FaTimes,
   FaListOl,
+  FaFlask,
+  FaVials,
+  FaUsersCog,
 } from "react-icons/fa";
 
 const adminSections = [
@@ -47,6 +52,14 @@ const adminSections = [
     ],
   },
   {
+    title: "Lab",
+    items: [
+      { path: "/lab-requests", icon: <FaFlask />, label: "Lab Requests", badge: "labOpen", lab: true },
+      { path: "/lab-tests", icon: <FaVials />, label: "Lab Tests", lab: true },
+      { path: "/lab-staff", icon: <FaUsersCog />, label: "Lab Staff", lab: true },
+    ],
+  },
+  {
     title: "System",
     items: [{ path: "/settings", icon: <FaCog />, label: "Settings" }],
   },
@@ -62,8 +75,19 @@ const doctorSections = [
     items: [
       { path: "/doctor/queue", icon: <FaListOl />, label: "Live Queue" },
       { path: "/doctor/appointments", icon: <FaCalendarAlt />, label: "Appointments" },
+      { path: "/doctor/lab-reports", icon: <FaFlask />, label: "Lab Reports", badge: "labReview", lab: true },
       { path: "/doctor/leave-requests", icon: <FaCalendarCheck />, label: "Leave Requests" },
       { path: "/doctor/profile", icon: <FaUserMd />, label: "Profile" },
+    ],
+  },
+];
+
+const labSections = [
+  {
+    title: "Lab",
+    items: [
+      { path: "/lab", icon: <FaFlask />, label: "Lab Requests", end: true, badge: "labOpen" },
+      { path: "/lab/tests", icon: <FaVials />, label: "Test List" },
     ],
   },
 ];
@@ -74,6 +98,9 @@ const COLLAPSE_KEY = "sidebarCollapsed";
 const Sidebar = ({ mobileOpen, onClose }) => {
   const { aToken, leaveStats, getLeaveStats } = useContext(AdminContext);
   const { dToken } = useContext(DoctorContext);
+  const { lToken } = useContext(LabContext);
+  const labEnabled = useLabEnabled();
+  const labCounts = useLabCounts(labEnabled && Boolean(aToken || dToken || lToken));
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -112,8 +139,15 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  const sections = aToken ? adminSections : dToken ? doctorSections : [];
-  const badges = { pendingLeave: leaveStats?.pending || 0 };
+  // Lab items are hidden when the hospital has the lab module turned off
+  const sections = (aToken ? adminSections : dToken ? doctorSections : lToken ? labSections : [])
+    .map((section) => ({ ...section, items: section.items.filter((item) => labEnabled || !item.lab) }))
+    .filter((section) => section.items.length);
+  const badges = {
+    pendingLeave: leaveStats?.pending || 0,
+    labOpen: labCounts.open || 0,
+    labReview: labCounts.toReview || 0,
+  };
 
   // The drawer on mobile is always shown expanded
   const renderNav = (isCollapsed) => (

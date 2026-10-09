@@ -25,16 +25,22 @@ import ForgotPassword from "./pages/Doctor/ForgotPassword";
 import VerifyOTP from "./pages/Doctor/VerifyOTP";
 import ResetPassword from "./pages/Doctor/ResetPassword";
 import Queue from "./pages/Queue.jsx";
+import { LabContext } from "./context/LabContext.jsx";
+import LabOrders from "./pages/Lab/LabOrders.jsx";
+import LabOrderDetail from "./pages/Lab/LabOrderDetail.jsx";
+import LabTests from "./pages/Lab/LabTests.jsx";
+import LabStaff from "./pages/Lab/LabStaff.jsx";
 
 const App = () => {
   const { aToken } = useContext(AdminContext);
   const { dToken } = useContext(DoctorContext);
+  const { lToken } = useContext(LabContext);
   const [navOpen, setNavOpen] = useState(false);
   const closeNav = useCallback(() => setNavOpen(false), []);
   return (
     <BrowserRouter>
       <ToastContainer />
-      {aToken || dToken ? (
+      {aToken || dToken || lToken ? (
         <NotificationProvider>
           <div className="min-h-screen bg-[#F8F9FD]">
             <Navbar onMenuClick={() => setNavOpen(true)} />
@@ -53,16 +59,29 @@ const App = () => {
                   <Route path="/add-patient" element={<AddPatient />} />
                   <Route path="/leave-management" element={<AdminLeaveManagement />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/lab-requests" element={<LabOrders />} />
+                  <Route path="/lab-requests/:id" element={<LabOrderDetail />} />
+                  <Route path="/lab-tests" element={<LabTests />} />
+                  <Route path="/lab-staff" element={<LabStaff />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-              ) : (
+              ) : dToken ? (
                 <Routes>
                   <Route path="/doctor" element={<DoctorDashboard />} />
                   <Route path="/doctor/queue" element={<Queue />} />
                   <Route path="/doctor/appointments" element={<DoctorAppointments />} />
                   <Route path="/doctor/profile" element={<DoctorProfile />} />
                   <Route path="/doctor/leave-requests" element={<DoctorLeaveRequest />} />
+                  <Route path="/doctor/lab-reports" element={<LabOrders />} />
+                  <Route path="/doctor/lab-reports/:id" element={<LabOrderDetail />} />
                   <Route path="*" element={<Navigate to="/doctor" replace />} />
+                </Routes>
+              ) : (
+                <Routes>
+                  <Route path="/lab" element={<LabOrders />} />
+                  <Route path="/lab/orders/:id" element={<LabOrderDetail />} />
+                  <Route path="/lab/tests" element={<LabTests />} />
+                  <Route path="*" element={<Navigate to="/lab" replace />} />
                 </Routes>
               )}
               </main>

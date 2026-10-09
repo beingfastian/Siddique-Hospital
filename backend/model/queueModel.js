@@ -27,6 +27,9 @@ const queueTokenSchema = new mongoose.Schema({
 
   patientName: { type: String, required: true },
   phone: { type: String },
+  // Optional, as told at reception (the lab needs them to read results against normal ranges)
+  age: { type: String },
+  gender: { type: String, enum: ["Male", "Female", "Other"] },
   // WhatsApp updates (token number, "your turn is near"), only with the patient's consent
   notify: { type: Boolean, default: false },
   language: { type: String, enum: ["ur", "en"], default: "ur" },

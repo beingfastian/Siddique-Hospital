@@ -6,6 +6,7 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { DoctorContext } from "../context/DoctorContext";
+import { LabContext } from "../context/LabContext";
 
 const Login = () => {
   const [state, setState] = useState("Admin");
@@ -18,6 +19,7 @@ const Login = () => {
   
   const { setAToken, backendUrl } = useContext(AdminContext);
   const { setDToken, dToken } = useContext(DoctorContext);
+  const { setLToken } = useContext(LabContext);
   const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {
@@ -33,6 +35,15 @@ const Login = () => {
           localStorage.setItem("aToken", data.token);
           toast.success(data.message);
           setAToken(data.token);
+        } else {
+          toast.error(data.message);
+        }
+      } else if (state === "Lab") {
+        const { data } = await axios.post(backendUrl + "/api/lab/login", { email, password });
+        if (data.success) {
+          localStorage.setItem("lToken", data.token);
+          navigate("/lab");
+          setLToken(data.token);
         } else {
           toast.error(data.message);
         }
@@ -109,6 +120,17 @@ const Login = () => {
               }`}
             >
               Doctor
+            </button>
+            <button
+              type="button"
+              onClick={() => setState("Lab")}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                state === "Lab"
+                  ? "bg-white text-blue-600 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Lab
             </button>
           </div>
 

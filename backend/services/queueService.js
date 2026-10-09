@@ -168,7 +168,7 @@ const isMobileNumber = (e164) => /^\+923\d{9}$/.test(e164) || (/^\+\d{10,15}$/.t
 
 // Give a token to a walk-in, or check in an appointment patient who has arrived.
 // Returns { token, existing } (existing: this appointment was already checked in today).
-export const issueToken = async ({ docId, appointmentId, patientName, phone, notify, language, fee, urgent, actor }) => {
+export const issueToken = async ({ docId, appointmentId, patientName, phone, notify, language, fee, urgent, age, gender, actor }) => {
   const doctor = await doctorModel.findById(docId).select("name fee").lean();
   if (!doctor) throw new QueueError("Doctor not found");
   docId = String(docId);
@@ -218,10 +218,16 @@ export const issueToken = async ({ docId, appointmentId, patientName, phone, not
       : null;
     const feeValue = fee === undefined || fee === null || fee === "" ? Number(doctor.fee) || 0 : Number(fee);
     if (!Number.isFinite(feeValue) || feeValue < 0) throw new QueueError("Please enter a valid fee");
+    const ageText = String(age ?? "").trim().slice(0, 20);
+    if (ageText && !/^\d{1,3}(\s*(y|yr|yrs|years?|m|mo|months?|d|days?))?$/i.test(ageText)) {
+      throw new QueueError("Please enter the age as a number, e.g. 45 (or 6 months)");
+    }
     details = {
       kind: "walk_in",
       ...(user && { userId: String(user._id) }),
       patientName: name.slice(0, 80),
+      ...(ageText && { age: /^\d+$/.test(ageText) ? `${ageText} y` : ageText }),
+      ...(["Male", "Female", "Other"].includes(gender) && { gender }),
       ...(normalized && { phone: normalized }),
       notify: wantsWhatsApp,
       language: LANGUAGES.includes(language) ? language : patientLanguage(user),

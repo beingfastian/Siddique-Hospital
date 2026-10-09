@@ -106,6 +106,32 @@ export const printAppointmentSlip = (details) => {
   return true;
 };
 
+// The patient takes this to the lab, so the lab finds the request quickly.
+// details: { orderNumber, patientName, doctorName, tests: [{ name, sampleType }], urgent, when }
+export const printLabRequestSlip = (details, win = openPrintWindow()) => {
+  if (!win || win.closed) return false;
+  const tests = (details.tests || [])
+    .map((t) => `<div class="row"><span>• ${escapeHtml(t.name)}</span><span class="k">${escapeHtml(t.sampleType || "")}</span></div>`)
+    .join("");
+  writeAndPrint(
+    win,
+    `Lab request L-${details.orderNumber}`,
+    `${header()}
+  <div class="type">Lab Request / <span class="ur">لیبارٹری کی پرچی</span></div>
+  <div class="token" style="font-size:32px">L-${escapeHtml(details.orderNumber)}</div>
+  ${details.urgent ? `<div class="urgent">URGENT / <span class="ur">فوری</span></div>` : ""}
+  ${row("Patient", details.patientName)}
+  ${row("Doctor", `Dr. ${details.doctorName}`)}
+  ${row("Date", details.when)}
+  <hr>
+  ${tests}
+  <hr>
+  <div class="foot">Take this slip to the lab to give your samples.</div>
+  <div class="foot ur">یہ پرچی لیبارٹری میں دکھا کر سیمپل دیں۔</div>`
+  );
+  return true;
+};
+
 // details: { number, patientName, doctorName, dateText, issuedTime, ahead, waitMinutes, urgent, trackUrl }
 // win: a window from openPrintWindow() opened earlier in the click (e.g. before
 // an API call), so the browser doesn't block it

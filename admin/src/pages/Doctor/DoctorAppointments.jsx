@@ -2,7 +2,9 @@ import React, { useContext, useEffect, useState } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
-import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeAlt, FaCalendarDay, FaUserSlash } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaFilter, FaCalendarPlus, FaExchangeAlt, FaCalendarDay, FaUserSlash, FaFlask } from "react-icons/fa";
+import LabOrderModal from "../../components/LabOrderModal";
+import { useLabEnabled } from "../../lab/api";
 import FollowUpModal from "../../components/FollowUpModal";
 import { DoctorRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
@@ -25,6 +27,8 @@ const DoctorAppointments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [followUpFor, setFollowUpFor] = useState(null);
+  const [labFor, setLabFor] = useState(null);
+  const labEnabled = useLabEnabled();
   const [rescheduleFor, setRescheduleFor] = useState(null);
   const [showDayActions, setShowDayActions] = useState(false);
 
@@ -76,6 +80,17 @@ const DoctorAppointments = () => {
 
   const followUpButton = (item) =>
     !item.cancelled && (
+      <>
+      {labEnabled && (
+        <button
+          onClick={() => setLabFor(item)}
+          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+          title="Request lab tests"
+          aria-label="Request lab tests"
+        >
+          <FaFlask className="w-4 h-4" />
+        </button>
+      )}
       <button
         onClick={() => setFollowUpFor(item)}
         className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -84,6 +99,7 @@ const DoctorAppointments = () => {
       >
         <FaCalendarPlus className="w-4 h-4" />
       </button>
+      </>
     );
 
   const getStatusBadge = (item) => {
@@ -402,6 +418,13 @@ const DoctorAppointments = () => {
 
       {followUpFor && (
         <FollowUpModal appointment={followUpFor} onClose={() => setFollowUpFor(null)} />
+      )}
+      {labFor && (
+        <LabOrderModal
+          source={{ appointmentId: labFor._id }}
+          patientName={labFor.userData?.name}
+          onClose={() => setLabFor(null)}
+        />
       )}
       {rescheduleFor && (
         <DoctorRescheduleModal appointment={rescheduleFor} onClose={() => setRescheduleFor(null)} />
