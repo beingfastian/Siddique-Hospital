@@ -169,11 +169,11 @@ const LabOrderDetail = () => {
   const canCancel = (role === "doctor" || role === "admin") && ["ordered", "returned", "report_uploaded"].includes(order.status);
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <Link to={BACK[role]} className="text-primary inline-flex items-center gap-2 mb-4 text-sm"><FaArrowLeft /> All requests</Link>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Lab request L-{order.orderNumber}</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Lab request L-{order.orderNumber}</h1>
         <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${status.className}`}>{status.label}</span>
         {order.urgent && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold bg-red-100 text-red-700">

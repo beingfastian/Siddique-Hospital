@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { FaExclamationTriangle } from "react-icons/fa";
 import DayActionsDialog from "../../components/DayActionsDialog";
 import { AppContext } from "../../context/AppContext.jsx";
+import { StatTile } from "../../components/ui";
 
 const AdminLeaveManagement = () => {
   const { 
@@ -163,32 +164,17 @@ const AdminLeaveManagement = () => {
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Leave Management</h1>
-        <p className="text-gray-600">Manage and review doctor leave requests</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Leave Management</h1>
+        <p className="mt-1 text-sm text-slate-600">Manage and review doctor leave requests</p>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-gray-900">{leaveStats?.total || 0}</div>
-          <div className="text-sm text-gray-500">Total Requests</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-yellow-600">{leaveStats?.pending || 0}</div>
-          <div className="text-sm text-gray-500">Pending</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-green-600">{leaveStats?.approved || 0}</div>
-          <div className="text-sm text-gray-500">Approved</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-red-600">{leaveStats?.rejected || 0}</div>
-          <div className="text-sm text-gray-500">Rejected</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-primary-700">{leaveStats?.thisMonth || 0}</div>
-          <div className="text-sm text-gray-500">This Month</div>
-        </div>
+        <StatTile label="Total requests" value={leaveStats?.total || 0} />
+        <StatTile label="Waiting for review" value={leaveStats?.pending || 0} />
+        <StatTile label="Approved" value={leaveStats?.approved || 0} />
+        <StatTile label="Rejected" value={leaveStats?.rejected || 0} />
+        <StatTile label="This month" value={leaveStats?.thisMonth || 0} />
       </div>
 
       {/* Filters */}

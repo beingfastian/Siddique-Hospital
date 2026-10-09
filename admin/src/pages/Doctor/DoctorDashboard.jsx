@@ -1,10 +1,10 @@
 import React, { useContext, useEffect } from "react";
 import Avatar from "../../components/ui/Avatar";
+import { Skeleton, StatTile } from "../../components/ui";
 import { DoctorContext } from "../../context/DoctorContext";
-import { assets } from "../../assets/assets";
 import { AppContext } from "../../context/AppContext";
 import ProfitReport from "../../components/ProfitReport";
-import { FaWhatsapp, FaEnvelope, FaDollarSign, FaCalendarCheck, FaUsers, FaUserSlash } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaMoneyBillWave, FaCalendarCheck, FaUsers, FaUserSlash } from "react-icons/fa";
 
 const DoctorDashboard = () => {
   const {
@@ -22,81 +22,42 @@ const DoctorDashboard = () => {
     }
   }, [dToken]);
   
-  return (
-    dashData && (
-      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">My Earnings (all time)</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {currency}{Number(dashData.earnings || 0).toLocaleString("en-PK")}
-                </p>
-                {dashData.hospitalSharePercent > 0 && (
-                  <p className="text-xs text-gray-500 mt-0.5">After the hospital&apos;s {dashData.hospitalSharePercent}% share</p>
-                )}
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <FaDollarSign className="text-green-600 text-xl" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Appointments</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashData.appointments}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                <FaCalendarCheck className="text-primary-700 text-xl" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Total Patients</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashData.patients}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                <FaUsers className="text-primary-700 text-xl" />
-              </div>
-            </div>
-          </div>
+  const loading = !dashData;
 
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">No-shows</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashData.noShow ?? 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <FaUserSlash className="text-orange-600 text-xl" />
-              </div>
-            </div>
-          </div>
+  return (
+      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600">Your appointments and earnings.</p>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          <StatTile
+            label="My earnings (all time)"
+            value={`${currency} ${Number(dashData?.earnings || 0).toLocaleString("en-PK")}`}
+            hint={dashData?.hospitalSharePercent > 0 ? `After the hospital's ${dashData.hospitalSharePercent}% share` : undefined}
+            icon={<FaMoneyBillWave />}
+            loading={loading}
+          />
+          <StatTile label="Appointments" value={dashData?.appointments} icon={<FaCalendarCheck />} loading={loading} />
+          <StatTile label="Patients" value={dashData?.patients} icon={<FaUsers />} loading={loading} />
+          <StatTile label="No-shows" value={dashData?.noShow ?? 0} icon={<FaUserSlash />} loading={loading} />
+        </div>
+
+        {loading ? (
+          <Skeleton className="h-64 w-full rounded-xl" />
+        ) : (
+        <>
         {/* The doctor's earnings by day / week / month */}
         <div className="mb-8">
           <ProfitReport mode="doctor" headers={{ dtoken: dToken }} />
         </div>
 
         {/* Latest Bookings */}
-        <div className="bg-white rounded-2xl border border-gray-100">
+        <div className="bg-white rounded-xl border border-slate-200">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Latest Bookings</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Latest bookings</h2>
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <FaWhatsapp className="text-green-500" />
@@ -153,7 +114,8 @@ const DoctorDashboard = () => {
                         <button
                           onClick={() => cancelAppointment(item._id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Cancel"
+                          title="Cancel appointment"
+                          aria-label={`Cancel ${item.userData.name}'s appointment`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -162,7 +124,8 @@ const DoctorDashboard = () => {
                         <button
                           onClick={() => completeAppointment(item._id)}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Complete"
+                          title="Mark completed"
+                          aria-label={`Mark ${item.userData.name}'s appointment completed`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -184,8 +147,9 @@ const DoctorDashboard = () => {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
-    )
   );
 };
 

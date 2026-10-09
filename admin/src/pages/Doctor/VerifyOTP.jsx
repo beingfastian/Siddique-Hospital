@@ -86,9 +86,9 @@ const VerifyOTP = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-center">
+        <div className="bg-primary p-6 text-center">
           <img src={assets.logo} alt="Qlinic" className="h-16 w-auto mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white">Verify OTP</h2>
           <p className="text-primary-100 mt-2">Enter the OTP sent to your email</p>
@@ -121,7 +121,7 @@ const VerifyOTP = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition duration-300 flex items-center justify-center disabled:opacity-70"
+            className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-800 transition-colors flex items-center justify-center disabled:opacity-70"
           >
             {loading ? (
               <>

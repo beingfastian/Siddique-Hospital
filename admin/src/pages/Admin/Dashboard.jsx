@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useDialog } from "../../components/ui/Dialog";
 import Avatar from "../../components/ui/Avatar";
+import { Skeleton, StatTile } from "../../components/ui";
 import { AdminContext } from "../../context/AdminContext.jsx";
-import { assets } from "../../assets/assets.js";
 import { AppContext } from "../../context/AppContext.jsx";
-import { FaWhatsapp, FaEnvelope, FaUserMd, FaCalendarCheck, FaUsers, FaChartLine, FaUserSlash } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaUserMd, FaCalendarCheck, FaUsers, FaUserSlash } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ProfitReport from "../../components/ProfitReport";
@@ -43,114 +43,54 @@ const Dashboard = () => {
     }
   }, [aToken]);
 
-  if (!dashData) {
-    return (
-      <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
-        <div className="animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="bg-gray-200 h-32 rounded-2xl"></div>
-            ))}
-          </div>
-          <div className="bg-gray-200 h-64 rounded-2xl"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const statsCards = [
-    {
-      title: "Total Doctors",
-      value: dashData.doctors,
-      icon: <FaUserMd className="text-2xl" />,
-      color: "text-primary-700",
-      bgColor: "bg-primary-100"
-    },
-    {
-      title: "Total Appointments",
-      value: dashData.appointments,
-      icon: <FaCalendarCheck className="text-2xl" />,
-      color: "text-primary-700",
-      bgColor: "bg-primary-100"
-    },
-    {
-      title: "Total Patients",
-      value: dashData.patients,
-      icon: <FaUsers className="text-2xl" />,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100"
-    },
-    {
-      title: "WhatsApp Enabled",
-      value: whatsappStats.enabledUsers,
-      subtitle: `${whatsappStats.todayNotifications} sent today`,
-      icon: <FaWhatsapp className="text-2xl" />,
-      color: "text-green-600",
-      bgColor: "bg-green-100"
-    },
-    {
-      // The pitch number: of patients who should have come (and didn't cancel
-      // ahead), how many never showed, over the last 30 days
-      title: "No-shows (30 days)",
-      value: dashData.last30Days ? dashData.last30Days.noShow : 0,
-      subtitle: dashData.last30Days
-        ? `${dashData.last30Days.noShowRate}% missed · ${dashData.last30Days.cancelled} cancelled ahead`
-        : undefined,
-      icon: <FaUserSlash className="text-2xl" />,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100"
-    }
-  ];
+  // Tiles keep their slot while loading, so nothing jumps when numbers arrive
+  const loading = !dashData;
+  const last30 = dashData?.last30Days;
 
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's what's happening with your healthcare system today.</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-600">Doctors, bookings and earnings at a glance.</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        {statsCards.map((card, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">{card.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                {card.subtitle && (
-                  <p className="text-xs text-gray-500 mt-1">{card.subtitle}</p>
-                )}
-              </div>
-              <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center`}>
-                <div className={card.color}>
-                  {card.icon}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <StatTile label="Doctors" value={dashData?.doctors} icon={<FaUserMd />} loading={loading} />
+        <StatTile label="Appointments" value={dashData?.appointments} icon={<FaCalendarCheck />} loading={loading} />
+        <StatTile label="Patients" value={dashData?.patients} icon={<FaUsers />} loading={loading} />
+        <StatTile
+          label="WhatsApp enabled"
+          value={whatsappStats.enabledUsers}
+          hint={`${whatsappStats.todayNotifications} messages sent today`}
+          icon={<FaWhatsapp />}
+          loading={loading}
+        />
+        {/* Of patients who should have come (and didn't cancel ahead), how many never showed */}
+        <StatTile
+          label="No-shows (30 days)"
+          value={last30 ? last30.noShow : 0}
+          hint={last30 ? `${last30.noShowRate}% missed · ${last30.cancelled} cancelled ahead` : undefined}
+          icon={<FaUserSlash />}
+          loading={loading}
+        />
       </div>
 
+      {loading ? (
+        <Skeleton className="h-64 w-full rounded-xl" />
+      ) : (
+      <>
       {/* Hospital profit by day / week / month, per doctor or all */}
       <div className="mb-8">
         <ProfitReport mode="admin" headers={{ atoken: aToken }} doctors={doctors} />
       </div>
 
       {/* Latest Bookings */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                <FaChartLine className="text-primary-700" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Latest Bookings</h2>
-                <p className="text-sm text-gray-500">Recent appointment bookings</p>
-              </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Latest bookings</h2>
+              <p className="text-sm text-slate-600">The most recent appointments</p>
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">
@@ -242,6 +182,8 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

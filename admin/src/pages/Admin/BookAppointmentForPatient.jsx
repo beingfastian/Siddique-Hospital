@@ -270,11 +270,11 @@ const BookAppointmentForPatient = () => {
   };
 
   return (
-    <div className="w-full p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-semibold text-primary-700">Book Appointment for Patient</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">Book Appointment for Patient</h1>
             <p className="text-gray-600 mt-1">Schedule appointments for patients with available doctors</p>
           </div>
           {step > 1 && (

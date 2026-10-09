@@ -140,7 +140,7 @@ const ManageDoctors = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Manage Doctors</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">Manage Doctors</h1>
             <p className="text-gray-600 mt-1">View, edit, and manage all doctors in the system</p>
           </div>
           <button 
