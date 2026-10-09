@@ -1,12 +1,18 @@
 import mongoose from "mongoose";
 
+// A patient. Identified by CNIC when given; the phone is a contact number, not an
+// identity: in Pakistan a family often shares one phone (father, mother and children
+// registered on the same number), and some walk-in patients have no phone at all.
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  cnic: { type: String, unique: true, sparse: true }, // Unique CNIC for admin patients
-  phone: { type: String, required: true, unique: true },
-  dob: { type: String, required: true },
+  cnic: { type: String, unique: true, sparse: true }, // Unique CNIC (when known)
+  phone: { type: String, index: true }, // contact number; can be shared by a family
+  // "yyyy-mm-dd". Walk-ins registered at the queue give only an age: dob is then worked
+  // out from it and dobEstimated is true.
+  dob: { type: String },
+  dobEstimated: { type: Boolean },
   gender: { type: String, default: "Male" },
-  address: { type: Object, required: true },
+  address: { type: Object, default: () => ({ line1: "", line2: "" }) },
   image: { type: String },
   whatsappEnabled: { type: Boolean, default: false },
   whatsappNumber: { type: String, default: "" },
@@ -17,6 +23,7 @@ const userSchema = new mongoose.Schema({
   language: { type: String, enum: ["ur", "en"] },
   email: { type: String, unique: true, sparse: true },
   password: { type: String },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const userModel = mongoose.models.user || mongoose.model("user", userSchema);

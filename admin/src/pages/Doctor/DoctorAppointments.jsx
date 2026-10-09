@@ -55,7 +55,11 @@ const DoctorAppointments = () => {
   }).reverse();
 
   const getTypeBadge = (item) =>
-    item.type === "follow_up" && (
+    item.type === "walk_in" ? (
+      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium" title="Came without an appointment (live queue)">
+        Walk-in
+      </span>
+    ) : item.type === "follow_up" && (
       <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">Follow-up</span>
     );
 
@@ -67,7 +71,8 @@ const DoctorAppointments = () => {
     );
 
   const rescheduleButton = (item) =>
-    !item.cancelled && !item.isCompleted && (
+    // Walk-in visits are in the live queue; they have no booked time to move
+    !item.cancelled && !item.isCompleted && item.type !== "walk_in" && (
       <button
         onClick={() => setRescheduleFor(item)}
         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

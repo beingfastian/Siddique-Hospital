@@ -50,8 +50,9 @@ const appointmentSchema = new mongoose.Schema({
   cancelled: { type: Boolean, default: false },
   isCompleted: { type: Boolean, default: false },
 
-  // "new" visit or a "follow_up" scheduled from an earlier visit
-  type: { type: String, enum: ["new", "follow_up"], default: "new" },
+  // "new" booked visit, a "follow_up" scheduled from an earlier visit, or a "walk_in"
+  // created when reception gives a queue token to a patient without an appointment
+  type: { type: String, enum: ["new", "follow_up", "walk_in"], default: "new" },
   parentAppointmentId: { type: String },
   createdBy: { type: actorSchema },
   history: { type: [historySchema], default: [] },

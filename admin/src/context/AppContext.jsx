@@ -24,9 +24,11 @@ const AppContextProvider = (props) => {
     return dateArray[0] + " " + months[dateArray[1]] + " " + dateArray[2];
   };
 
+  // Age in years, or "—" when the date of birth isn't known (e.g. walk-ins with no age given)
   const calculateAge = (dob) => {
     const today = new Date();
     const birthDate = new Date(dob);
+    if (!dob || Number.isNaN(birthDate.getTime())) return "—";
     let age = today.getFullYear() - birthDate.getFullYear();
     const month = today.getMonth() - birthDate.getMonth();
     if (month < 0 || (month === 0 && today.getDate() < birthDate.getDate())) {

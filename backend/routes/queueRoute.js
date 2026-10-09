@@ -1,6 +1,6 @@
 import express from "express";
 import authStaff from "../middleware/authStaff.js";
-import { queueDoctor, getQueue, issue, call, action, pause, board, token } from "../controllers/queueController.js";
+import { queueDoctor, getQueue, issue, call, action, pause, board, token, patients } from "../controllers/queueController.js";
 
 const queueRouter = express.Router();
 
@@ -10,6 +10,7 @@ queueRouter.get("/public/token/:publicId", token);
 
 // Reception (admin login) and doctors (their own queue only)
 queueRouter.get("/", authStaff, queueDoctor, getQueue);
+queueRouter.get("/patients", authStaff, patients);
 queueRouter.post("/issue", authStaff, queueDoctor, issue);
 queueRouter.post("/call", authStaff, queueDoctor, call);
 queueRouter.post("/action", authStaff, queueDoctor, action);

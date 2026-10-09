@@ -11,7 +11,8 @@ import { isEmailConfigured } from "../config/emailService.js";
 import { isWhatsAppConfigured, getWhatsAppProvider } from "../config/whatsappService.js";
 import { isCloudApiConfigured, getTemplateStatuses } from "../whatsapp/cloudApi.js";
 import { LANGUAGES } from "../whatsapp/templates.js";
-import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES } from "../utils/slots.js";
+import { releaseSlot, HOSPITAL_UTC_OFFSET_MINUTES, hospitalSlotDate } from "../utils/slots.js";
+import { queueTokenModel } from "../model/queueModel.js";
 import {
   AppointmentError,
   validateSlot,
@@ -391,6 +392,20 @@ const deleteDoctor = async (req, res) => {
       });
     }
 
+    // Patients still waiting in this doctor's live queue today would be left in a
+    // line nobody can see
+    const stillInQueue = await queueTokenModel.countDocuments({
+      docId: doctorId,
+      day: hospitalSlotDate(new Date()),
+      status: { $in: ["waiting", "called", "skipped"] },
+    });
+    if (stillInQueue) {
+      return res.json({
+        success: false,
+        message: `Cannot delete doctor. ${stillInQueue} patient(s) are still in today's queue. Finish or remove them in Live Queue first.`,
+      });
+    }
+
     // Delete doctor
     await doctorModel.findByIdAndDelete(doctorId);
 
@@ -433,12 +448,12 @@ const addPatient = async (req, res) => {
       return res.json({ success: false, message: "Please enter a valid email" });
     }
 
-    // Check if user already exists
+    // Same person = same CNIC (or email). A shared family phone is allowed.
     const existingUser = await userModel.findOne({
-      $or: [{ cnic }, { phone }, ...(patientEmail ? [{ email: patientEmail }] : [])]
+      $or: [{ cnic }, ...(patientEmail ? [{ email: patientEmail }] : [])]
     });
     if (existingUser) {
-      return res.json({ success: false, message: "Patient with this CNIC, phone or email already exists" });
+      return res.json({ success: false, message: `A patient with this CNIC or email already exists (${existingUser.name})` });
     }
 
     // Upload image if provided
@@ -653,12 +668,12 @@ const bookAppointmentForPatient = async (req, res) => {
         return res.json({ success: false, message: "CNIC must be exactly 13 digits" });
       }
 
-      // Check for existing patient
+      // Same person = same CNIC (or email). A shared family phone is allowed.
       const existingUser = await userModel.findOne({
-        $or: [{ cnic }, { phone }, ...(patientEmail ? [{ email: patientEmail }] : [])]
+        $or: [{ cnic }, ...(patientEmail ? [{ email: patientEmail }] : [])]
       });
       if (existingUser) {
-        return res.json({ success: false, message: "Patient with this CNIC, phone or email already exists" });
+        return res.json({ success: false, message: `A patient with this CNIC or email already exists (${existingUser.name}). Select them as an existing patient.` });
       }
 
       const patientData = {
