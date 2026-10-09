@@ -86,12 +86,12 @@ const VerifyOTP = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-center">
           <img src={assets.logo} alt="Qlinic" className="h-16 w-auto mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white">Verify OTP</h2>
-          <p className="text-blue-100 mt-2">Enter the OTP sent to your email</p>
+          <p className="text-primary-100 mt-2">Enter the OTP sent to your email</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
@@ -105,13 +105,13 @@ const VerifyOTP = () => {
           <div className="mb-6 text-center">
             {!canResend ? (
               <p className="text-gray-600">
-                Resend OTP in <span className="font-medium text-blue-600">{formatTime(timeLeft)}</span>
+                Resend OTP in <span className="font-medium text-primary-700">{formatTime(timeLeft)}</span>
               </p>
             ) : (
               <button
                 type="button"
                 onClick={handleResendOTP}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-primary-700 hover:text-primary-900 font-medium"
               >
                 Resend OTP
               </button>
@@ -121,7 +121,7 @@ const VerifyOTP = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition duration-300 flex items-center justify-center disabled:opacity-70"
+            className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition duration-300 flex items-center justify-center disabled:opacity-70"
           >
             {loading ? (
               <>
@@ -138,7 +138,7 @@ const VerifyOTP = () => {
           
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              <Link to="/forgot-password" className="text-blue-600 hover:text-blue-800 font-medium">
+              <Link to="/forgot-password" className="text-primary-700 hover:text-primary-900 font-medium">
                 Back to Forgot Password
               </Link>
             </p>

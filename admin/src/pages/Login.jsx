@@ -69,10 +69,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-primary-50 to-primary-100 flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-blue-200/30 to-indigo-200/30 blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-primary-200/30 to-primary-200/30 blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-tr from-violet-200/30 to-pink-200/30 blur-3xl"></div>
       </div>
 
@@ -82,7 +82,7 @@ const Login = () => {
           
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/25">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl mb-4 shadow-lg shadow-primary-600/25">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
@@ -93,7 +93,7 @@ const Login = () => {
             </h1>
             
             <p className="text-gray-500 text-sm">
-              Sign in to your <span className="font-semibold text-blue-600">{state}</span> account
+              Sign in to your <span className="font-semibold text-primary-700">{state}</span> account
             </p>
           </div>
 
@@ -104,7 +104,7 @@ const Login = () => {
               onClick={() => setState("Admin")}
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 state === "Admin"
-                  ? "bg-white text-blue-600 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -115,7 +115,7 @@ const Login = () => {
               onClick={() => setState("Doctor")}
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 state === "Doctor"
-                  ? "bg-white text-blue-600 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -126,7 +126,7 @@ const Login = () => {
               onClick={() => setState("Lab")}
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 state === "Lab"
-                  ? "bg-white text-blue-600 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -150,13 +150,13 @@ const Login = () => {
                   onBlur={() => setEmailFocused(false)}
                   className={`w-full px-4 py-4 bg-gray-50/50 border-2 rounded-2xl text-gray-700 placeholder-gray-400 transition-all duration-300 focus:outline-none ${
                     emailFocused || email
-                      ? "border-blue-400 bg-white/80 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                      ? "border-primary-500 bg-white/80 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   placeholder="Enter your email"
                   required
                 />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400 to-indigo-400 opacity-0 -z-10 blur transition-opacity duration-300"></div>
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-500 opacity-0 -z-10 blur transition-opacity duration-300"></div>
               </div>
             </div>
 
@@ -174,7 +174,7 @@ const Login = () => {
                   onBlur={() => setPasswordFocused(false)}
                   className={`w-full px-4 py-4 pr-12 bg-gray-50/50 border-2 rounded-2xl text-gray-700 placeholder-gray-400 transition-all duration-300 focus:outline-none ${
                     passwordFocused || password
-                      ? "border-blue-400 bg-white/80 shadow-lg shadow-blue-100/50 transform scale-[1.02]"
+                      ? "border-primary-500 bg-white/80 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   placeholder="Enter your password"
@@ -197,7 +197,7 @@ const Login = () => {
               className={`w-full py-4 rounded-2xl font-semibold text-white transition-all duration-300 transform ${
                 loading
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 hover:scale-[1.02] shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
+                  : "bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 hover:scale-[1.02] shadow-lg shadow-primary-600/25 hover:shadow-xl hover:shadow-primary-600/30"
               }`}
             >
               {loading ? (
@@ -214,7 +214,7 @@ const Login = () => {
               )}
             </button>
             <div className="mt-4 text-right">
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+              <Link to="/forgot-password" className="text-sm text-primary-700 hover:text-primary-900">
                 Forgot Password?
               </Link>
             </div>

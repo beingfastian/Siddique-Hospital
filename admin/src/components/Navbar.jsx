@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
+import Avatar from "./ui/Avatar";
 import { assets } from "../assets/assets";
 import { HOSPITAL_NAME, PRODUCT_NAME } from "../config";
 import { useNavigate } from "react-router-dom";
@@ -76,7 +77,7 @@ const Navbar = ({ onMenuClick }) => {
       case 'new_patient':
         return <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
       default:
-        return <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5 5-5H15m-6 10v-5a6 6 0 1 0-12 0v5" /></svg>;
+        return <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
     }
   };
 
@@ -119,7 +120,7 @@ const Navbar = ({ onMenuClick }) => {
                     className="h-8 w-auto sm:h-10 cursor-pointer transition-transform duration-300 hover:scale-105"
                   />
                   {/* Subtle glow effect */}
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400/20 to-indigo-400/20 blur-sm opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary-500/20 to-primary-500/20 blur-sm opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
 
                 {/* Brand text - hidden on mobile */}
@@ -134,10 +135,10 @@ const Navbar = ({ onMenuClick }) => {
               <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
                 aToken
                   ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border border-emerald-200/50 shadow-sm shadow-emerald-100/50'
-                  : 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200/50 shadow-sm shadow-blue-100/50'
+                  : 'bg-gradient-to-r from-primary-50 to-primary-50 text-primary-800 border border-primary-200/50 shadow-sm shadow-primary-100/50'
               }`}>
                 <div className={`w-2 h-2 rounded-full mr-2 ${
-                  aToken ? 'bg-emerald-400' : 'bg-blue-400'
+                  aToken ? 'bg-emerald-400' : 'bg-primary-500'
                 } animate-pulse`}></div>
                 {userType}
               </div>
@@ -151,10 +152,10 @@ const Navbar = ({ onMenuClick }) => {
                 <div className="relative notification-dropdown">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-xl transition-all duration-200 hover:bg-gray-100/50"
+                    className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 rounded-xl transition-all duration-200 hover:bg-gray-100/50"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5 5-5H15m-6 10v-5a6 6 0 1 0-12 0v5" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
 
                     {/* Notification badge */}
@@ -176,7 +177,7 @@ const Navbar = ({ onMenuClick }) => {
                           {unreadCount > 0 && (
                             <button
                               onClick={() => markAllAsRead(aToken ? 'admin' : 'doctor', dToken ? doctorData?._id : null)}
-                              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                              className="text-sm text-primary-700 hover:text-primary-800 font-medium transition-colors"
                             >
                               Mark all read
                             </button>
@@ -194,7 +195,7 @@ const Navbar = ({ onMenuClick }) => {
                             <div
                               key={notification._id}
                               className={`p-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                                !notification.read ? 'bg-blue-50/30' : ''
+                                !notification.read ? 'bg-primary-50/30' : ''
                               }`}
                               onClick={() => markAsRead(notification._id)}
                             >
@@ -203,7 +204,7 @@ const Navbar = ({ onMenuClick }) => {
                                 <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                                   notification.priority === 'high' ? 'bg-red-100 text-red-600' :
                                   notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                                  'bg-blue-100 text-blue-600'
+                                  'bg-primary-100 text-primary-700'
                                 }`}>
                                   {getNotificationIcon(notification.type)}
                                 </div>
@@ -215,7 +216,7 @@ const Navbar = ({ onMenuClick }) => {
                                       {notification.title}
                                     </p>
                                     {!notification.read && (
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                      <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0"></div>
                                     )}
                                   </div>
                                   <p className="text-sm text-gray-600 mt-1">
@@ -245,7 +246,7 @@ const Navbar = ({ onMenuClick }) => {
                           <div className="p-8 text-center">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5 5-5H15m-6 10v-5a6 6 0 1 0-12 0v5" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                               </svg>
                             </div>
                             <p className="text-gray-500 text-sm">No notifications yet</p>
@@ -264,36 +265,8 @@ const Navbar = ({ onMenuClick }) => {
                 <p className="text-xs text-gray-500">Welcome back</p>
               </div>
 
-              {/* User Avatar */}
-              <div className="relative">
-                {dToken && doctorData && doctorData.image ? (
-                  <img
-                    src={doctorData.image}
-                    alt="Doctor Profile"
-                    className="w-10 h-10 rounded-full object-cover shadow-lg transition-all duration-300 hover:scale-105"
-                    onError={(e) => {
-                      console.error("Image failed to load:", doctorData.image);
-                      e.target.onerror = null;
-                      e.target.style.display = 'none';
-                      e.target.parentNode.innerHTML = `
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg transition-all duration-300 hover:scale-105 bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-200">
-                          D
-                        </div>
-                      `;
-                    }}
-                  />
-                ) : (
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg transition-all duration-300 hover:scale-105 ${
-                    aToken
-                      ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-200'
-                      : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-200'
-                  }`}>
-                    {aToken ? 'A' : userType === 'Lab' ? 'L' : 'D'}
-                  </div>
-                )}
-                {/* Online indicator */}
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
-              </div>
+              {/* User Avatar (photo for doctors, initials otherwise) */}
+              <Avatar src={dToken ? doctorData?.image : undefined} name={userName} className="w-10 h-10" textClass="text-sm" />
 
               {/* Logout Button */}
               <button

@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import Avatar from "../../components/ui/Avatar";
 import { getDaySlots } from "../../utils/slots";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
@@ -273,7 +274,7 @@ const BookAppointmentForPatient = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-semibold text-blue-600">Book Appointment for Patient</h1>
+            <h1 className="text-2xl font-semibold text-primary-700">Book Appointment for Patient</h1>
             <p className="text-gray-600 mt-1">Schedule appointments for patients with available doctors</p>
           </div>
           {step > 1 && (
@@ -289,22 +290,22 @@ const BookAppointmentForPatient = () => {
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-8">
-            <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'} transition-all`}>
+            <div className={`flex items-center ${step >= 1 ? 'text-primary-700' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
                 <FaUser />
               </div>
               <span className="ml-3 font-medium">Select Patient</span>
             </div>
-            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'} transition-all`}></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'} transition-all`}>
+            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-primary-700' : 'bg-gray-200'} transition-all`}></div>
+            <div className={`flex items-center ${step >= 2 ? 'text-primary-700' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
                 <FaUser />
               </div>
               <span className="ml-3 font-medium">Select Doctor</span>
             </div>
-            <div className={`w-16 h-0.5 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'} transition-all`}></div>
-            <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'} transition-all`}>
+            <div className={`w-16 h-0.5 ${step >= 3 ? 'bg-primary-700' : 'bg-gray-200'} transition-all`}></div>
+            <div className={`flex items-center ${step >= 3 ? 'text-primary-700' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary-700 text-white' : 'bg-gray-200'} transition-all`}>
                 <FaCalendarAlt />
               </div>
               <span className="ml-3 font-medium">Select Time</span>
@@ -323,7 +324,7 @@ const BookAppointmentForPatient = () => {
               onClick={() => setPatientSelectionMode("existing")}
               className={`px-6 py-3 rounded-xl border transition-all ${
                 patientSelectionMode === "existing" 
-                  ? "bg-blue-600 text-white border-blue-600" 
+                  ? "bg-primary-700 text-white border-primary-700" 
                   : "border-gray-300 hover:border-gray-400 text-gray-700"
               }`}
             >
@@ -333,7 +334,7 @@ const BookAppointmentForPatient = () => {
               onClick={() => setPatientSelectionMode("new")}
               className={`px-6 py-3 rounded-xl border transition-all flex items-center gap-2 ${
                 patientSelectionMode === "new" 
-                  ? "bg-blue-600 text-white border-blue-600" 
+                  ? "bg-primary-700 text-white border-primary-700" 
                   : "border-gray-300 hover:border-gray-400 text-gray-700"
               }`}
             >
@@ -350,7 +351,7 @@ const BookAppointmentForPatient = () => {
                   placeholder="Search patients by name, email, phone, or CNIC..."
                   value={patientSearchTerm}
                   onChange={(e) => setPatientSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                 />
               </div>
               
@@ -361,16 +362,12 @@ const BookAppointmentForPatient = () => {
                     onClick={() => setSelectedPatient(patient)}
                     className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
                       selectedPatient?._id === patient._id 
-                        ? "border-blue-600 bg-blue-50 shadow-md" 
+                        ? "border-primary-700 bg-primary-50 shadow-md" 
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={patient.image}
-                        alt={patient.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
+                      <Avatar src={patient.image} name={patient.name} className="w-12 h-12" textClass="text-base" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{patient.name}</h3>
                         <p className="text-sm text-gray-600">{patient.email}</p>
@@ -405,7 +402,7 @@ const BookAppointmentForPatient = () => {
                   type="text"
                   value={newPatientData.name}
                   onChange={(e) => handleNewPatientDataChange('name', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -416,7 +413,7 @@ const BookAppointmentForPatient = () => {
                   type="email"
                   value={newPatientData.email}
                   onChange={(e) => handleNewPatientDataChange('email', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -427,7 +424,7 @@ const BookAppointmentForPatient = () => {
                   type="tel"
                   value={newPatientData.phone}
                   onChange={(e) => handleNewPatientDataChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -439,7 +436,7 @@ const BookAppointmentForPatient = () => {
                   value={newPatientData.cnic}
                   onChange={(e) => handleNewPatientDataChange('cnic', e.target.value)}
                   placeholder="1234567890123"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   maxLength="13"
                   required
                 />
@@ -454,7 +451,7 @@ const BookAppointmentForPatient = () => {
                   type="date"
                   value={newPatientData.dob}
                   onChange={(e) => handleNewPatientDataChange('dob', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -464,7 +461,7 @@ const BookAppointmentForPatient = () => {
                 <select
                   value={newPatientData.gender}
                   onChange={(e) => handleNewPatientDataChange('gender', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -478,7 +475,7 @@ const BookAppointmentForPatient = () => {
                   type="text"
                   value={newPatientData.address.line1}
                   onChange={(e) => handleNewPatientDataChange('address.line1', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -489,7 +486,7 @@ const BookAppointmentForPatient = () => {
                   type="text"
                   value={newPatientData.address.line2}
                   onChange={(e) => handleNewPatientDataChange('address.line2', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                 />
               </div>
               
@@ -546,7 +543,7 @@ const BookAppointmentForPatient = () => {
                   setStep(2);
                 }
               }}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              className="bg-primary-700 text-white px-8 py-3 rounded-lg hover:bg-primary-800 transition-colors font-semibold"
             >
               Select Doctor
             </button>
@@ -560,9 +557,9 @@ const BookAppointmentForPatient = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">2. Select Doctor</h2>
           
           {getSelectedPatientData() && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-2">Selected Patient: {getSelectedPatientData().name}</h4>
-              <div className="text-sm text-blue-700 grid grid-cols-2 gap-2">
+            <div className="mb-6 p-4 bg-primary-50 rounded-xl border border-primary-200">
+              <h4 className="font-semibold text-primary-900 mb-2">Selected Patient: {getSelectedPatientData().name}</h4>
+              <div className="text-sm text-primary-800 grid grid-cols-2 gap-2">
                 <span>Email: {getSelectedPatientData().email}</span>
                 <span>Phone: {getSelectedPatientData().phone}</span>
                 <span>Age: {calculateAge(getSelectedPatientData().dob)} years</span>
@@ -574,7 +571,7 @@ const BookAppointmentForPatient = () => {
                     </>
                   ) : (
                     <>
-                      <FaEnvelope className="text-blue-500" />
+                      <FaEnvelope className="text-primary-600" />
                       Email Only
                     </>
                   )}
@@ -588,7 +585,7 @@ const BookAppointmentForPatient = () => {
               <div
                 key={doctor._id}
                 onClick={() => handleDoctorSelection(doctor)}
-                className="border border-gray-200 rounded-2xl p-6 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-300"
+                className="border border-gray-200 rounded-2xl p-6 cursor-pointer hover:shadow-lg hover:border-primary-300 transition-all duration-300"
               >
                 <img
                   className="w-full h-48 object-cover rounded-xl bg-gray-50 mb-4"
@@ -601,7 +598,7 @@ const BookAppointmentForPatient = () => {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">{doctor.name}</h3>
                 <p className="text-sm text-gray-600 mb-2">{doctor.speciality}</p>
-                <p className="text-sm text-blue-600 font-semibold">Rs. {doctor.fee}</p>
+                <p className="text-sm text-primary-700 font-semibold">Rs. {doctor.fee}</p>
                 {doctor.timings && (
                   <p className="text-xs text-gray-500 mt-2">
                     {doctor.timings.start} - {doctor.timings.end}
@@ -638,21 +635,21 @@ const BookAppointmentForPatient = () => {
           {/* Selected Doctor Info */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl mb-6">
             <img
-              className="w-16 h-16 rounded-xl object-cover border-2 border-blue-600"
+              className="w-16 h-16 rounded-xl object-cover border-2 border-primary-700"
               src={selectedDoctor.image}
               alt={selectedDoctor.name}
             />
             <div>
               <h3 className="font-semibold text-gray-900">{selectedDoctor.name}</h3>
               <p className="text-sm text-gray-600">{selectedDoctor.speciality}</p>
-              <p className="text-sm text-blue-600 font-semibold">Fee: Rs. {selectedDoctor.fee}</p>
+              <p className="text-sm text-primary-700 font-semibold">Fee: Rs. {selectedDoctor.fee}</p>
             </div>
           </div>
           
           {/* Patient Summary */}
-          <div className="p-4 bg-blue-50 rounded-xl mb-6 border border-blue-200">
-            <h4 className="font-semibold text-blue-900 mb-2">Patient: {getSelectedPatientData().name}</h4>
-            <div className="text-sm text-blue-700 grid grid-cols-2 gap-2">
+          <div className="p-4 bg-primary-50 rounded-xl mb-6 border border-primary-200">
+            <h4 className="font-semibold text-primary-900 mb-2">Patient: {getSelectedPatientData().name}</h4>
+            <div className="text-sm text-primary-800 grid grid-cols-2 gap-2">
               <span>Age: {calculateAge(getSelectedPatientData().dob)} years</span>
               <span>Gender: {getSelectedPatientData().gender}</span>
               <span>Phone: {getSelectedPatientData().phone}</span>
@@ -664,7 +661,7 @@ const BookAppointmentForPatient = () => {
                   </>
                 ) : (
                   <>
-                    <FaEnvelope className="text-blue-500" />
+                    <FaEnvelope className="text-primary-600" />
                     Email Only
                   </>
                 )}
@@ -695,7 +692,7 @@ const BookAppointmentForPatient = () => {
                     onClick={() => handleMonthChange(index)}
                     className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
                       selectedMonth === index
-                        ? "bg-blue-600 text-white shadow-lg"
+                        ? "bg-primary-700 text-white shadow-lg"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
@@ -723,7 +720,7 @@ const BookAppointmentForPatient = () => {
           <div className="mb-6">
             <h4 className="font-semibold text-gray-900 mb-4">Select Date</h4>
             {slotsLoading ? (
-              <div className="flex items-center gap-2 text-blue-600">
+              <div className="flex items-center gap-2 text-primary-700">
                 <FaSpinner className="animate-spin" /> Loading available dates...
               </div>
             ) : docSlots.length > 0 ? (
@@ -733,8 +730,8 @@ const BookAppointmentForPatient = () => {
                     key={index}
                     className={`flex flex-col items-center justify-center min-w-[90px] px-6 py-5 rounded-xl border-2 transition-all duration-200 shadow-md
                       ${slotIndex === index
-                        ? "bg-blue-600 text-white border-blue-600 scale-105 font-bold"
-                        : "bg-white text-gray-800 border-gray-200 hover:border-blue-500 hover:bg-blue-50"
+                        ? "bg-primary-700 text-white border-primary-700 scale-105 font-bold"
+                        : "bg-white text-gray-800 border-gray-200 hover:border-primary-600 hover:bg-primary-50"
                       }`}
                     onClick={() => {
                       setSlotIndex(index);
@@ -766,7 +763,7 @@ const BookAppointmentForPatient = () => {
           <div className="mb-6">
             <h4 className="font-semibold text-gray-900 mb-4">Select Time</h4>
             {slotsLoading ? (
-              <div className="flex items-center gap-2 text-blue-600">
+              <div className="flex items-center gap-2 text-primary-700">
                 <FaSpinner className="animate-spin" /> Loading time slots...
               </div>
             ) : docSlots.length > 0 && docSlots[slotIndex]?.length > 0 ? (
@@ -777,8 +774,8 @@ const BookAppointmentForPatient = () => {
                     onClick={() => setSlotTime(item.time)}
                     className={`px-4 py-2 rounded-lg border transition-all shadow-sm ${
                       item.time === slotTime
-                        ? "bg-blue-600 text-white border-blue-600 scale-105"
-                        : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+                        ? "bg-primary-700 text-white border-primary-700 scale-105"
+                        : "border-gray-300 hover:border-primary-600 hover:bg-primary-50"
                     }`}
                   >
                     {item.time.toLowerCase()}
@@ -851,13 +848,13 @@ const BookAppointmentForPatient = () => {
                       </>
                     ) : (
                       <>
-                        <FaEnvelope className="text-blue-500" />
+                        <FaEnvelope className="text-primary-600" />
                         Email Only
                       </>
                     )}
                   </p>
                   {patientSelectionMode === "new" && (
-                    <p className="text-blue-600"><strong>Note:</strong> New patient account will be created</p>
+                    <p className="text-primary-700"><strong>Note:</strong> New patient account will be created</p>
                   )}
                 </div>
               </div>
@@ -865,7 +862,7 @@ const BookAppointmentForPatient = () => {
               <button
                 onClick={bookAppointment}
                 disabled={isBooking}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg"
+                className="w-full bg-primary-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg"
               >
                 {isBooking ? (
                   <>

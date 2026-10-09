@@ -6,6 +6,7 @@ import DoctorContextProvider from "./context/DoctorContext.jsx";
 import AppContextProvider from "./context/AppContext.jsx";
 import LabContextProvider from "./context/LabContext.jsx";
 import "./index.css";
+import { DialogProvider } from "./components/ui/Dialog.jsx";
 
 // When the backend rejects a logged-in request (expired or invalid token),
 // clear the session and return to the login page.
@@ -29,7 +30,9 @@ createRoot(document.getElementById("root")).render(
     <DoctorContextProvider>
       <LabContextProvider>
         <AppContextProvider>
-          <App />
+          <DialogProvider>
+            <App />
+          </DialogProvider>
         </AppContextProvider>
       </LabContextProvider>
     </DoctorContextProvider>

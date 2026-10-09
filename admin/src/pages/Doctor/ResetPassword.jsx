@@ -64,12 +64,12 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-center">
           <img src={assets.logo} alt="Qlinic" className="h-16 w-auto mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white">Reset Password</h2>
-          <p className="text-blue-100 mt-2">Create a new password for your account</p>
+          <p className="text-primary-100 mt-2">Create a new password for your account</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
@@ -83,7 +83,7 @@ const ResetPassword = () => {
                 type={showPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-primary-600 transition"
                 placeholder="••••••••"
               />
               <button
@@ -115,7 +115,7 @@ const ResetPassword = () => {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-primary-600 transition"
                 placeholder="••••••••"
               />
               <button
@@ -140,7 +140,7 @@ const ResetPassword = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition duration-300 flex items-center justify-center disabled:opacity-70"
+            className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition duration-300 flex items-center justify-center disabled:opacity-70"
           >
             {loading ? (
               <>
@@ -157,7 +157,7 @@ const ResetPassword = () => {
           
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">
+              <Link to="/login" className="text-primary-700 hover:text-primary-900 font-medium">
                 Back to Login
               </Link>
             </p>

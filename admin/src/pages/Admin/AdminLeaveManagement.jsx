@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import Avatar from "../../components/ui/Avatar";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { FaCheck, FaTimes, FaEye, FaClock, FaFilter, FaCalendarAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -125,7 +126,7 @@ const AdminLeaveManagement = () => {
 
   const getTypeColor = (type) => {
     const colors = {
-      vacation: "bg-blue-100 text-blue-700",
+      vacation: "bg-primary-100 text-primary-800",
       sick: "bg-red-100 text-red-700",
       emergency: "bg-orange-100 text-orange-700",
       personal: "bg-purple-100 text-purple-700",
@@ -185,7 +186,7 @@ const AdminLeaveManagement = () => {
           <div className="text-sm text-gray-500">Rejected</div>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <div className="text-2xl font-bold text-blue-600">{leaveStats?.thisMonth || 0}</div>
+          <div className="text-2xl font-bold text-primary-700">{leaveStats?.thisMonth || 0}</div>
           <div className="text-sm text-gray-500">This Month</div>
         </div>
       </div>
@@ -200,7 +201,7 @@ const AdminLeaveManagement = () => {
           <select 
             value={filterStatus} 
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -210,7 +211,7 @@ const AdminLeaveManagement = () => {
           <select 
             value={filterDoctor} 
             onChange={(e) => setFilterDoctor(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
           >
             <option value="all">All Doctors</option>
             {uniqueDoctors.map(doctor => (
@@ -236,7 +237,7 @@ const AdminLeaveManagement = () => {
             <p className="text-gray-500">Leave requests will appear here when doctors submit them</p>
           </div>
         ) : (
-          <div className="max-h-[65vh] overflow-auto">
+          <div className="overflow-x-auto">
             {/* Desktop View */}
             <div className="hidden lg:block">
               <table className="w-full">
@@ -255,11 +256,7 @@ const AdminLeaveManagement = () => {
                     <tr key={request._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <img
-                            className="w-10 h-10 rounded-full object-cover"
-                            src={request.doctorData?.image}
-                            alt={request.doctorData?.name}
-                          />
+                          <Avatar src={request.doctorData?.image} name={request.doctorData?.name} className="w-10 h-10" textClass="text-sm" />
                           <div>
                             <p className="font-medium text-gray-900">
                               Dr. {request.doctorData?.name || 'Unknown'}
@@ -315,7 +312,7 @@ const AdminLeaveManagement = () => {
                           ) : (
                             <button
                               onClick={() => toast.info(request.adminResponse || 'No admin response provided')}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                               title="View Admin Response"
                             >
                               <FaEye />
@@ -335,11 +332,7 @@ const AdminLeaveManagement = () => {
                 <div key={request._id} className="p-4 border-b border-gray-50 last:border-b-0">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <img
-                        className="w-12 h-12 rounded-full object-cover"
-                        src={request.doctorData?.image}
-                        alt={request.doctorData?.name}
-                      />
+                      <Avatar src={request.doctorData?.image} name={request.doctorData?.name} className="w-12 h-12" textClass="text-base" />
                       <div>
                         <p className="font-medium text-gray-900">Dr. {request.doctorData?.name || 'Unknown'}</p>
                         <p className="text-sm text-gray-500">{request.doctorData?.speciality}</p>
@@ -392,7 +385,7 @@ const AdminLeaveManagement = () => {
                       ) : (
                         <button
                           onClick={() => toast.info(request.adminResponse || 'No admin response provided')}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                         >
                           <FaEye />
                         </button>
@@ -464,7 +457,7 @@ const AdminLeaveManagement = () => {
                     ? "Add any notes for the doctor..."
                     : "Please provide reason for rejection..."
                 }
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none resize-none"
                 rows={3}
                 required={modalType === 'reject'}
               />

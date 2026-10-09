@@ -1,11 +1,69 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+/* Fonts: design-system/qlinic/MASTER.md section 3 */
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  /* Urdu text: right-to-left script font wherever lang="ur" is set */
+  [lang="ur"] {
+    @apply font-urdu;
+    line-height: 1.9;
+  }
+  /* Visible keyboard focus on every control (mouse clicks don't show it) */
+  :focus-visible {
+    outline: 2px solid theme("colors.primary.700");
+    outline-offset: 2px;
+  }
+  button,
+  [role="button"],
+  a,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* Thin, visible scrollbars: lists that scroll must look scrollable */
 * {
-  font-family: Outfit;
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.slate.300") transparent;
 }
 ::-webkit-scrollbar {
-  @apply hidden;
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: theme("colors.slate.300");
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme("colors.slate.400");
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

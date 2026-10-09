@@ -1,4 +1,5 @@
 import React, { useContext, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
 import ShareField, { isValidPercent } from "../../components/ShareField";
 import { assets } from "../../assets/assets.js";
 import { AdminContext } from "../../context/AdminContext.jsx";
@@ -7,6 +8,7 @@ import axios from "axios";
 import { FaEye, FaEyeSlash, FaWhatsapp, FaUser, FaGraduationCap, FaClock, FaCalendarAlt } from "react-icons/fa";
 
 const AddDoctor = () => {
+  const { confirm } = useDialog();
   const [docImage, setDocImg] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -192,10 +194,10 @@ const AddDoctor = () => {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           
           {/* Image Upload Section */}
-          <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+          <div className="p-6 bg-gradient-to-r from-primary-50 to-primary-50 border-b border-gray-100">
             <div className="flex items-center gap-6">
               <label htmlFor="docImage" className="cursor-pointer">
-                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 hover:border-blue-500 bg-white flex items-center justify-center overflow-hidden transition-all">
+                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 hover:border-primary-600 bg-white flex items-center justify-center overflow-hidden transition-all">
                   {docImage ? (
                     <img
                       src={URL.createObjectURL(docImage)}
@@ -232,7 +234,7 @@ const AddDoctor = () => {
               {/* Personal Information */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                  <FaUser className="text-blue-600" />
+                  <FaUser className="text-primary-700" />
                   <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
                 </div>
                 
@@ -244,7 +246,7 @@ const AddDoctor = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Enter doctor's full name"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -256,7 +258,7 @@ const AddDoctor = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="doctor@example.com"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -269,7 +271,7 @@ const AddDoctor = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Secure password (min 6 chars)"
-                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                         required
                       />
                       <button
@@ -289,7 +291,7 @@ const AddDoctor = () => {
                       value={address1}
                       onChange={(e) => setAddress1(e.target.value)}
                       placeholder="Street address, building name"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -301,7 +303,7 @@ const AddDoctor = () => {
                       value={address2}
                       onChange={(e) => setAddress2(e.target.value)}
                       placeholder="Area, city, postal code"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -320,7 +322,7 @@ const AddDoctor = () => {
                     <select
                       value={speciality}
                       onChange={(e) => setSpeciality(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                     >
                       <option value="General physician">General physician</option>
                       <option value="Gynecologist">Gynecologist</option>
@@ -336,7 +338,7 @@ const AddDoctor = () => {
                     <select
                       value={experience}
                       onChange={(e) => setExperience(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                     >
                       {[...Array(15)].map((_, i) => (
                         <option key={i + 1} value={`${i + 1} Year${i > 0 ? 's' : ''}`}>
@@ -353,7 +355,7 @@ const AddDoctor = () => {
                       value={degree}
                       onChange={(e) => setDegree(e.target.value)}
                       placeholder="e.g., MBBS, MD, FCPS"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       required
                     />
                   </div>
@@ -365,14 +367,14 @@ const AddDoctor = () => {
                       value={fee}
                       onChange={(e) => setFee(e.target.value)}
                       placeholder="Fee in Pakistani Rupees"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all"
                       min="0"
                       step="50"
                       required
                     />
                   </div>
 
-                  <ShareField value={sharePercent} onChange={setSharePercent} fee={fee} required inputClassName="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                  <ShareField value={sharePercent} onChange={setSharePercent} fee={fee} required inputClassName="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all" />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">About Doctor *</label>
@@ -380,7 +382,7 @@ const AddDoctor = () => {
                       value={about}
                       onChange={(e) => setAbout(e.target.value)}
                       placeholder="Brief description of expertise and experience..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all resize-none"
                       rows={4}
                       maxLength={500}
                       required
@@ -393,7 +395,7 @@ const AddDoctor = () => {
               {/* Schedule & Contact */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                  <FaClock className="text-indigo-600" />
+                  <FaClock className="text-primary-700" />
                   <h3 className="text-lg font-semibold text-gray-900">Schedule & Contact</h3>
                 </div>
                 
@@ -407,7 +409,7 @@ const AddDoctor = () => {
                           type="time"
                           value={startTime}
                           onChange={(e) => setStartTime(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-600 outline-none"
                           required
                         />
                         <label className="text-xs text-gray-500">Start</label>
@@ -417,7 +419,7 @@ const AddDoctor = () => {
                           type="time"
                           value={endTime}
                           onChange={(e) => setEndTime(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-600 outline-none"
                           required
                         />
                         <label className="text-xs text-gray-500">End</label>
@@ -430,7 +432,7 @@ const AddDoctor = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Working Days *</label>
                     <div className="flex gap-2 mb-2">
-                      <button type="button" onClick={selectWeekdays} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                      <button type="button" onClick={selectWeekdays} className="text-xs bg-primary-100 text-primary-800 px-2 py-1 rounded">
                         Weekdays
                       </button>
                       <button type="button" onClick={selectAllDays} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
@@ -447,7 +449,7 @@ const AddDoctor = () => {
                             type="checkbox"
                             checked={sittingDays.includes(day.value)}
                             onChange={() => handleDayChange(day.value)}
-                            className="rounded text-blue-600 focus:ring-blue-500"
+                            className="rounded text-primary-700 focus:ring-primary-600"
                           />
                           <span className="text-sm">{day.label}</span>
                         </label>
@@ -463,7 +465,7 @@ const AddDoctor = () => {
                       value={holidays}
                       onChange={(e) => setHolidays(e.target.value)}
                       placeholder="Annual leave, Eid holidays, etc."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none transition-all resize-none"
                       rows={2}
                     />
                   </div>
@@ -513,14 +515,14 @@ const AddDoctor = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Adding Doctor..." : "Add Doctor"}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm("Reset all fields? This cannot be undone.")) {
+                onClick={async () => {
+                  if (await confirm({ title: "Clear the form?", message: "Everything you typed on this page will be removed.", confirmLabel: "Clear form", tone: "danger" })) {
                     // Reset form logic here
                     setName(""); setEmail(""); setPassword(""); setFee(""); setSharePercent(""); setAbout(""); setDegree("");
                     setAddress1(""); setAddress2(""); setWhatsappEnabled(false); setWhatsappNumber("");

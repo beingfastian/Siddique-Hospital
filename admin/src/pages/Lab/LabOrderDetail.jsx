@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -32,6 +33,7 @@ const Field = ({ label, children }) => (
 );
 
 const LabOrderDetail = () => {
+  const { prompt } = useDialog();
   const { id } = useParams();
   const role = currentRole() || "lab";
   const [order, setOrder] = useState(null);
@@ -132,8 +134,16 @@ const LabOrderDetail = () => {
     );
   };
 
-  const cancel = () => {
-    const note = window.prompt("Cancel this lab request? Reason (optional):", "");
+  const cancel = async () => {
+    const note = await prompt({
+      title: "Cancel this lab request?",
+      message: "The lab is told it is no longer needed.",
+      label: "Reason (optional)",
+      placeholder: "e.g. Ordered by mistake",
+      confirmLabel: "Cancel request",
+      cancelLabel: "Keep request",
+      tone: "danger",
+    });
     if (note === null) return;
     run(() => labPost(`/orders/${id}/cancel`, { note }));
   };

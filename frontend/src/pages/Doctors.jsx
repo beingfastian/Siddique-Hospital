@@ -58,7 +58,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "General physician" ? "/doctors" : "/doctors/General physician"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "General physician" ? "bg-indigo-100 text-black" : ""
+              speciality === "General physician" ? "bg-primary-100 text-black" : ""
             }`}
           >
             General physician
@@ -66,7 +66,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "Gynecologist" ? "/doctors" : "/doctors/Gynecologist"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Gynecologist" ? "bg-indigo-100 text-black" : ""
+              speciality === "Gynecologist" ? "bg-primary-100 text-black" : ""
             }`}
           >
             Gynecologist
@@ -74,7 +74,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "Dermatologist" ? "/doctors" : "/doctors/Dermatologist"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Dermatologist" ? "bg-indigo-100 text-black" : ""
+              speciality === "Dermatologist" ? "bg-primary-100 text-black" : ""
             }`}
           >
             Dermatologist
@@ -82,7 +82,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "Pediatricians" ? "/doctors" : "/doctors/Pediatricians"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Pediatricians" ? "bg-indigo-100 text-black" : ""
+              speciality === "Pediatricians" ? "bg-primary-100 text-black" : ""
             }`}
           >
             Pediatricians
@@ -90,7 +90,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "Neurologist" ? "/doctors" : "/doctors/Neurologist"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Neurologist" ? "bg-indigo-100 text-black" : ""
+              speciality === "Neurologist" ? "bg-primary-100 text-black" : ""
             }`}
           >
             Neurologist
@@ -98,7 +98,7 @@ useEffect(() => {
           <p
             onClick={() => window.location.href = speciality === "Gastroenterologist" ? "/doctors" : "/doctors/Gastroenterologist"}
             className={`w-[94vw] sm:w-auto pl-3 py-1.5 pr-16 border border-gray-300 rounded transition-all cursor-pointer ${
-              speciality === "Gastroenterologist" ? "bg-indigo-100 text-black" : ""
+              speciality === "Gastroenterologist" ? "bg-primary-100 text-black" : ""
             }`}
           >
             Gastroenterologist
@@ -108,9 +108,9 @@ useEffect(() => {
           {filteredDoc.map((item, index) => (
             <div
               key={index}
-              className="border border-blue-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500"
+              className="border border-primary-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500"
             >
-              <img className="bg-blue-50" src={item.image} alt={item.name} />
+              <img className="bg-primary-50" src={item.image} alt={item.name} />
               <div className="p-4">
                 <div
                   className={`flex items-center gap-2 text-sm text-center ${

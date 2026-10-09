@@ -23,50 +23,31 @@ const TopDoctors = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  // "09:00" -> "9:00 AM"
+  const clock = (hhmm) => {
+    const [h, m] = String(hhmm || "").split(":").map(Number);
+    if (Number.isNaN(h)) return hhmm;
+    return `${h % 12 || 12}:${String(m || 0).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  };
+
+  // One honest line about when the doctor sits, worded the same way everywhere:
+  // in clinic now / sits today from ... / closed for today / next sitting day /
+  // not taking appointments. (Before, the home page said "Unavailable" at night
+  // while the doctors page said "Available" for the same doctor.)
   const getAvailabilityDisplay = (doctor) => {
     const status = getDoctorAvailabilityStatus(doctor);
-    
-    const kind = status.available ? "available" : "unavailable";
-
-    switch (kind) {
-      case "available":
-        return (
-          <div className="flex items-center gap-2 text-sm text-green-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Available Now</span>
-          </div>
-        );
-      case "unavailable":
-        if (status.reason.includes("Available from")) {
-          return (
-            <div className="flex items-center gap-2 text-sm text-blue-500">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Opens Later</span>
-            </div>
-          );
-        } else if (status.reason.includes("closed")) {
-          return (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-              <span>Closed</span>
-            </div>
-          );
-        } else {
-          return (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-              <span>Unavailable</span>
-            </div>
-          );
-        }
-      default:
-        return (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-            <span>Contact for availability</span>
-          </div>
-        );
-    }
+    const line = (dot, text, label) => (
+      <div className={`flex items-center gap-2 text-sm ${text}`}>
+        <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true"></span>
+        <span>{label}</span>
+      </div>
+    );
+    if (!doctor.available) return line("bg-gray-400", "text-gray-600", "Not taking appointments");
+    if (status.available) return line("bg-green-600", "text-green-700", "In clinic now");
+    if (status.reason?.startsWith("Available from")) return line("bg-primary", "text-primary", `Sits today from ${clock(doctor.timings?.start)}`);
+    if (status.reason?.includes("closed")) return line("bg-gray-400", "text-gray-600", "Closed for today · back tomorrow");
+    if (status.nextAvailable) return line("bg-gray-400", "text-gray-600", `Next sitting: ${status.nextAvailable}`);
+    return line("bg-gray-400", "text-gray-600", "Call to check timings");
   };
 
   return (
@@ -78,32 +59,24 @@ const TopDoctors = () => {
       
       <div className="w-full grid grid-cols-auto gap-4 pt-5 gap-y-6 px-3 sm:px-0">
         {doctors.slice(0, 12).map((item, index) => {
-          const availabilityStatus = getDoctorAvailabilityStatus(item);
           
           return (
             <div
               key={index}
-              className="border border-blue-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500 bg-white shadow-sm hover:shadow-lg"
+              className="border border-primary-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500 bg-white shadow-sm hover:shadow-lg"
             >
               <div className="relative">
                 <img 
-                  className="bg-blue-50 w-full h-48 object-cover" 
+                  className="bg-primary-50 w-full h-48 object-cover" 
                   src={item.image} 
                   alt={item.name} 
                 />
-                {/* Availability Badge */}
-                <div className="absolute top-2 right-2">
-                  {availabilityStatus.available ? (
-                    <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      Available
-                    </span>
-                  ) : (
-                    <span className="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      Unavailable
-                    </span>
-                  )}
-                </div>
+                {/* Only when the doctor isn't taking appointments at all */}
+                {!item.available && (
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-gray-700 text-white px-2 py-1 rounded-full text-xs font-medium">Not taking appointments</span>
+                  </div>
+                )}
               </div>
               
               <div className="p-4">
@@ -142,12 +115,6 @@ const TopDoctors = () => {
                   Request Appointment
                 </button>
 
-                {/* Additional Info for Unavailable Doctors */}
-                {!availabilityStatus.available && availabilityStatus.nextAvailable && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Next available: {availabilityStatus.nextAvailable}
-                  </p>
-                )}
               </div>
             </div>
           );
@@ -159,7 +126,7 @@ const TopDoctors = () => {
           navigate("/doctors");
           scrollTo(0, 0);
         }}
-        className="bg-blue-200 text-gray-600 px-12 py-3 rounded-full mt-10 hover:bg-blue-300 transition-colors"
+        className="bg-primary-200 text-gray-600 px-12 py-3 rounded-full mt-10 hover:bg-primary-300 transition-colors"
       >
         View All Doctors
       </button>

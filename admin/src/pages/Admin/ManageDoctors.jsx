@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
+import Avatar from "../../components/ui/Avatar";
 import ShareField from "../../components/ShareField";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaToggleOn, FaToggleOff } from "react-icons/fa";
@@ -6,6 +8,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 
 const ManageDoctors = () => {
+  const { confirm } = useDialog();
   const { doctors, aToken, getAllDoctors, changeAvailability, backendUrl } = useContext(AdminContext);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,7 +110,12 @@ const ManageDoctors = () => {
   };
 
   const deleteDoctor = async (doctorId, doctorName) => {
-    if (window.confirm(`Are you sure you want to delete Dr. ${doctorName}? This action cannot be undone.`)) {
+    if (await confirm({
+      title: `Delete Dr. ${doctorName}?`,
+      message: "Their profile and login are removed permanently. Doctors with upcoming appointments or patients in today's queue can't be deleted.",
+      confirmLabel: "Delete doctor",
+      tone: "danger",
+    })) {
       try {
         const { data } = await axios.delete(
           `${backendUrl}/api/admin/delete-doctor/${doctorId}`,
@@ -137,7 +145,7 @@ const ManageDoctors = () => {
           </div>
           <button 
             onClick={() => window.location.href = '/add-doctor'}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 transition-colors"
           >
             <FaPlus /> Add New Doctor
           </button>
@@ -153,13 +161,13 @@ const ManageDoctors = () => {
                 placeholder="Search doctors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               />
             </div>
             <select
               value={filterSpeciality}
               onChange={(e) => setFilterSpeciality(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
             >
               <option value="all">All Specialities</option>
               {specialities.map(spec => (
@@ -169,7 +177,7 @@ const ManageDoctors = () => {
             <select
               value={filterAvailability}
               onChange={(e) => setFilterAvailability(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
             >
               <option value="all">All Status</option>
               <option value="available">Available</option>
@@ -184,7 +192,7 @@ const ManageDoctors = () => {
 
       {/* Doctors Table */}
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        <div className="max-h-[65vh] overflow-auto">
+        <div className="overflow-x-auto">
           {/* Desktop View */}
           <div className="hidden lg:block">
             <table className="w-full">
@@ -204,11 +212,7 @@ const ManageDoctors = () => {
                   <tr key={doctor._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={doctor.image}
-                          alt={doctor.name}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                        <Avatar src={doctor.image} name={doctor.name} className="w-12 h-12" textClass="text-base" />
                         <div>
                           <p className="font-medium text-gray-900">{doctor.name}</p>
                           <p className="text-sm text-gray-500">{doctor.email}</p>
@@ -240,7 +244,7 @@ const ManageDoctors = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditDoctor(doctor)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                           title="Edit Doctor"
                         >
                           <FaEdit />
@@ -266,11 +270,7 @@ const ManageDoctors = () => {
               <div key={doctor._id} className="p-4 border-b border-gray-50 last:border-b-0">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={doctor.image}
-                      alt={doctor.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                    <Avatar src={doctor.image} name={doctor.name} className="w-12 h-12" textClass="text-base" />
                     <div>
                       <p className="font-medium text-gray-900">{doctor.name}</p>
                       <p className="text-sm text-gray-500">{doctor.speciality}</p>
@@ -310,7 +310,7 @@ const ManageDoctors = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditDoctor(doctor)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                     >
                       <FaEdit />
                     </button>
@@ -356,7 +356,7 @@ const ManageDoctors = () => {
                   type="text"
                   value={editingDoctor.name}
                   onChange={(e) => setEditingDoctor({...editingDoctor, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -365,7 +365,7 @@ const ManageDoctors = () => {
                   type="email"
                   value={editingDoctor.email}
                   onChange={(e) => setEditingDoctor({...editingDoctor, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -373,7 +373,7 @@ const ManageDoctors = () => {
                 <select
                   value={editingDoctor.speciality}
                   onChange={(e) => setEditingDoctor({...editingDoctor, speciality: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 >
                   {specialities.map(spec => (
                     <option key={spec} value={spec}>{spec}</option>
@@ -385,7 +385,7 @@ const ManageDoctors = () => {
                 <select
                   value={editingDoctor.experience}
                   onChange={(e) => setEditingDoctor({...editingDoctor, experience: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 >
                   {[...Array(15)].map((_, i) => (
                     <option key={i + 1} value={`${i + 1} Year${i > 0 ? 's' : ''}`}>
@@ -400,7 +400,7 @@ const ManageDoctors = () => {
                   type="number"
                   value={editingDoctor.fee}
                   onChange={(e) => setEditingDoctor({...editingDoctor, fee: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -409,7 +409,7 @@ const ManageDoctors = () => {
                   value={String(editingDoctor.hospitalSharePercent ?? "")}
                   onChange={(value) => setEditingDoctor({ ...editingDoctor, hospitalSharePercent: value })}
                   fee={editingDoctor.fee}
-                  inputClassName="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  inputClassName="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
                 <p className="text-xs text-gray-500 mt-1">A new share applies to visits completed from now on. Past visits keep the share they had.</p>
               </div>
@@ -419,7 +419,7 @@ const ManageDoctors = () => {
                   type="text"
                   value={editingDoctor.degree}
                   onChange={(e) => setEditingDoctor({...editingDoctor, degree: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div className="md:col-span-2">
@@ -428,7 +428,7 @@ const ManageDoctors = () => {
                   value={editingDoctor.about}
                   onChange={(e) => setEditingDoctor({...editingDoctor, about: e.target.value})}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none resize-none"
                 />
               </div>
             </div>
@@ -446,7 +446,7 @@ const ManageDoctors = () => {
               <button
                 onClick={updateDoctor}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50"
               >
                 {loading ? "Updating..." : "Update Doctor"}
               </button>

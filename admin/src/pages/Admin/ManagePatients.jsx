@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
+import Avatar from "../../components/ui/Avatar";
 import LanguageSelect from "../../components/LanguageSelect";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
@@ -7,6 +9,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 
 const ManagePatients = () => {
+  const { confirm } = useDialog();
   const { aToken, backendUrl } = useContext(AdminContext);
   const { calculateAge } = useContext(AppContext);
   const [patients, setPatients] = useState([]);
@@ -126,7 +129,12 @@ const ManagePatients = () => {
   };
 
   const deletePatient = async (patientId, patientName) => {
-    if (window.confirm(`Are you sure you want to delete ${patientName}? This will also delete all their appointments. This action cannot be undone.`)) {
+    if (await confirm({
+      title: `Delete ${patientName}?`,
+      message: "This permanently deletes the patient and all their appointments. It can't be undone.",
+      confirmLabel: "Delete patient",
+      tone: "danger",
+    })) {
       try {
         const { data } = await axios.delete(
           `${backendUrl}/api/admin/delete-patient/${patientId}`,
@@ -172,7 +180,7 @@ const ManagePatients = () => {
           </div>
           <button 
             onClick={() => window.location.href = '/add-patient'}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 transition-colors"
           >
             <FaPlus /> Add New Patient
           </button>
@@ -188,13 +196,13 @@ const ManagePatients = () => {
                 placeholder="Search patients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               />
             </div>
             <select
               value={filterGender}
               onChange={(e) => setFilterGender(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
             >
               <option value="all">All Genders</option>
               <option value="Male">Male</option>
@@ -204,7 +212,7 @@ const ManagePatients = () => {
             <select
               value={filterWhatsApp}
               onChange={(e) => setFilterWhatsApp(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
             >
               <option value="all">All Notifications</option>
               <option value="enabled">WhatsApp Enabled</option>
@@ -219,7 +227,7 @@ const ManagePatients = () => {
 
       {/* Patients Table */}
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        <div className="max-h-[65vh] overflow-auto">
+        <div className="overflow-x-auto">
           {/* Desktop View */}
           <div className="hidden lg:block">
             <table className="w-full">
@@ -238,11 +246,7 @@ const ManagePatients = () => {
                   <tr key={patient._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={patient.image}
-                          alt={patient.name}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                        <Avatar src={patient.image} name={patient.name} className="w-12 h-12" textClass="text-base" />
                         <div>
                           <p className="font-medium text-gray-900">{patient.name}</p>
                           <p className="text-sm text-gray-500">{patient.email}</p>
@@ -265,7 +269,7 @@ const ManagePatients = () => {
                             <span className="text-xs">WhatsApp</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-blue-600">
+                          <div className="flex items-center gap-1 text-primary-700">
                             <FaEnvelope />
                             <span className="text-xs">Email</span>
                           </div>
@@ -276,7 +280,7 @@ const ManagePatients = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditPatient(patient)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                           title="Edit Patient"
                         >
                           <FaEdit />
@@ -302,11 +306,7 @@ const ManagePatients = () => {
               <div key={patient._id} className="p-4 border-b border-gray-50 last:border-b-0">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={patient.image}
-                      alt={patient.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                    <Avatar src={patient.image} name={patient.name} className="w-12 h-12" textClass="text-base" />
                     <div>
                       <p className="font-medium text-gray-900">{patient.name}</p>
                       <p className="text-sm text-gray-500">{patient.email}</p>
@@ -316,7 +316,7 @@ const ManagePatients = () => {
                     {patient.whatsappEnabled ? (
                       <FaWhatsapp className="text-green-500" />
                     ) : (
-                      <FaEnvelope className="text-blue-500" />
+                      <FaEnvelope className="text-primary-600" />
                     )}
                   </div>
                 </div>
@@ -337,13 +337,13 @@ const ManagePatients = () => {
                     {patient.whatsappEnabled ? (
                       <span className="text-green-600">WhatsApp Enabled</span>
                     ) : (
-                      <span className="text-blue-600">Email Only</span>
+                      <span className="text-primary-700">Email Only</span>
                     )}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditPatient(patient)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                     >
                       <FaEdit />
                     </button>
@@ -389,7 +389,7 @@ const ManagePatients = () => {
                   type="text"
                   value={editingPatient.name}
                   onChange={(e) => setEditingPatient({...editingPatient, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -398,7 +398,7 @@ const ManagePatients = () => {
                   type="email"
                   value={editingPatient.email || ""}
                   onChange={(e) => setEditingPatient({...editingPatient, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -407,7 +407,7 @@ const ManagePatients = () => {
                   type="tel"
                   value={editingPatient.phone}
                   onChange={(e) => setEditingPatient({...editingPatient, phone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -416,7 +416,7 @@ const ManagePatients = () => {
                   type="date"
                   value={editingPatient.dob}
                   onChange={(e) => setEditingPatient({...editingPatient, dob: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div>
@@ -424,7 +424,7 @@ const ManagePatients = () => {
                 <select
                   value={editingPatient.gender}
                   onChange={(e) => setEditingPatient({...editingPatient, gender: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -437,7 +437,7 @@ const ManagePatients = () => {
                   type="text"
                   value={editingPatient.address1}
                   onChange={(e) => setEditingPatient({...editingPatient, address1: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               <div className="md:col-span-2">
@@ -446,7 +446,7 @@ const ManagePatients = () => {
                   type="text"
                   value={editingPatient.address2}
                   onChange={(e) => setEditingPatient({...editingPatient, address2: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
                 />
               </div>
               
@@ -506,7 +506,7 @@ const ManagePatients = () => {
               <button
                 onClick={updatePatient}
                 disabled={updateLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50"
               >
                 {updateLoading ? "Updating..." : "Update Patient"}
               </button>

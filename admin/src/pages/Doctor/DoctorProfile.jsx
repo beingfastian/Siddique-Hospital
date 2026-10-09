@@ -75,7 +75,7 @@ const DoctorProfile = () => {
     <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         {/* Header Section */}
-        <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-8">
+        <div className="relative bg-gradient-to-r from-primary-600 to-primary-700 p-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Profile Image */}
             <div className="relative">
@@ -119,7 +119,7 @@ const DoctorProfile = () => {
               {!isEdit ? (
                 <button
                   onClick={() => setIsEdit(true)}
-                  className="flex items-center gap-2 bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 bg-white text-primary-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                 >
                   <FaEdit />
                   Edit Profile
@@ -152,7 +152,7 @@ const DoctorProfile = () => {
           {/* About Section */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaUser className="text-blue-600" />
+              <FaUser className="text-primary-700" />
               About
             </h2>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -180,7 +180,7 @@ const DoctorProfile = () => {
                       fee: e.target.value,
                     }))
                   }
-                  className="w-32 px-3 py-2 border border-gray-300 rounded-md outline-blue-500"
+                  className="w-32 px-3 py-2 border border-gray-300 rounded-md outline-primary-600"
                   min="0"
                 />
               ) : (
@@ -206,7 +206,7 @@ const DoctorProfile = () => {
             {/* Availability Section */}
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FaClock className="text-blue-600" />
+                <FaClock className="text-primary-700" />
                 Availability Status
               </h3>
               <div className="flex items-center justify-between">
@@ -264,7 +264,7 @@ const DoctorProfile = () => {
                         address: { ...prev.address, line1: e.target.value },
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md outline-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md outline-primary-600"
                   />
                 ) : (
                   <p className="text-gray-700">{profileData.address.line1}</p>
@@ -284,7 +284,7 @@ const DoctorProfile = () => {
                         address: { ...prev.address, line2: e.target.value },
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md outline-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md outline-primary-600"
                   />
                 ) : (
                   <p className="text-gray-700">{profileData.address.line2}</p>

@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
+import Avatar from "../../components/ui/Avatar";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { assets } from "../../assets/assets.js";
 import { AppContext } from "../../context/AppContext.jsx";
@@ -8,6 +10,7 @@ import { toast } from "react-toastify";
 import ProfitReport from "../../components/ProfitReport";
 
 const Dashboard = () => {
+  const { confirm } = useDialog();
   const { aToken, getDashData, dashData, cancelAppointment, backendUrl, doctors, getAllDoctors } = useContext(AdminContext);
   // Doctors for the profit report's filter
   useEffect(() => {
@@ -60,15 +63,15 @@ const Dashboard = () => {
       title: "Total Doctors",
       value: dashData.doctors,
       icon: <FaUserMd className="text-2xl" />,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
+      color: "text-primary-700",
+      bgColor: "bg-primary-100"
     },
     {
       title: "Total Appointments",
       value: dashData.appointments,
       icon: <FaCalendarCheck className="text-2xl" />,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-100"
+      color: "text-primary-700",
+      bgColor: "bg-primary-100"
     },
     {
       title: "Total Patients",
@@ -141,8 +144,8 @@ const Dashboard = () => {
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FaChartLine className="text-blue-600" />
+              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                <FaChartLine className="text-primary-700" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Latest Bookings</h2>
@@ -155,7 +158,7 @@ const Dashboard = () => {
                 <span>WhatsApp</span>
               </div>
               <div className="flex items-center gap-1">
-                <FaEnvelope className="text-blue-500" />
+                <FaEnvelope className="text-primary-600" />
                 <span>Email</span>
               </div>
             </div>
@@ -170,11 +173,7 @@ const Dashboard = () => {
                 className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0"
               >
                 <div className="flex items-center gap-4">
-                  <img
-                    className="w-12 h-12 rounded-full object-cover"
-                    src={item.docData.image}
-                    alt={item.docData.name}
-                  />
+                  <Avatar src={item.docData.image} name={item.docData.name} className="w-12 h-12" textClass="text-base" />
                   <div>
                     <p className="font-semibold text-gray-900">{item.docData.name}</p>
                     <p className="text-sm text-gray-600">Patient: {item.userData.name}</p>
@@ -191,7 +190,7 @@ const Dashboard = () => {
                         <FaWhatsapp className="text-green-500 w-4 h-4" title="WhatsApp enabled" />
                       </div>
                     )}
-                    <FaEnvelope className="text-blue-500 w-4 h-4" title="Email notification" />
+                    <FaEnvelope className="text-primary-600 w-4 h-4" title="Email notification" />
                   </div>
 
                   {item.cancelled ? (
@@ -212,7 +211,14 @@ const Dashboard = () => {
                         Pending
                       </span>
                       <button
-                        onClick={() => window.confirm("Cancel this appointment? The patient's slot will be freed.") && cancelAppointment(item._id)}
+                        onClick={async () =>
+                          (await confirm({
+                            title: `Cancel ${item.userData?.name || "this patient"}'s appointment?`,
+                            message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
+                            confirmLabel: "Cancel appointment",
+                            tone: "danger",
+                          })) && cancelAppointment(item._id)
+                        }
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Cancel Appointment"
                       >

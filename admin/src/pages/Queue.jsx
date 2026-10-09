@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useDialog } from "../components/ui/Dialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import {
@@ -219,6 +220,7 @@ const PatientPicker = ({ headers, backendUrl, selected, onSelect, newPatient, se
 };
 
 const Queue = () => {
+  const { confirm, prompt } = useDialog();
   const { aToken, doctors, getAllDoctors } = useContext(AdminContext);
   const { dToken, profileData, getProfileData } = useContext(DoctorContext);
   const { slotDateFormat } = useContext(AppContext);
@@ -381,9 +383,16 @@ const Queue = () => {
     post("call", { ...(tokenId && { tokenId }), expectedCurrentId: queue?.current?._id || "" }, tokenId ? `call-${tokenId}` : "next");
   const act = (tokenId, action) => post("action", { tokenId, action }, `${action}-${tokenId}`);
 
-  const togglePause = () => {
+  const togglePause = async () => {
     if (queue?.paused) return post("pause", { paused: false }, "pause");
-    const note = window.prompt("Reason shown on the waiting-room screen (optional), e.g. Namaz break, Ward round", "Break");
+    const note = await prompt({
+      title: "Pause the queue?",
+      message: "The waiting-room screen and patients' token pages show that the doctor is on a break.",
+      label: "Reason shown to patients (optional)",
+      defaultValue: "Break",
+      placeholder: "e.g. Namaz break, Ward round",
+      confirmLabel: "Pause queue",
+    });
     if (note === null) return null;
     return post("pause", { paused: true, note }, "pause");
   };
@@ -519,7 +528,14 @@ const Queue = () => {
                       <FaPrint />
                     </button>
                     <button
-                      onClick={() => window.confirm(`Remove token ${t.number} (${t.patientName}) from the line? Their visit is cancelled.`) && act(t._id, "left")}
+                      onClick={async () =>
+                        (await confirm({
+                          title: `Remove token ${t.number} from the line?`,
+                          message: `${t.patientName} is taken out of the queue and their visit is cancelled. No message is sent.`,
+                          confirmLabel: "Remove from line",
+                          tone: "danger",
+                        })) && act(t._id, "left")
+                      }
                       disabled={Boolean(busy)}
                       className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
                       title="Left / remove from line"

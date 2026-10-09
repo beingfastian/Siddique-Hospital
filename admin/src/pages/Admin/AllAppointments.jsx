@@ -1,14 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useDialog } from "../../components/ui/Dialog";
+import Avatar from "../../components/ui/Avatar";
 import { AdminContext } from "../../context/AdminContext.jsx";
 import { AppContext } from "../../context/AppContext.jsx";
 import { assets } from "../../assets/assets.js";
-import { FaWhatsapp, FaEnvelope, FaFilter, FaEye, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash, FaPrint } from "react-icons/fa";
+import { FaWhatsapp, FaEnvelope, FaSearch, FaExchangeAlt, FaTimes, FaCalendarDay, FaUserSlash, FaPrint } from "react-icons/fa";
 import { printAppointmentSlip } from "../../components/PrintSlip";
 import { hasStarted } from "../../utils/slots";
 import { AdminRescheduleModal } from "../../components/RescheduleModal";
 import DayActionsDialog from "../../components/DayActionsDialog";
 
 const AllAppointments = () => {
+  const { confirm, alert } = useDialog();
   const { aToken, appointments, getAllAppointments, doctors, getAllDoctors, cancelAppointment, rescheduleDay, cancelDay, markNoShow } =
     useContext(AdminContext);
   const [rescheduleFor, setRescheduleFor] = useState(null);
@@ -71,7 +74,7 @@ const AllAppointments = () => {
       time: item.slotTime,
       fee: typeof item.amount === "number" ? item.amount : undefined,
     });
-    if (!ok) window.alert("The print window was blocked. Allow pop-ups for this site and try again.");
+    if (!ok) alert({ title: "Couldn't open the print window", message: "The browser blocked it. Allow pop-ups for this site, then try again." });
   };
 
   // Reschedule / cancel for appointments that haven't happened yet
@@ -89,7 +92,7 @@ const AllAppointments = () => {
         {item.type !== "walk_in" && (
         <button
           onClick={() => setRescheduleFor(item)}
-          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
           title="Reschedule"
           aria-label="Reschedule"
         >
@@ -97,9 +100,13 @@ const AllAppointments = () => {
         </button>
         )}
         <button
-          onClick={() =>
-            window.confirm(`Cancel ${item.userData.name}'s appointment? The patient will be told on WhatsApp.`) &&
-            cancelAppointment(item._id)
+          onClick={async () =>
+            (await confirm({
+              title: `Cancel ${item.userData.name}'s appointment?`,
+              message: "The time slot is freed and the patient is told on WhatsApp (if they agreed to messages).",
+              confirmLabel: "Cancel appointment",
+              tone: "danger",
+            })) && cancelAppointment(item._id)
           }
           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Cancel"
@@ -125,21 +132,17 @@ const AllAppointments = () => {
   return (
     <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <h1 className="text-2xl font-semibold text-gray-900">All Appointments</h1>
             <p className="text-gray-600 mt-1">Overview of all appointments in the system</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-              <FaEye className="text-blue-600" />
-              <span className="text-sm text-blue-800 font-medium">Reception marks no-shows</span>
-            </div>
             <button
               onClick={() => setShowDayActions(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              <FaCalendarDay className="text-blue-600" />
+              <FaCalendarDay className="text-primary-700" />
               Manage a day
             </button>
           </div>
@@ -155,7 +158,7 @@ const AllAppointments = () => {
                 placeholder="Search by patient or doctor name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
               />
             </div>
             
@@ -163,7 +166,7 @@ const AllAppointments = () => {
               <select 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -175,7 +178,7 @@ const AllAppointments = () => {
               <select 
                 value={filterNotification} 
                 onChange={(e) => setFilterNotification(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 outline-none"
               >
                 <option value="all">All Notifications</option>
                 <option value="whatsapp">WhatsApp</option>
@@ -213,18 +216,14 @@ const AllAppointments = () => {
         </div>
 
         {/* Appointments List */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="overflow-x-auto">
           {filteredAppointments.length > 0 ? (
             filteredAppointments.map((item, index) => (
               <div key={index} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors">
                 {/* Desktop Layout */}
                 <div className="hidden lg:grid grid-cols-12 gap-4 p-4 items-center">
                   <div className="col-span-2 flex items-center gap-3 min-w-0">
-                    <img
-                      className="w-10 h-10 rounded-full object-cover"
-                      src={item.userData.image}
-                      alt={item.userData.name}
-                    />
+                    <Avatar src={item.userData.image} name={item.userData.name} className="w-10 h-10" textClass="text-sm" />
                     <div>
                       <p className="font-semibold text-gray-900">{item.userData.name}</p>
                       {item.userData.whatsappEnabled && (
@@ -243,11 +242,7 @@ const AllAppointments = () => {
                   </div>
                   
                   <div className="col-span-2 flex items-center gap-2">
-                    <img
-                      className="w-8 h-8 rounded-full object-cover"
-                      src={item.docData.image}
-                      alt={item.docData.name}
-                    />
+                    <Avatar src={item.docData.image} name={item.docData.name} className="w-8 h-8" textClass="text-xs" />
                     <span className="font-medium text-gray-900">{item.docData.name}</span>
                   </div>
                   
@@ -259,7 +254,7 @@ const AllAppointments = () => {
                     {item.userData?.whatsappEnabled ? (
                       <FaWhatsapp className="text-green-500 text-lg" title="WhatsApp" />
                     ) : (
-                      <FaEnvelope className="text-blue-500 text-lg" title="Email" />
+                      <FaEnvelope className="text-primary-600 text-lg" title="Email" />
                     )}
                   </div>
                   
@@ -268,9 +263,12 @@ const AllAppointments = () => {
                     {getTypeBadge(item)}
                     {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
                       <button
-                        onClick={() =>
-                          window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
-                          markNoShow(item._id)
+                        onClick={async () =>
+                          (await confirm({
+                            title: `Mark ${item.userData.name} as no-show?`,
+                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
+                            confirmLabel: "Mark no-show",
+                          })) && markNoShow(item._id)
                         }
                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                         title="Mark as no-show"
@@ -287,11 +285,7 @@ const AllAppointments = () => {
                 <div className="lg:hidden p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                        className="w-12 h-12 rounded-full object-cover"
-                        src={item.userData.image}
-                        alt={item.userData.name}
-                      />
+                      <Avatar src={item.userData.image} name={item.userData.name} className="w-12 h-12" textClass="text-base" />
                       <div>
                         <p className="font-semibold text-gray-900">{item.userData.name}</p>
                         <p className="text-sm text-gray-500">Age: {calculateAge(item.userData.dob)}</p>
@@ -302,9 +296,12 @@ const AllAppointments = () => {
                       {getTypeBadge(item)}
                       {!item.cancelled && !item.isCompleted && item.status !== "no_show" && hasStarted(item) && (
                         <button
-                          onClick={() =>
-                            window.confirm("Mark this appointment as no-show? The patient didn't come.") &&
-                            markNoShow(item._id)
+                          onClick={async () =>
+                            (await confirm({
+                            title: `Mark ${item.userData.name} as no-show?`,
+                            message: "Use this when the patient didn't come. If they arrive late, you can still complete the visit.",
+                            confirmLabel: "Mark no-show",
+                          })) && markNoShow(item._id)
                           }
                           className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                           title="Mark as no-show"
@@ -336,7 +333,7 @@ const AllAppointments = () => {
                           <span>WhatsApp</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 text-xs text-blue-600">
+                        <div className="flex items-center gap-1 text-xs text-primary-700">
                           <FaEnvelope />
                           <span>Email</span>
                         </div>
@@ -366,21 +363,6 @@ const AllAppointments = () => {
               </p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Info Message */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <FaEye className="text-blue-600 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-blue-900">Managing appointments</h4>
-            <p className="text-sm text-blue-700 mt-1">
-              Use the buttons on an upcoming appointment to reschedule or cancel it, or "Manage a day" to move or
-              cancel all of a doctor's appointments on one day. Patients are told on WhatsApp. Doctors mark visits
-              as completed; reception marks a missed patient as a no-show from this list.
-            </p>
-          </div>
         </div>
       </div>
 

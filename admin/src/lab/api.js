@@ -105,7 +105,7 @@ export const labChanged = () => window.dispatchEvent(new Event("lab-changed"));
 export const STATUS = {
   ordered: { label: "Waiting for lab", className: "bg-amber-100 text-amber-800" },
   returned: { label: "Returned to lab", className: "bg-red-100 text-red-700" },
-  report_uploaded: { label: "Report ready – doctor to review", className: "bg-blue-100 text-blue-700" },
+  report_uploaded: { label: "Report ready – doctor to review", className: "bg-primary-100 text-primary-800" },
   approved: { label: "Approved", className: "bg-green-100 text-green-700" },
   cancelled: { label: "Cancelled", className: "bg-gray-100 text-gray-500" },
 };

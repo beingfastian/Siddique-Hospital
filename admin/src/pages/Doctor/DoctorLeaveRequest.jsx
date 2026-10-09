@@ -1,9 +1,11 @@
 import React, { useContext, useState, useEffect } from "react";
+import { useDialog } from "../../components/ui/Dialog";
 import { DoctorContext } from "../../context/DoctorContext";
 import { toast } from "react-toastify";
 import { FaCalendarAlt, FaPlus, FaTrash, FaEye, FaClock, FaTimes } from "react-icons/fa";
 
 const DoctorLeaveRequest = () => {
+  const { confirm } = useDialog();
   const { 
     dToken, 
     backendUrl, 
@@ -23,7 +25,7 @@ const DoctorLeaveRequest = () => {
   });
 
   const leaveTypes = [
-    { value: "vacation", label: "Vacation", color: "bg-blue-100 text-blue-700" },
+    { value: "vacation", label: "Vacation", color: "bg-primary-100 text-primary-800" },
     { value: "sick", label: "Sick Leave", color: "bg-red-100 text-red-700" },
     { value: "emergency", label: "Emergency", color: "bg-orange-100 text-orange-700" },
     { value: "personal", label: "Personal", color: "bg-purple-100 text-purple-700" },
@@ -96,7 +98,7 @@ const DoctorLeaveRequest = () => {
   };
 
   const handleCancelLeaveRequest = async (requestId) => {
-    if (!window.confirm("Are you sure you want to cancel this leave request?")) {
+    if (!(await confirm({ title: "Withdraw this leave request?", message: "The admin will no longer see it for approval.", confirmLabel: "Withdraw request", tone: "danger" }))) {
       return;
     }
     try {
@@ -140,7 +142,7 @@ const DoctorLeaveRequest = () => {
         <h1 className="text-2xl font-semibold text-gray-900">Leave Requests</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 transition-colors"
         >
           <FaPlus />
           Request Leave
@@ -195,7 +197,7 @@ const DoctorLeaveRequest = () => {
                   value={formData.fromDate}
                   onChange={(e) => setFormData({...formData, fromDate: e.target.value})}
                   min={getTodayDate()}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -206,7 +208,7 @@ const DoctorLeaveRequest = () => {
                   value={formData.toDate}
                   onChange={(e) => setFormData({...formData, toDate: e.target.value})}
                   min={formData.fromDate || getTodayDate()}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -215,7 +217,7 @@ const DoctorLeaveRequest = () => {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none"
                   required
                 >
                   {leaveTypes.map(type => (
@@ -242,7 +244,7 @@ const DoctorLeaveRequest = () => {
                 value={formData.reason}
                 onChange={(e) => setFormData({...formData, reason: e.target.value})}
                 placeholder="Please provide reason for leave request..."
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent outline-none resize-none"
                 rows={3}
                 required
               />
@@ -252,7 +254,7 @@ const DoctorLeaveRequest = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-primary-700 text-white px-6 py-2 rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Submitting..." : "Submit Request"}
               </button>
@@ -276,7 +278,7 @@ const DoctorLeaveRequest = () => {
             <p className="text-gray-500">Click "Request Leave" to submit your first leave request</p>
           </div>
         ) : (
-          <div className="max-h-[65vh] overflow-auto">
+          <div className="overflow-x-auto">
             {/* Desktop View */}
             <div className="hidden lg:block">
               <table className="w-full">
@@ -328,7 +330,7 @@ const DoctorLeaveRequest = () => {
                           {request.adminResponse && (
                             <button
                               onClick={() => toast.info(`Admin Response: ${request.adminResponse}`)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                               title="View Admin Response"
                             >
                               <FaEye className="text-xs" />
@@ -385,7 +387,7 @@ const DoctorLeaveRequest = () => {
                       {request.adminResponse && (
                         <button
                           onClick={() => toast.info(`Admin Response: ${request.adminResponse}`)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                         >
                           <FaEye className="text-xs" />
                         </button>

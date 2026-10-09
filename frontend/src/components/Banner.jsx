@@ -20,7 +20,7 @@ const Banner = () => {
       <div className="flex-1 py-8 sm:py-10 md:py-16 lg:py-24 lg:pl-5">
         <div className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-semibold text-white">
           <p className="mt-4">Book Appointment</p>
-          <p>With 100+ Trusted Doctors</p>
+          <p>With Our Trusted Doctors</p>
         </div>
         <p className="text-white text-sm sm:text-base mt-4 mb-6 opacity-90">
           Contact us on WhatsApp for instant appointment booking
