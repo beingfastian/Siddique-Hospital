@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Qlinic">
+  <!-- Q ring, open at the bottom right where the queue comes out -->
+  <path d="M34.56 47.12 A18 18 0 1 1 45.31 37.61" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+  <!-- the queue: three people, the middle one being seen -->
+  <circle cx="34.2" cy="35.2" r="4.4" fill="#67E8F9"/>
+  <circle cx="42.4" cy="43.4" r="4.7" fill="#A5F3FC"/>
+  <circle cx="50.6" cy="51.6" r="4.7" fill="#67E8F9"/>
+</svg>

@@ -89,7 +89,7 @@ const VerifyOTP = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="bg-primary p-6 text-center">
-          <img src={assets.logo} alt="Qlinic" className="h-16 w-auto mx-auto mb-4" />
+          <img src={assets.logo_mark_light} alt="Qlinic" className="h-14 w-14 mx-auto mb-3" />
           <h2 className="text-2xl font-bold text-white">Verify OTP</h2>
           <p className="text-primary-100 mt-2">Enter the OTP sent to your email</p>
         </div>

@@ -138,6 +138,27 @@ buttons need `aria-label` and a tooltip (`title`).
 
 ---
 
+## 5a. Logo
+
+- Mark: a teal Q ring (`#0E7490`) open at the bottom right, with the queue coming out of
+  it: three dots, the middle (dark, `#164E63`) one being seen. Files: `assets/qlinic-mark.svg`,
+  `qlinic-mark-light.svg` (white ring, for teal/dark backgrounds), favicon = the mark.
+- Wordmark: "Qlinic" in Figtree ExtraBold, `slate-900`; tagline "Care without the wait."
+  In the apps the wordmark is real text next to the mark (patient site: `Logo` in
+  `components/site.jsx`), so it renders crisply in the web font.
+- Never put the dark wordmark on teal; use the light mark there.
+
+## 5b. Patient website language
+
+- English | اردو switch, remembered on the phone (`frontend/src/i18n.jsx`). Urdu sets
+  `<html lang="ur" dir="rtl">`, the Nastaliq font and taller line heights.
+- Names, phone numbers, fees and times stay Latin inside Urdu text: wrap them in
+  `<Latin>` (`bdi dir="ltr" lang="en"`).
+- Use logical spacing (`ms-`/`me-`, `text-start/end`) and `rtl:rotate-180` on arrows.
+- The queue board and token page are bilingual on their own and stay left-to-right.
+
+---
+
 ## 6. Motion
 
 Transitions 150-200ms on colour/opacity only. No scroll animations, no layout-shifting

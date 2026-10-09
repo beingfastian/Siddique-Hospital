@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { HOSPITAL_NAME, HOSPITAL_NAME_URDU, HOSPITAL_PHONE } from "../../config";
+import { assets } from "../../assets/assets";
 
 // A patient's own token page, opened from the WhatsApp link or the QR code on the
 // slip (often on a family member's phone). Urdu first, English under it. Shows
@@ -66,17 +67,17 @@ const QueueTrack = () => {
   if (notFound) {
     box = (
       <Line
-        className="p-5 rounded-2xl bg-gray-100 text-gray-800"
+        className="p-5 rounded-2xl bg-slate-100 text-slate-800"
         ur="یہ ٹوکن نہیں ملا۔ براہ کرم ریسیپشن سے رابطہ کریں۔"
         en="This token was not found. Please ask at reception."
       />
     );
   } else if (!token) {
-    box = <p className="text-center text-gray-500 py-10">Loading… / لوڈ ہو رہا ہے</p>;
+    box = <p className="text-center text-slate-500 py-10">Loading… / لوڈ ہو رہا ہے</p>;
   } else if (!token.isToday) {
     box = (
       <Line
-        className="p-5 rounded-2xl bg-gray-100 text-gray-800"
+        className="p-5 rounded-2xl bg-slate-100 text-slate-800"
         ur={`یہ ٹوکن ${formatDay(token.day)} کا تھا۔`}
         en={`This token was for ${formatDay(token.day)}.`}
       />
@@ -90,7 +91,7 @@ const QueueTrack = () => {
       />
     );
   } else if (token.status === "done") {
-    box = <Line className="p-5 rounded-2xl bg-gray-100 text-gray-800" ur="آپ کا معائنہ مکمل ہو گیا۔ شکریہ!" en="Your visit is complete. Thank you!" />;
+    box = <Line className="p-5 rounded-2xl bg-slate-100 text-slate-800" ur="آپ کا معائنہ مکمل ہو گیا۔ شکریہ!" en="Your visit is complete. Thank you!" />;
   } else if (token.status === "skipped") {
     box = (
       <Line
@@ -100,7 +101,7 @@ const QueueTrack = () => {
       />
     );
   } else if (token.status === "left") {
-    box = <Line className="p-5 rounded-2xl bg-gray-100 text-gray-800" ur="یہ ٹوکن منسوخ ہو چکا ہے۔" en="This token was cancelled." />;
+    box = <Line className="p-5 rounded-2xl bg-slate-100 text-slate-800" ur="یہ ٹوکن منسوخ ہو چکا ہے۔" en="This token was cancelled." />;
   } else {
     box = (
       <div className="space-y-3">
@@ -130,7 +131,7 @@ const QueueTrack = () => {
         )}
         {!token.started && !token.paused && (
           <Line
-            className="p-4 rounded-2xl bg-gray-100 text-gray-800"
+            className="p-4 rounded-2xl bg-slate-100 text-slate-800"
             ur="ڈاکٹر نے ابھی مریض دیکھنا شروع نہیں کیے۔ وقت اندازاً ہے۔"
             en="The doctor hasn't started yet, so the time is only a guess."
           />
@@ -141,26 +142,27 @@ const QueueTrack = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center px-4 py-6">
+    <div className="min-h-screen bg-slate-50 flex justify-center px-4 py-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-5">
-          <p className="text-xl font-bold text-gray-900">{HOSPITAL_NAME}</p>
+          <img src={assets.logo_mark} alt="" className="mx-auto mb-2 h-10 w-10" />
+          <p className="font-display text-xl font-bold text-slate-900">{HOSPITAL_NAME}</p>
           {HOSPITAL_NAME_URDU && (
-            <p className="text-gray-600" dir="rtl" lang="ur">{HOSPITAL_NAME_URDU}</p>
+            <p className="text-slate-600" dir="rtl" lang="ur">{HOSPITAL_NAME_URDU}</p>
           )}
         </div>
 
         {token && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4 text-center">
-            <p className="text-gray-500">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-4 text-center">
+            <p className="text-slate-500">
               Your token · <span dir="rtl" lang="ur">آپ کا ٹوکن نمبر</span>
             </p>
-            <p className="text-7xl font-bold text-gray-900 tabular-nums my-2">{token.number}</p>
-            <p className="text-gray-700">Dr. {token.doctorName}</p>
-            {token.speciality && <p className="text-sm text-gray-500">{token.speciality}</p>}
+            <p className="text-7xl font-bold text-slate-900 tabular-nums my-2">{token.number}</p>
+            <p className="text-slate-700">Dr. {token.doctorName}</p>
+            {token.speciality && <p className="text-sm text-slate-500">{token.speciality}</p>}
             {token.isToday && token.status !== "done" && token.status !== "left" && (
-              <p className="mt-3 text-sm text-gray-500">
-                Now serving · <span dir="rtl" lang="ur">اب باری</span>: <span className="font-semibold text-gray-900">{token.nowServing ?? "—"}</span>
+              <p className="mt-3 text-sm text-slate-500">
+                Now serving · <span dir="rtl" lang="ur">اب باری</span>: <span className="font-semibold text-slate-900">{token.nowServing ?? "—"}</span>
               </p>
             )}
           </div>
@@ -173,7 +175,7 @@ const QueueTrack = () => {
             No internet, retrying… / انٹرنیٹ نہیں، دوبارہ کوشش جاری ہے
           </p>
         )}
-        <p className="mt-6 text-center text-xs text-gray-500">
+        <p className="mt-6 text-center text-xs text-slate-500">
           Updates by itself every few seconds{updatedAt ? ` · last ${updatedAt.toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}` : ""}.
           <br />
           Help: <a className="underline" href={`tel:${HOSPITAL_PHONE}`}>{HOSPITAL_PHONE}</a>

@@ -1,75 +1,39 @@
-import React from "react";
-import { assets } from "../assets/assets";
+import { FaClock, FaFlask, FaWhatsapp } from "react-icons/fa";
 import { HOSPITAL_NAME } from "../config";
+import { useLanguage } from "../i18n";
+import { ButtonLink, Container, whatsappUrl } from "../components/site";
 
 const About = () => {
+  const { t } = useLanguage();
+  const points = [
+    { icon: <FaClock />, title: t("about.e1Title"), text: t("about.e1Text") },
+    { icon: <FaWhatsapp />, title: t("about.e2Title"), text: t("about.e2Text") },
+    { icon: <FaFlask />, title: t("about.e3Title"), text: t("about.e3Text") },
+  ];
   return (
-    <div>
-      <div className="text-center text-2xl pt-10 text-gray-500">
-        <p>
-          ABOUT <span className="text-gray-700 font-medium">US</span>
-        </p>
-      </div>
-      <div className="my-10 flex flex-col md:flex-row gap-12">
-        <img
-          src={assets.about_image}
-          alt=""
-          className="w-full md:max-w-[360px]"
-        />
-        <div className="flex flex-col justify-center gap-6 md:w-2/4 text-lg text-gray-600">
-          <p>
-            Welcome to {HOSPITAL_NAME}, your trusted partner in managing your
-            healthcare needs conveniently and efficiently. At {HOSPITAL_NAME}, we
-            understand the challenges individuals face when it comes to
-            scheduling doctor appointments and managing their health records.
-          </p>
-          <p>
-            {HOSPITAL_NAME} is committed to excellence in healthcare technology. We
-            continuously strive to enhance our platform, integrating the latest
-            advancements to improve user experience and deliver superior
-            service. Whether you're booking your first appointment or managing
-            ongoing care, {HOSPITAL_NAME} is here to support you every step of the
-            way.
-          </p>
-          <strong className="text-gray-800">Our Vision</strong>
-          <p>
-            Our vision at {HOSPITAL_NAME} is to create a seamless healthcare
-            experience for every user. We aim to bridge the gap between patients
-            and healthcare providers, making it easier for you to access the
-            care you need, when you need it.
-          </p>
-        </div>
-      </div>
+    <Container className="py-8 sm:py-10">
+      <h1 className="text-3xl font-bold text-slate-900">{t("about.title", { hospital: HOSPITAL_NAME })}</h1>
+      <p className="mt-3 max-w-3xl text-lg text-slate-600">{t("about.lead", { hospital: HOSPITAL_NAME })}</p>
 
-      <div className="text-xl my-4 text-gray-400">
-        <p>
-          WHY <span className="text-gray-700 font-semibold">CHOOSE US</span>
-        </p>
+      <h2 className="mt-10 text-2xl font-semibold text-slate-900">{t("about.expectTitle")}</h2>
+      <ul className="mt-5 grid gap-4 md:grid-cols-3">
+        {points.map((p) => (
+          <li key={p.title} className="rounded-xl border border-slate-200 bg-white p-5">
+            <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-lg text-primary-700">
+              {p.icon}
+            </span>
+            <h3 className="mt-3 text-lg font-semibold text-slate-900">{p.title}</h3>
+            <p className="mt-1 text-sm text-slate-600">{p.text}</p>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-10">
+        <ButtonLink href={whatsappUrl(t("wa.general"))} external variant="whatsapp" size="lg" icon={<FaWhatsapp />}>
+          {t("action.whatsapp")}
+        </ButtonLink>
       </div>
-      <div className="flex flex-col md:flex-row mb-20">
-        <div className="hover:text-white hover:bg-primary border px-10 md:px16 py-8 sm:py-16 flex flex-col gap-5 text-[15px] transition-all duration-300 text-gray-600 cursor-pointer">
-          <strong>EFFICIENCY:</strong>
-          <p>
-            Streamlined appointment scheduling that fits into your busy
-            lifestyle.
-          </p>
-        </div>
-        <div className="hover:text-white hover:bg-primary border px-10 md:px16 py-8 sm:py-16 flex flex-col gap-5 text-[15px] transition-all duration-300 text-gray-600 cursor-pointer">
-          <strong>CONVENIENCE:</strong>
-          <p>
-            Access to a network of trusted healthcare professionals in your
-            area.
-          </p>
-        </div>
-        <div className="hover:text-white hover:bg-primary border px-10 md:px16 py-8 sm:py-16 flex flex-col gap-5 text-[15px] transition-all duration-300 text-gray-600 cursor-pointer">
-          <strong>PERSONALIZATION:</strong>
-          <p>
-            Tailored recommendations and reminders to help you stay on top of
-            your health.
-          </p>
-        </div>
-      </div>
-    </div>
+    </Container>
   );
 };
 

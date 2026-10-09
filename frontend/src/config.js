@@ -9,6 +9,11 @@ export const HOSPITAL_NAME_URDU = env.VITE_HOSPITAL_NAME_URDU || "";
 export const HOSPITAL_PHONE = env.VITE_HOSPITAL_PHONE || "+920000000000";
 export const HOSPITAL_EMAIL = env.VITE_HOSPITAL_EMAIL || "info@example.com";
 export const HOSPITAL_ADDRESS = env.VITE_HOSPITAL_ADDRESS || "Hospital address, City";
+// Optional: opening hours as you want patients to read them (English and Urdu)
+export const HOSPITAL_HOURS = env.VITE_HOSPITAL_HOURS || "";
+export const HOSPITAL_HOURS_URDU = env.VITE_HOSPITAL_HOURS_URDU || "";
+// Optional: your Google Maps link; otherwise the address is searched on Google Maps
+export const HOSPITAL_MAP_URL = env.VITE_HOSPITAL_MAP_URL || "";
 
 // The product itself
 export const PRODUCT_NAME = "Qlinic";

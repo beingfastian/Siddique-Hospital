@@ -75,7 +75,7 @@ const Login = () => {
       {/* Brand panel (large screens) */}
       <aside className="hidden lg:flex flex-col justify-between bg-primary-900 p-12 text-white">
         <div className="flex items-center gap-3">
-          <img src={assets.logo_mark} alt="" className="h-10 w-10 rounded-lg bg-white/10" />
+          <img src={assets.logo_mark_light} alt="" className="h-11 w-11" />
           <div className="leading-tight">
             <p className="font-display text-xl font-semibold">{PRODUCT_NAME}</p>
             <p className="text-sm text-primary-100">{HOSPITAL_NAME}</p>
