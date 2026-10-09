@@ -140,13 +140,13 @@ buttons need `aria-label` and a tooltip (`title`).
 
 ## 5a. Logo
 
-- Mark: a teal Q ring (`#0E7490`) open at the bottom right, with the queue coming out of
-  it: three dots, the middle (dark, `#164E63`) one being seen. Files: `assets/qlinic-mark.svg`,
-  `qlinic-mark-light.svg` (white ring, for teal/dark backgrounds), favicon = the mark.
-- Wordmark: "Qlinic" in Figtree ExtraBold, `slate-900`; tagline "Care without the wait."
-  In the apps the wordmark is real text next to the mark (patient site: `Logo` in
-  `components/site.jsx`), so it renders crisply in the web font.
-- Never put the dark wordmark on teal; use the light mark there.
+- Use the official Qlinic logo files as they are; never redraw or recolour them.
+  - `assets/qlinic-logo.png`: full logo (Q mark with queue dots, "Qlinic", tagline),
+    transparent background. Default everywhere there is room.
+  - `assets/qlinic-mark.png`: the Q mark alone, cut from the same file, for small
+    spaces (phone headers). `public/favicon.png` is the same mark at 64 px.
+- On teal or dark backgrounds, place the logo on a white rounded card.
+- Next to the logo, the hospital's own name in plain text, separated by a thin divider.
 
 ## 5b. Patient website language
 
