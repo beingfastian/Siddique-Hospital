@@ -108,7 +108,7 @@ const Settings = () => {
   return (
     <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">System Settings</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 mb-2">System Settings</h1>
         <p className="text-gray-600">Status of the notification services used for appointments</p>
       </div>
 

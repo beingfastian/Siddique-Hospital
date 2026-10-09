@@ -113,10 +113,10 @@ const LabOrders = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
             <FaFlask className="text-primary" /> {TITLE[role]}
           </h1>
           <p className="text-sm text-gray-500">

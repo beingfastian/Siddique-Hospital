@@ -136,10 +136,10 @@ const DoctorLeaveRequest = () => {
   }, [dToken]);
 
   return (
-    <div className="w-full p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="w-full p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Leave Requests</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Leave Requests</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 transition-colors"

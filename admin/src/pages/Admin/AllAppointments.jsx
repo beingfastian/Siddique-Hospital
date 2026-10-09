@@ -134,7 +134,7 @@ const AllAppointments = () => {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-gray-900">All Appointments</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">All Appointments</h1>
             <p className="text-gray-600 mt-1">Overview of all appointments in the system</p>
           </div>
           <div className="flex items-center gap-3">

@@ -1,12 +1,21 @@
-import React, { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { assets } from "../assets/assets";
-import { AdminContext } from "../context/AdminContext";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { FaEye, FaEyeSlash, FaUserTie, FaUserMd, FaFlask, FaListOl, FaFileMedical, FaChartBar } from "react-icons/fa";
+import { assets } from "../assets/assets";
+import { HOSPITAL_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "../config";
+import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext";
 import { LabContext } from "../context/LabContext";
+import { Button, Field, Input } from "../components/ui";
+
+// One sign-in page for every role. The role decides which account is checked;
+// the requests and where each role lands are unchanged.
+const ROLES = [
+  { key: "Admin", label: "Reception / Admin", icon: <FaUserTie /> },
+  { key: "Doctor", label: "Doctor", icon: <FaUserMd /> },
+  { key: "Lab", label: "Lab", icon: <FaFlask /> },
+];
 
 const Login = () => {
   const [state, setState] = useState("Admin");
@@ -14,29 +23,25 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-  
+  const [error, setError] = useState("");
+
   const { setAToken, backendUrl } = useContext(AdminContext);
-  const { setDToken, dToken } = useContext(DoctorContext);
+  const { setDToken } = useContext(DoctorContext);
   const { setLToken } = useContext(LabContext);
   const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
     setLoading(true);
+    setError("");
     try {
       if (state === "Admin") {
-        const { data } = await axios.post(backendUrl + "/api/admin/login", {
-          email,
-          password,
-        });
+        const { data } = await axios.post(backendUrl + "/api/admin/login", { email, password });
         if (data.success) {
           localStorage.setItem("aToken", data.token);
-          toast.success(data.message);
           setAToken(data.token);
         } else {
-          toast.error(data.message);
+          setError(data.message);
         }
       } else if (state === "Lab") {
         const { data } = await axios.post(backendUrl + "/api/lab/login", { email, password });
@@ -45,189 +50,148 @@ const Login = () => {
           navigate("/lab");
           setLToken(data.token);
         } else {
-          toast.error(data.message);
+          setError(data.message);
         }
       } else {
-        const { data } = await axios.post(backendUrl + "/api/doctor/login", {
-          email,
-          password,
-        });
+        const { data } = await axios.post(backendUrl + "/api/doctor/login", { email, password });
         if (data.success) {
           localStorage.setItem("dToken", data.token);
           navigate("/doctor");
           setDToken(data.token);
         } else {
-          toast.error(data.message);
+          setError(data.message);
         }
       }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Couldn't reach the server. Check the internet connection and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-primary-50 to-primary-100 flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-primary-200/30 to-primary-200/30 blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-tr from-violet-200/30 to-pink-200/30 blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
+      {/* Brand panel (large screens) */}
+      <aside className="hidden lg:flex flex-col justify-between bg-primary-900 p-12 text-white">
+        <div className="flex items-center gap-3">
+          <img src={assets.logo_mark} alt="" className="h-10 w-10 rounded-lg bg-white/10" />
+          <div className="leading-tight">
+            <p className="font-display text-xl font-semibold">{PRODUCT_NAME}</p>
+            <p className="text-sm text-primary-100">{HOSPITAL_NAME}</p>
+          </div>
+        </div>
+        <div>
+          <p className="font-display text-4xl font-semibold leading-tight">{PRODUCT_TAGLINE}</p>
+          <ul className="mt-8 space-y-4 text-primary-50">
+            <li className="flex items-center gap-3">
+              <FaListOl aria-hidden="true" className="text-primary-300" /> Live queue for reception and doctors
+            </li>
+            <li className="flex items-center gap-3">
+              <FaFileMedical aria-hidden="true" className="text-primary-300" /> Lab requests and reports in one place
+            </li>
+            <li className="flex items-center gap-3">
+              <FaChartBar aria-hidden="true" className="text-primary-300" /> Daily, weekly and monthly reports
+            </li>
+          </ul>
+        </div>
+        <p className="text-sm text-primary-200">Secure sign-in for hospital staff only.</p>
+      </aside>
 
-      <div className="relative w-full max-w-md">
-        {/* Main Card */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/5 border border-white/50 p-8 transition-all duration-500 hover:shadow-3xl hover:shadow-black/10">
-          
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl mb-4 shadow-lg shadow-primary-600/25">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+      {/* Sign-in form */}
+      <main className="flex min-h-screen items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-md">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <img src={assets.logo_mark} alt="" className="h-10 w-10" />
+            <div className="leading-tight">
+              <p className="font-display text-lg font-semibold text-slate-900">{PRODUCT_NAME}</p>
+              <p className="text-sm text-slate-500">{HOSPITAL_NAME}</p>
             </div>
-            
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
-              Welcome Back
-            </h1>
-            
-            <p className="text-gray-500 text-sm">
-              Sign in to your <span className="font-semibold text-primary-700">{state}</span> account
-            </p>
           </div>
 
-          {/* Role Toggle */}
-          <div className="flex bg-gray-100/80 backdrop-blur-sm rounded-2xl p-1 mb-8 border border-gray-200/50">
-            <button
-              type="button"
-              onClick={() => setState("Admin")}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                state === "Admin"
-                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => setState("Doctor")}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                state === "Doctor"
-                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Doctor
-            </button>
-            <button
-              type="button"
-              onClick={() => setState("Lab")}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                state === "Lab"
-                  ? "bg-white text-primary-700 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Lab
-            </button>
-          </div>
+          <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
+          <p className="mt-1 text-sm text-slate-600">Choose your role, then enter your work email and password.</p>
 
-          {/* Form */}
-          <form onSubmit={onSubmitHandler} className="space-y-6">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 block">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                  className={`w-full px-4 py-4 bg-gray-50/50 border-2 rounded-2xl text-gray-700 placeholder-gray-400 transition-all duration-300 focus:outline-none ${
-                    emailFocused || email
-                      ? "border-primary-500 bg-white/80 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
-                      : "border-gray-200 hover:border-gray-300"
+          <div role="radiogroup" aria-label="Role" className="mt-6 grid grid-cols-3 gap-2">
+            {ROLES.map((r) => {
+              const selected = state === r.key;
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => {
+                    setState(r.key);
+                    setError("");
+                  }}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-sm font-medium transition-colors ${
+                    selected ? "border-primary bg-primary-50 text-primary-900" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                   }`}
-                  placeholder="Enter your email"
-                  required
-                />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-500 opacity-0 -z-10 blur transition-opacity duration-300"></div>
-              </div>
-            </div>
+                >
+                  <span aria-hidden="true" className={selected ? "text-primary-700" : "text-slate-400"}>
+                    {r.icon}
+                  </span>
+                  <span className="text-center leading-tight">{r.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 block">
-                Password
-              </label>
+          <form onSubmit={onSubmitHandler} className="mt-6 space-y-4" noValidate>
+            <Field label="Email" htmlFor="login-email">
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@hospital.pk"
+                required
+              />
+            </Field>
+            <Field label="Password" htmlFor="login-password">
               <div className="relative">
-                <input
+                <Input
+                  id="login-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                  className={`w-full px-4 py-4 pr-12 bg-gray-50/50 border-2 rounded-2xl text-gray-700 placeholder-gray-400 transition-all duration-300 focus:outline-none ${
-                    passwordFocused || password
-                      ? "border-primary-500 bg-white/80 shadow-lg shadow-primary-100/50 transform scale-[1.02]"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                  placeholder="Enter your password"
                   required
+                  className="pr-11"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:text-slate-800"
                 >
-                  {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                  {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                 </button>
               </div>
-            </div>
+            </Field>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-4 rounded-2xl font-semibold text-white transition-all duration-300 transform ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 hover:scale-[1.02] shadow-lg shadow-primary-600/25 hover:shadow-xl hover:shadow-primary-600/30"
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <span>Signing in</span>
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                  </div>
-                </div>
-              ) : (
-                <span>Sign In</span>
-              )}
-            </button>
-            <div className="mt-4 text-right">
-              <Link to="/forgot-password" className="text-sm text-primary-700 hover:text-primary-900">
-                Forgot Password?
-              </Link>
-            </div>
+            {error && (
+              <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full" disabled={!email || !password}>
+              {loading ? "Signing in" : "Sign in"}
+            </Button>
+
+            {state === "Doctor" && (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-sm font-medium text-primary-700 hover:text-primary-900">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
           </form>
         </div>
-
-        {/* Footer decoration */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-400">
-            Secure • Encrypted • Protected
-          </p>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -108,7 +108,9 @@ Scale (staff panel):
 
 - Spacing: Tailwind scale, dense dashboard rhythm: 8px inside controls, 12-16px inside
   cards, 24px between sections. Page gutter 16px (phone), 24px (desktop).
-- Page content width: `max-w-7xl` for every staff page (one width everywhere).
+- Page content width: `max-w-7xl` for lists, dashboards and work screens (queue, lab);
+  `max-w-4xl` for single-column forms (Add patient, Settings, Doctor profile, Lab staff).
+  Use `<Page>` / `<Page narrow>` from `components/ui`.
 - Radius: `rounded-lg` (8px) for controls and badges, `rounded-xl` (12px) for cards and
   dialogs, `rounded-full` only for avatars and pills.
 - Elevation: cards use a 1px `slate-200` border and no shadow; dropdowns and dialogs use

@@ -63,7 +63,7 @@ const LabStaff = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1"><FaUsersCog className="text-primary" /> Lab Staff</h1>
+      <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2 mb-1"><FaUsersCog className="text-primary" /> Lab Staff</h1>
       <p className="text-sm text-gray-500 mb-4">
         Logins for the lab. They sign in on the normal login page using the “Lab” tab, and only see lab requests and the test list.
       </p>

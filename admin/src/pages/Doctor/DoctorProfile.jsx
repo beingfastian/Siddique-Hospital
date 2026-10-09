@@ -75,7 +75,7 @@ const DoctorProfile = () => {
     <div className="w-full p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         {/* Header Section */}
-        <div className="relative bg-gradient-to-r from-primary-600 to-primary-700 p-8">
+        <div className="relative bg-primary p-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Profile Image */}
             <div className="relative">

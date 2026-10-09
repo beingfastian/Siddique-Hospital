@@ -40,9 +40,9 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-center">
+        <div className="bg-primary p-6 text-center">
           <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
   <svg className="h-8 w-8 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -70,7 +70,7 @@ const ForgotPassword = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition duration-300 flex items-center justify-center disabled:opacity-70"
+            className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-800 transition-colors flex items-center justify-center disabled:opacity-70"
           >
             {loading ? (
               <>
