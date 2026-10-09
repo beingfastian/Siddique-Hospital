@@ -61,7 +61,7 @@ const Dashboard = () => {
         <StatTile
           label="WhatsApp enabled"
           value={whatsappStats.enabledUsers}
-          hint={`${whatsappStats.todayNotifications} messages sent today`}
+          hint={`${whatsappStats.todayNotifications} message${whatsappStats.todayNotifications === 1 ? "" : "s"} sent today`}
           icon={<FaWhatsapp />}
           loading={loading}
         />
