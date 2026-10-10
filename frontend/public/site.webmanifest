@@ -1,0 +1,13 @@
+{
+  "name": "Qclinics",
+  "short_name": "Qclinics",
+  "description": "Care without the wait. Hospital and clinic software for Pakistan.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#0E7490",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

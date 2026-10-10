@@ -15,7 +15,7 @@ export const telUrl = `tel:${phoneDigits}`;
 
 export const Logo = ({ tagline = false, size = "md" }) => (
   <span className="inline-flex items-center gap-2 font-sans" dir="ltr" lang="en">
-    <img src={assets.logo_mark} alt="" className={size === "lg" ? "h-12 w-12" : "h-9 w-9"} />
+    <img src={assets.logo_mark} alt="" width={size === "lg" ? 48 : 36} height={size === "lg" ? 48 : 36} className={size === "lg" ? "h-12 w-12" : "h-9 w-9"} />
     <span className="leading-none">
       <span className={cx("block font-display font-extrabold tracking-tight text-slate-900", size === "lg" ? "text-3xl" : "text-xl")}>{PRODUCT_NAME}</span>
       {tagline && <span className="mt-1 block text-xs font-medium text-slate-700">{PRODUCT_TAGLINE}</span>}

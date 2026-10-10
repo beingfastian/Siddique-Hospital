@@ -6,7 +6,7 @@ import { Container, Latin, Logo, telUrl, whatsappUrl } from "./site";
 
 const Footer = () => {
   const { t } = useLanguage();
-  const linkClass = "inline-flex items-center gap-2 py-1 text-slate-700 hover:text-primary-800";
+  const linkClass = "inline-flex min-h-10 items-center gap-2 py-1 text-slate-700 hover:text-primary-800";
   return (
     <footer className="border-t border-slate-200 bg-white">
       <Container className="grid gap-10 py-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr]">

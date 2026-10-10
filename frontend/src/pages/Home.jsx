@@ -190,7 +190,7 @@ const Home = () => {
           <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <details key={n} className="group p-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-slate-900">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-medium text-slate-900">
                   {t(`faq.q${n}`)}
                   <span aria-hidden="true" className="shrink-0 text-xl text-slate-500 transition-transform group-open:rotate-45">
                     +
