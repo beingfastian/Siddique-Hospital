@@ -152,8 +152,12 @@ buttons need `aria-label` and a tooltip (`title`).
 
 ## 5b. Website language
 
-- English | اردو switch, remembered on the device (`frontend/src/i18n.jsx`). Urdu sets
+- Each language has its own address: English `/`, Urdu `/ur` (`frontend/src/i18n.jsx`),
+  both prerendered at build time (`frontend/scripts/prerender.mjs`) and linked with
+  `hreflang`. The English | اردو switch is a link between them. Urdu pages carry
   `<html lang="ur" dir="rtl">`, the Nastaliq font and taller line heights.
+- Every new marketing string needs both languages; page title and description live in
+  `meta.title` / `meta.description`.
 - Names, numbers and brand text stay Latin inside Urdu: wrap them in `<Latin>`.
 - Use logical spacing (`ms-`/`me-`, `text-start/end`) and `rtl:rotate-180` on arrows.
 - The queue board and token page are bilingual on their own and stay left-to-right.

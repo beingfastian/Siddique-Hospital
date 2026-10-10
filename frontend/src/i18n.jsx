@@ -1,12 +1,25 @@
-// English / Urdu for the Qclinics website. The choice is remembered on the device.
-// Urdu switches the page to right-to-left and the Nastaliq font (index.css).
+// English / Urdu for the Qclinics website. Each language has its own address
+// (English "/", Urdu "/ur"), prerendered at build time and linked with hreflang,
+// so both can be found in search. Urdu is right-to-left in Nastaliq (index.css).
 // Only describe what the product really does today.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 
-const STORAGE_KEY = "qclinics.lang";
+export const LANGUAGES = {
+  en: { path: "/", dir: "ltr", locale: "en_PK" },
+  ur: { path: "/ur", dir: "rtl", locale: "ur_PK" },
+};
+
+// "/ur", "/ur/..." -> Urdu; everything else English
+export const langFromPath = (pathname = "/") => (/^\/ur(\/|$)/.test(pathname) ? "ur" : "en");
 
 const STRINGS = {
   en: {
+    "meta.title": "Qclinics | Hospital & Clinic Management Software in Pakistan",
+    "meta.description":
+      "Token queue, waiting-room screen, WhatsApp reminders in Urdu, lab reports and doctor earnings in one simple system for hospitals and clinics in Pakistan. Book a free demo.",
+    "notFound.title": "Page not found",
+    "notFound.text": "This page doesn't exist. It may have moved.",
+    "notFound.home": "Go to the home page",
     "nav.features": "Features",
     "nav.how": "How it works",
     "nav.pakistan": "Built for Pakistan",
@@ -102,6 +115,12 @@ const STRINGS = {
     "wa.demo": "Hello! I'd like a demo of {product} for our hospital.",
   },
   ur: {
+    "meta.title": "Qclinics | پاکستان کے ہسپتالوں اور کلینکس کے لیے سافٹ ویئر",
+    "meta.description":
+      "ٹوکن قطار، ویٹنگ روم اسکرین، اردو میں واٹس ایپ یاد دہانیاں، لیب رپورٹس اور ڈاکٹرز کی آمدن: پاکستان کے ہسپتالوں اور کلینکس کے لیے ایک آسان نظام۔ مفت ڈیمو بُک کریں۔",
+    "notFound.title": "صفحہ نہیں ملا",
+    "notFound.text": "یہ صفحہ موجود نہیں۔ ہو سکتا ہے یہ کہیں اور منتقل ہو گیا ہو۔",
+    "notFound.home": "ہوم پیج پر جائیں",
     "nav.features": "خصوصیات",
     "nav.how": "طریقہ کار",
     "nav.pakistan": "پاکستان کے لیے",
@@ -198,33 +217,17 @@ const STRINGS = {
   },
 };
 
+export { STRINGS };
+
 const LanguageContext = createContext(null);
 
-const readStored = () => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "ur" ? "ur" : "en";
-  } catch {
-    return "en";
-  }
-};
-
-export const LanguageProvider = ({ children }) => {
-  const [lang, setLangState] = useState(readStored);
-
+// The language comes from the address, so the server-built page and the browser agree
+export const LanguageProvider = ({ lang = "en", children }) => {
+  // Built pages already carry lang/dir; this keeps them right in development too
   useEffect(() => {
-    const html = document.documentElement;
-    html.lang = lang;
-    html.dir = lang === "ur" ? "rtl" : "ltr";
+    document.documentElement.lang = lang;
+    document.documentElement.dir = LANGUAGES[lang].dir;
   }, [lang]);
-
-  const setLang = useCallback((next) => {
-    setLangState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* private mode: the choice lasts until the tab closes */
-    }
-  }, []);
 
   const t = useCallback(
     (key, vars = {}) => {
@@ -233,8 +236,7 @@ export const LanguageProvider = ({ children }) => {
     },
     [lang]
   );
-
-  const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
+  const value = useMemo(() => ({ lang, t, other: lang === "ur" ? "en" : "ur" }), [lang, t]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 

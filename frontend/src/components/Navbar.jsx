@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaBars, FaPhoneAlt, FaTimes, FaWhatsapp } from "react-icons/fa";
 import { PRODUCT_NAME, STAFF_APP_URL } from "../config";
-import { useLanguage } from "../i18n";
+import { LANGUAGES, useLanguage } from "../i18n";
 import { ButtonLink, Container, Logo, cx, telUrl, whatsappUrl } from "./site";
 
 export const SECTIONS = [
@@ -11,20 +11,20 @@ export const SECTIONS = [
   { id: "faq", key: "nav.faq" },
 ];
 
-// English <-> Urdu. The label is always in the other language, so it can be read.
+// English <-> Urdu: each language is its own page ("/" and "/ur"). The label is
+// always in the other language, so it can be read.
 export const LanguageSwitch = ({ className = "" }) => {
-  const { lang, setLang, t } = useLanguage();
-  const next = lang === "ur" ? "en" : "ur";
+  const { other, t } = useLanguage();
   return (
-    <button
-      type="button"
-      onClick={() => setLang(next)}
-      lang={next}
+    <a
+      href={LANGUAGES[other].path}
+      hrefLang={other}
+      lang={other}
       aria-label={t("lang.switchLabel")}
       className={cx("inline-flex h-10 items-center rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-800 hover:bg-slate-50", className)}
     >
       {t("lang.switch")}
-    </button>
+    </a>
   );
 };
 
@@ -44,7 +44,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
       <Container className="flex h-16 items-center justify-between gap-3">
-        <a href="#top" aria-label={PRODUCT_NAME}>
+        <a href="#top" aria-label={PRODUCT_NAME} className="py-1">
           <Logo />
         </a>
 

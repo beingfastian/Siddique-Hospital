@@ -1,17 +1,19 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./index.css";
-import { BrowserRouter } from "react-router-dom";
-import { LanguageProvider } from "./i18n.jsx";
-import { PRODUCT_NAME, PRODUCT_TAGLINE } from "./config";
 
-document.title = `${PRODUCT_NAME} · ${PRODUCT_TAGLINE}`;
-
-createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <LanguageProvider>
+const root = document.getElementById("root");
+const app = (
+  <StrictMode>
+    <BrowserRouter>
       <App />
-    </LanguageProvider>
-  </BrowserRouter>
+    </BrowserRouter>
+  </StrictMode>
 );
+
+// "/", "/ur" and the 404 page arrive already rendered (scripts/prerender.mjs):
+// take them over instead of drawing them again. Other screens start empty.
+if (root.hasChildNodes()) hydrateRoot(root, app);
+else createRoot(root).render(app);

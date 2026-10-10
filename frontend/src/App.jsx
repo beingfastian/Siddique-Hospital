@@ -1,57 +1,56 @@
-import { useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import Navbar, { MobileActionBar } from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import QueueBoard from "./pages/queue/QueueBoard.jsx";
-import QueueTrack from "./pages/queue/QueueTrack.jsx";
+import { LanguageProvider, langFromPath } from "./i18n.jsx";
 
-// New page: start at the top (filter changes on the doctors page keep their place)
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-  const section = pathname.split("/")[1];
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [section]);
-  return null;
-};
+// Queue screens (waiting-room TV, a patient's token link) are only for the
+// running hospital: loaded on demand, so the marketing page stays light
+const QueueBoard = lazy(() => import("./pages/queue/QueueBoard.jsx"));
+const QueueTrack = lazy(() => import("./pages/queue/QueueTrack.jsx"));
 
 const App = () => {
-  const location = useLocation();
+  const { pathname } = useLocation();
 
-  // Queue screens (waiting-room TV, a patient's token link): full screen,
-  // without the site header and footer
-  if (location.pathname === "/queue" || location.pathname.startsWith("/queue/")) {
+  if (pathname === "/queue" || pathname.startsWith("/queue/")) {
     // These screens are bilingual already (Urdu lines carry their own dir/lang),
-    // so they keep their layout whatever language the site is set to
+    // so they keep their own layout
     return (
       <div dir="ltr" lang="en" className="font-sans leading-normal">
-        <Routes>
-          <Route path="/queue" element={<QueueBoard />} />
-          <Route path="/queue/t/:publicId" element={<QueueTrack />} />
-          <Route path="*" element={<QueueBoard />} />
-        </Routes>
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/queue" element={<QueueBoard />} />
+            <Route path="/queue/t/:publicId" element={<QueueTrack />} />
+            <Route path="*" element={<QueueBoard />} />
+          </Routes>
+        </Suspense>
       </div>
     );
   }
 
+  const lang = langFromPath(pathname);
   return (
-    <div className="flex min-h-screen flex-col pb-20 md:pb-0">
-      <ScrollToTop />
-      <ToastContainer />
-      <Navbar />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          {/* The old patient-site pages (doctors, about, contact) were removed: send old links home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <Footer />
-      <MobileActionBar />
-    </div>
+    <LanguageProvider lang={lang}>
+      <div className="flex min-h-screen flex-col pb-20 md:pb-0">
+        <Navbar />
+        <main id="main" className="flex-1">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/ur" element={<Home />} />
+            {/* Old patient-site pages: the host sends a permanent redirect (vercel.json);
+                this covers local development */}
+            {["/doctors", "/doctors/*", "/about", "/contact"].map((path) => (
+              <Route key={path} path={path} element={<Navigate to="/" replace />} />
+            ))}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
+        <MobileActionBar />
+      </div>
+    </LanguageProvider>
   );
 };
 
